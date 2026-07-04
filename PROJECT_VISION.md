@@ -265,4 +265,103 @@ Return:
 IMPORTANT:  
 Do not overengineer.  
 Do not split into microservices.  
-Focus on production-grade SaaS ERP readiness.  
+Focus on production-grade SaaS ERP readiness.
+
+
+---
+
+# 💼 COMMERCIAL PACKAGING MODEL (UPDATED)
+
+The system is also designed to support a SaaS commercial structure based on 3 core products + custom enterprise plan.
+
+## 🧩 CORE PRODUCTS
+
+### 1. Business ERP (General Companies)
+For retail, wholesale, services, and general businesses.
+
+Includes:
+- Accounting
+- Inventory
+- Sales & Purchases
+- Invoicing (ZATCA compliant)
+- Multi-branch management
+
+Target:
+- SMEs
+- Distributors
+- Service companies
+
+---
+
+### 2. Restaurant System
+For restaurants, cafés, cloud kitchens, and fast food.
+
+Includes:
+- POS system
+- Tables & orders
+- Kitchen Display System (KDS)
+- Menu management
+- Delivery & takeaway flows
+- Shift management
+
+Optimized for:
+- High speed ordering
+- Peak-hour performance
+
+---
+
+### 3. Sales & Repair System
+For electronics, mobile shops, laptops, and repair centers.
+
+Includes:
+- POS sales
+- Serial / IMEI tracking
+- Repair orders lifecycle
+- Technician management
+- Spare parts inventory
+- Device history tracking
+
+---
+
+## 🏢 CUSTOM / ENTERPRISE PLAN
+
+For companies requiring:
+- Advanced workflows
+- Deep integrations
+- Custom modules
+- Dedicated SLA
+- BI & analytics dashboards
+- Multi-company structures
+
+Pricing: Quote-based (Sales-led)
+
+---
+
+## 🔌 ADD-ONS STRATEGY
+
+To maximize SaaS revenue:
+
+- Extra users
+- Extra branches
+- Extra warehouses
+- API access
+- Advanced BI
+- Custom reports
+- Training & onboarding
+- Data migration
+- SLA premium support
+
+Rule:
+➡ Base system stays simple  
+➡ Monetization happens via add-ons
+
+---
+
+## 📊 KEY STRATEGY ALIGNMENT
+
+This commercial model ensures:
+- Simple buying decision (3 choices only)
+- Clear industry targeting
+- Higher conversion rate
+- Upselling through add-ons instead of complex plans
+
