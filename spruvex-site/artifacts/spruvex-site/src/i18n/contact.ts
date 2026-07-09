@@ -1,0 +1,38 @@
+export const contact = {
+  ar: {
+    signup_eyebrow: "جاهزون لخدمتك", signup_title: "تواصل مع SpruVex",
+    signup_sub: "سجّل بيانات متجرك لطلب تجربة مجانية أو باقة مدفوعة، أو راسلنا مباشرة لأي استفسار — فريقنا يرد خلال ساعات العمل.",
+    info1_h: "رد سريع", info1_p: "نتواصل معك خلال 24 ساعة عمل كحد أقصى",
+    info2_h: "بياناتك بأمان", info2_p: "معلوماتك التجارية محفوظة ولا تُشارك مع أي طرف ثالث",
+    info3_h: "إعداد مرافَق", info3_p: "نساعدك في إعداد حسابك وربط متجرك خطوة بخطوة",
+    wa_card_h: "تفضّل التواصل المباشر؟", wa_card_p: "تواصل معنا الآن على واتساب", wa_card_cta: "واتساب",
+    ftab1: "طلب تجربة / باقة", ftab2: "استفسار عام",
+    success_h: "تم استلام طلبك بنجاح", success_p: "سيتواصل معك فريقنا قريباً. يمكنك أيضاً إرسال الطلب نفسه على واتساب لتسريع الرد.", success_wa: "إرسال الطلب عبر واتساب",
+    f_name: "الاسم الكامل", f_store: "اسم المتجر / النشاط", f_phone: "رقم الجوال (واتساب)", f_email: "البريد الإلكتروني",
+    f_interest: "ما الذي تريده؟", f_int_trial: "تجربة مجانية", f_int_basic: "باقة أساسية", f_int_pro: "باقة متقدمة", f_int_ent: "باقة احترافية",
+    f_channels: "القنوات التي تحتاج ربطها", f_ch_none: "— اختياري —",
+    f_notes: "ملاحظات إضافية (اختياري)", f_submit: "إرسال الطلب", f_wa_alt: "أو راسلنا واتساب مباشرة",
+    f_note: "بإرسالك هذا النموذج فإنك توافق على تواصلنا معك بخصوص حسابك في SpruVex.",
+    f_msg: "رسالتك",
+
+    contact_meta_title: "تواصل معنا | SpruVex", contact_meta_desc: "تواصل مع فريق SpruVex لطلب تجربة مجانية أو استفسار عام عن منصة إدارة الأعمال ونقاط البيع.",
+  },
+  en: {
+    signup_eyebrow: "Ready to help", signup_title: "Contact SpruVex",
+    signup_sub: "Register your store details to request a free trial or paid plan, or message us directly with any question — our team replies during working hours.",
+    info1_h: "Fast response", info1_p: "We get back to you within 24 working hours at most",
+    info2_h: "Your data is safe", info2_p: "Your business information is stored securely and never shared with third parties",
+    info3_h: "Guided setup", info3_p: "We help you set up your account and connect your store step by step",
+    wa_card_h: "Prefer to talk directly?", wa_card_p: "Message us now on WhatsApp", wa_card_cta: "WhatsApp",
+    ftab1: "Request trial / plan", ftab2: "General inquiry",
+    success_h: "Your request was received", success_p: "Our team will reach out soon. You can also send the same request on WhatsApp to speed things up.", success_wa: "Send request via WhatsApp",
+    f_name: "Full name", f_store: "Store / business name", f_phone: "Mobile number (WhatsApp)", f_email: "Email address",
+    f_interest: "What are you interested in?", f_int_trial: "Free trial", f_int_basic: "Basic plan", f_int_pro: "Advanced plan", f_int_ent: "Enterprise plan",
+    f_channels: "Channels you need connected", f_ch_none: "— optional —",
+    f_notes: "Additional notes (optional)", f_submit: "Send request", f_wa_alt: "Or message us on WhatsApp",
+    f_note: "By submitting this form, you agree to be contacted about your SpruVex account.",
+    f_msg: "Your message",
+
+    contact_meta_title: "Contact | SpruVex", contact_meta_desc: "Contact the SpruVex team to request a free trial or ask a general question about our ERP and POS platform.",
+  },
+};

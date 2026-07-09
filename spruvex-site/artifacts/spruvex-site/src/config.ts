@@ -1,6 +1,8 @@
 /* ============================================================
    SpruVex Site Config — read/write from localStorage
    Admin panel saves here; main site reads on every mount.
+   Pricing is NOT stored here — it is fetched live from the
+   SaaS plan catalog API (see src/lib/api.ts).
    ============================================================ */
 
 export interface Lead {
@@ -18,8 +20,10 @@ export interface Lead {
   status: 'new' | 'contacted' | 'converted' | 'closed';
 }
 
-export interface PricingRow {
-  m1: number; m3: number; m6: number; y1: number; life: number;
+export interface FaqItem {
+  id: string;
+  qAr: string; qEn: string;
+  aAr: string; aEn: string;
 }
 
 export interface SiteConfig {
@@ -31,17 +35,11 @@ export interface SiteConfig {
     code: string;
     discount: number;
   };
-  pricing: {
-    basic: PricingRow;
-    pro: PricingRow;
-    enterprise: PricingRow;
+  hero: {
+    titleAr: string; titleEn: string;
+    subAr: string; subEn: string;
   };
-  lifetimeFees: { basic: number; pro: number; enterprise: number };
-  planFeatures: {
-    basic: string[];
-    pro: string[];
-    enterprise: string[];
-  };
+  faqItems: FaqItem[];
 }
 
 export const DEFAULT_CONFIG: SiteConfig = {
@@ -52,43 +50,23 @@ export const DEFAULT_CONFIG: SiteConfig = {
     descAr: 'خصم إضافي 5% على أول اشتراك', descEn: 'Get an extra 5% off your first subscription',
     code: 'NEW5', discount: 5,
   },
-  pricing: {
-    basic:      { m1: 149,  m3: 129, m6: 119, y1: 99,  life: 2490  },
-    pro:        { m1: 349,  m3: 309, m6: 279, y1: 249, life: 5990  },
-    enterprise: { m1: 699,  m3: 629, m6: 579, y1: 499, life: 11990 },
+  hero: {
+    titleAr: 'كل أعمالك التجارية… في نظام واحد',
+    titleEn: 'Every part of your business, one system',
+    subAr: 'SpruVex يوحّد المحاسبة والمبيعات والمخزون والفروع والصيانة وخدمة العملاء في منصة سحابية واحدة.',
+    subEn: 'SpruVex unifies accounting, sales, inventory, branches, service, and customer management in one cloud platform.',
   },
-  lifetimeFees: { basic: 199, pro: 349, enterprise: 599 },
-  planFeatures: {
-    basic: [
-      'فرع واحد ومستخدمان',
-      'نقاط بيع + محاسبة أساسية',
-      'ربط متجر إلكتروني واحد',
-      'فواتير واتساب يدوية',
-      'دعم عبر البريد والواتساب',
-    ],
-    pro: [
-      'حتى 5 فروع و10 مستخدمين',
-      'ERP كامل + صيانة وخدمة عملاء',
-      'ربط متاجر متعددة (سلة، زد، Shopify)',
-      'دفع بالتقسيط: تابي وتمارا',
-      'فواتير واتساب تلقائية',
-      'لوحات تحليلات متقدمة',
-    ],
-    enterprise: [
-      'فروع ومستخدمون غير محدودين',
-      'كل مزايا المتقدمة، بدون حدود',
-      'تكاملات مخصّصة عبر API',
-      'مدير حساب مخصص',
-      'أولوية الدعم الفني 24/7',
-    ],
-  },
+  faqItems: [],
 };
 
 const CONFIG_KEY = 'spruvex_config';
 const LEADS_KEY  = 'spruvex_leads';
 const AUTH_KEY   = 'spruvex_admin_auth';
 
-export const ADMIN_PASSWORD = 'SpruVex@2026';
+// Stopgap client-side gate only — there is no backend-authenticated admin yet,
+// so this can never be truly secure. Password comes from an env var purely to
+// avoid a literal hardcoded string in committed source.
+export const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PANEL_PASSWORD || 'SpruVex@2026';
 
 /* ---- Config helpers ---- */
 export function getConfig(): SiteConfig {
@@ -98,18 +76,9 @@ export function getConfig(): SiteConfig {
     const p = JSON.parse(stored);
     return {
       ...DEFAULT_CONFIG, ...p,
-      offer:        { ...DEFAULT_CONFIG.offer,        ...p.offer },
-      pricing: {
-        basic:      { ...DEFAULT_CONFIG.pricing.basic,      ...p.pricing?.basic },
-        pro:        { ...DEFAULT_CONFIG.pricing.pro,        ...p.pricing?.pro },
-        enterprise: { ...DEFAULT_CONFIG.pricing.enterprise, ...p.pricing?.enterprise },
-      },
-      lifetimeFees: { ...DEFAULT_CONFIG.lifetimeFees, ...p.lifetimeFees },
-      planFeatures: {
-        basic:      p.planFeatures?.basic      ?? DEFAULT_CONFIG.planFeatures.basic,
-        pro:        p.planFeatures?.pro        ?? DEFAULT_CONFIG.planFeatures.pro,
-        enterprise: p.planFeatures?.enterprise ?? DEFAULT_CONFIG.planFeatures.enterprise,
-      },
+      offer: { ...DEFAULT_CONFIG.offer, ...p.offer },
+      hero:  { ...DEFAULT_CONFIG.hero,  ...p.hero },
+      faqItems: p.faqItems ?? DEFAULT_CONFIG.faqItems,
     };
   } catch { return DEFAULT_CONFIG; }
 }

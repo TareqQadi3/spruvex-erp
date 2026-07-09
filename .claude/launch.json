@@ -18,6 +18,18 @@
         "API_PROXY_TARGET": "http://localhost:5000",
         "NODE_ENV": "development"
       }
+    },
+    {
+      "name": "spruvex-site",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["-C", "spruvex-site", "--filter", "@workspace/spruvex-site", "run", "dev"],
+      "port": 5174,
+      "env": {
+        "PORT": "5174",
+        "BASE_PATH": "/",
+        "VITE_API_URL": "http://localhost:5000",
+        "VITE_APP_URL": "http://localhost:5173"
+      }
     }
   ]
 }

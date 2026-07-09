@@ -1,2 +1,5 @@
 User-agent: *
 Allow: /
+
+# Replace https://spruvex.com with the real production domain at deploy time.
+Sitemap: https://spruvex.com/sitemap.xml

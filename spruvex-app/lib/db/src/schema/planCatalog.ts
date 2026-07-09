@@ -17,30 +17,51 @@ export interface PlanLimits {
   // businessType at signup, see businessTypeDefaults.ts) and any active
   // module-type add-ons. Never subtracted from on plan change, only added to.
   modules: string[];
+  // Public marketing/display fields — read by the marketing site's pricing
+  // page (GET /api/public/plans in modules/public) so pricing is never
+  // hardcoded on spruvex-site. priceMonthlySar is null for custom-quote
+  // plans (enterprise).
+  nameAr: string;
+  nameEn: string;
+  taglineAr: string;
+  taglineEn: string;
+  priceMonthlySar: number | null;
 }
 
-// Placeholder figures — real limits are a pricing/business decision, not an
-// architecture one; adjust freely without touching any enforcement code.
+// Real commercial pricing (approved 2026-07-09) — adjust freely without
+// touching any enforcement code, this is business config, not architecture.
 export const PLAN_CATALOG: Record<PlanCode, PlanLimits> = {
   erp_business: {
     maxUsers: 5, maxBranches: 2, maxProducts: 1000, maxCustomers: 2000,
     maxInvoicesPerMonth: 1000, storageQuotaMb: 500,
     modules: ["pos", "inventory", "customers"],
+    nameAr: "الأعمال ERP", nameEn: "Business ERP",
+    taglineAr: "لإدارة المخزون والمبيعات والعملاء", taglineEn: "Inventory, sales, and customer management",
+    priceMonthlySar: 899,
   },
   restaurant: {
     maxUsers: 8, maxBranches: 2, maxProducts: 500, maxCustomers: 2000,
     maxInvoicesPerMonth: 3000, storageQuotaMb: 500,
     modules: ["pos", "inventory", "customers", "restaurant"],
+    nameAr: "المطاعم", nameEn: "Restaurant",
+    taglineAr: "لإدارة الطاولات والطلبات والمطبخ", taglineEn: "Tables, orders, and kitchen management",
+    priceMonthlySar: 599,
   },
   sales_repair: {
     maxUsers: 5, maxBranches: 2, maxProducts: 1000, maxCustomers: 2000,
     maxInvoicesPerMonth: 1000, storageQuotaMb: 500,
     modules: ["pos", "inventory", "customers", "repairs"],
+    nameAr: "المبيعات والصيانة", nameEn: "Sales & Repair",
+    taglineAr: "لإدارة تذاكر الصيانة وقطع الغيار", taglineEn: "Repair tickets and spare parts management",
+    priceMonthlySar: 699,
   },
   enterprise: {
     maxUsers: 999_999, maxBranches: 999_999, maxProducts: 999_999, maxCustomers: 999_999,
     maxInvoicesPerMonth: 999_999, storageQuotaMb: 50_000,
     modules: ["pos", "inventory", "customers", "repairs", "restaurant", "ecommerce"],
+    nameAr: "المؤسسات", nameEn: "Enterprise",
+    taglineAr: "حلول مخصصة للمؤسسات الكبيرة", taglineEn: "Custom solutions for large organizations",
+    priceMonthlySar: null,
   },
 };
 

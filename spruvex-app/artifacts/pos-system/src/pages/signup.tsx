@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -52,6 +52,13 @@ export default function SignupPage() {
   const [plan, setPlan] = useState<CompanyPlan | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const planParam = new URLSearchParams(window.location.search).get("plan");
+    if (PLANS.some(({ value }) => value === planParam)) {
+      setPlan(planParam as CompanyPlan);
+    }
+  }, []);
 
   const { setSession } = useAuth();
   const [, navigate] = useLocation();

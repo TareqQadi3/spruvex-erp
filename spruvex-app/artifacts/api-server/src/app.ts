@@ -20,6 +20,7 @@ import syncRouter from "./modules/sync/routes/sync.routes";
 import subscriptionsRouter from "./modules/subscriptions/routes/subscriptions.routes";
 import platformRouter from "./modules/platform/routes/platform.routes";
 import supportRouter from "./modules/support/routes/support.routes";
+import publicRouter from "./modules/public/routes/public.routes";
 
 // Only auth + rbac are mounted so far. Every other module under modules/<name>
 // lands here as it's rebuilt against the new core/ + shared/ layer; the
@@ -73,6 +74,13 @@ app.use(healthRouter);
 // refresh, inventory, zatca, sync, rbac). As each module is migrated, its
 // legacy counterpart is removed from routes/index.ts and the module takes over.
 app.use("/api", legacyRouter);
+
+// Mounted before userRolesRouter deliberately: userRolesRouter is mounted
+// broadly at "/api" with an unscoped `router.use(requireAuth, ...)` inside,
+// which intercepts every /api/* request that reaches it (even ones matching
+// no route of its own) before falling through. Any unauthenticated route
+// must be registered ahead of that mount or it will 401 unconditionally.
+app.use("/api/public", publicRouter);
 
 app.use("/api/auth", authRouter);
 app.use("/api/roles", rolesRouter);

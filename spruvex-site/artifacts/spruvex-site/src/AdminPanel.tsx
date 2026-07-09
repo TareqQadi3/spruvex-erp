@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   getConfig, saveConfig, getLeads, updateLeadStatus, deleteLead,
   isAdminAuthenticated, setAdminAuthenticated,
-  ADMIN_PASSWORD, DEFAULT_CONFIG,
-  type SiteConfig, type Lead, type PricingRow,
+  ADMIN_PASSWORD,
+  type SiteConfig, type Lead, type FaqItem,
 } from './config';
 
 /* ─── tiny style helpers ─── */
@@ -253,6 +253,12 @@ function SettingsTab({ config, onSave }: { config: SiteConfig; onSave: (c: SiteC
 
   return (
     <div>
+      <div style={{ ...s.card, background: '#EBF3FF', border: '1px solid #C7DEFF' }}>
+        <p style={{ fontSize: 13, color: '#005BFF', fontWeight: 600 }}>
+          ℹ️ الأسعار تُدار من نظام SaaS ولا يمكن تعديلها هنا. عدّل الباقات والأسعار من نظام إدارة الباقات في المنصة نفسها.
+        </p>
+      </div>
+
       {/* WhatsApp */}
       <div style={s.card}>
         <div style={s.cardTitle}>📱 واتساب</div>
@@ -263,6 +269,32 @@ function SettingsTab({ config, onSave }: { config: SiteConfig; onSave: (c: SiteC
             سيُستخدم في زر الواتساب العائم وكل روابط التواصل في الموقع
           </p>
         </div>
+      </div>
+
+      {/* Hero */}
+      <div style={s.card}>
+        <div style={s.cardTitle}>🏠 نص الصفحة الرئيسية</div>
+        <div style={s.grid2}>
+          <div>
+            <label style={s.label}>العنوان (عربي)</label>
+            <input style={s.input} value={form.hero.titleAr} onChange={e => set('hero.titleAr', e.target.value)} />
+          </div>
+          <div>
+            <label style={s.label}>العنوان (إنجليزي)</label>
+            <input dir="ltr" style={s.input} value={form.hero.titleEn} onChange={e => set('hero.titleEn', e.target.value)} />
+          </div>
+          <div style={{ gridColumn: '1/-1' }}>
+            <label style={s.label}>الوصف (عربي)</label>
+            <input style={s.input} value={form.hero.subAr} onChange={e => set('hero.subAr', e.target.value)} />
+          </div>
+          <div style={{ gridColumn: '1/-1' }}>
+            <label style={s.label}>الوصف (إنجليزي)</label>
+            <input dir="ltr" style={s.input} value={form.hero.subEn} onChange={e => set('hero.subEn', e.target.value)} />
+          </div>
+        </div>
+        <p style={{ fontSize: 12, color: '#8A90A8', marginTop: 10 }}>
+          ملاحظة: هذه الحقول محفوظة للاستخدام المستقبلي — الصفحة الرئيسية الحالية تعرض النص الافتراضي المدمج في الموقع.
+        </p>
       </div>
 
       {/* Offer */}
@@ -315,143 +347,62 @@ function SettingsTab({ config, onSave }: { config: SiteConfig; onSave: (c: SiteC
   );
 }
 
-/* ─── Pricing Tab ─── */
-const CYCLES: { key: keyof PricingRow; label: string }[] = [
-  { key: 'm1', label: 'شهري' }, { key: 'm3', label: '3 أشهر' },
-  { key: 'm6', label: '6 أشهر' }, { key: 'y1', label: 'سنوي' }, { key: 'life', label: 'مدى الحياة' },
-];
-const PLANS: { key: 'basic' | 'pro' | 'enterprise'; label: string }[] = [
-  { key: 'basic', label: 'الأساسية' }, { key: 'pro', label: 'المتقدمة' }, { key: 'enterprise', label: 'الاحترافية' },
-];
+/* ─── FAQ Tab ─── */
+function FaqTab({ config, onSave }: { config: SiteConfig; onSave: (c: SiteConfig) => void }) {
+  const [items, setItems] = useState<FaqItem[]>(config.faqItems);
 
-function PricingTab({ config, onSave }: { config: SiteConfig; onSave: (c: SiteConfig) => void }) {
-  const [pricing, setPricing] = useState(config.pricing);
-  const [fees, setFees] = useState(config.lifetimeFees);
-
-  const handleSave = () => {
-    const updated = { ...config, pricing, lifetimeFees: fees };
-    saveConfig(updated); onSave(updated);
+  const update = (id: string, patch: Partial<FaqItem>) => {
+    setItems(prev => prev.map(it => (it.id === id ? { ...it, ...patch } : it)));
   };
-
-  const setPrice = (plan: 'basic'|'pro'|'enterprise', cycle: keyof PricingRow, val: number) => {
-    setPricing(prev => ({ ...prev, [plan]: { ...prev[plan], [cycle]: val } }));
+  const addItem = () => {
+    setItems(prev => [...prev, { id: Date.now().toString(), qAr: '', qEn: '', aAr: '', aEn: '' }]);
+  };
+  const removeItem = (id: string) => setItems(prev => prev.filter(it => it.id !== id));
+  const handleSave = () => {
+    const updated = { ...config, faqItems: items };
+    saveConfig(updated); onSave(updated);
   };
 
   return (
     <div>
-      <div style={s.card}>
-        <div style={s.cardTitle}>💰 أسعار الباقات (ر.س)</div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ background: '#F7F8FB' }}>
-                <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, borderBottom: '2px solid #E2E5EF', color: '#0A1023' }}>الباقة</th>
-                {CYCLES.map(c => (
-                  <th key={c.key} style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 700, borderBottom: '2px solid #E2E5EF', color: '#0A1023' }}>{c.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {PLANS.map((plan, i) => (
-                <tr key={plan.key} style={{ background: i % 2 === 0 ? '#fff' : '#FAFBFD' }}>
-                  <td style={{ padding: '10px 16px', fontWeight: 700, color: '#0A1023', borderBottom: '1px solid #F0F2F8' }}>{plan.label}</td>
-                  {CYCLES.map(c => (
-                    <td key={c.key} style={{ padding: '8px 12px', borderBottom: '1px solid #F0F2F8', textAlign: 'center' }}>
-                      <input
-                        type="number" min="0"
-                        value={pricing[plan.key][c.key]}
-                        onChange={e => setPrice(plan.key, c.key, Number(e.target.value))}
-                        style={{ ...s.input, width: 90, textAlign: 'center', padding: '8px', fontFamily: 'IBM Plex Mono,monospace', fontWeight: 600 }}
-                        dir="ltr"
-                      />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div style={{ ...s.card, background: '#EBF3FF', border: '1px solid #C7DEFF' }}>
+        <p style={{ fontSize: 13, color: '#005BFF', fontWeight: 600 }}>
+          ℹ️ هذه الأسئلة إضافية إلى الأسئلة الافتراضية المدمجة في الموقع، لاستخدامها مستقبلاً عند ربط صفحة الأسئلة بالبيانات المخصصة.
+        </p>
       </div>
-
-      <div style={s.card}>
-        <div style={s.cardTitle}>🔁 الرسوم السنوية لباقة مدى الحياة (ر.س)</div>
-        <div style={s.grid3}>
-          {PLANS.map(plan => (
-            <div key={plan.key}>
-              <label style={s.label}>{plan.label}</label>
-              <input type="number" min="0" dir="ltr"
-                style={{ ...s.input, fontFamily: 'IBM Plex Mono,monospace', fontWeight: 600 }}
-                value={fees[plan.key]}
-                onChange={e => setFees(prev => ({ ...prev, [plan.key]: Number(e.target.value) }))}
-              />
+      {items.map(item => (
+        <div key={item.id} style={s.card}>
+          <div style={s.grid2}>
+            <div>
+              <label style={s.label}>السؤال (عربي)</label>
+              <input style={s.input} value={item.qAr} onChange={e => update(item.id, { qAr: e.target.value })} />
             </div>
-          ))}
-        </div>
-      </div>
-
-      <button onClick={handleSave} style={{ ...s.btn('primary'), padding: '12px 32px', fontSize: 15 }}>💾 حفظ الأسعار</button>
-    </div>
-  );
-}
-
-/* ─── Features Tab ─── */
-function FeaturesTab({ config, onSave }: { config: SiteConfig; onSave: (c: SiteConfig) => void }) {
-  const [features, setFeatures] = useState(config.planFeatures);
-
-  const setFeature = (plan: 'basic'|'pro'|'enterprise', idx: number, val: string) => {
-    setFeatures(prev => {
-      const next = { ...prev };
-      next[plan] = [...next[plan]];
-      next[plan][idx] = val;
-      return next;
-    });
-  };
-  const addFeature = (plan: 'basic'|'pro'|'enterprise') => {
-    setFeatures(prev => ({ ...prev, [plan]: [...prev[plan], ''] }));
-  };
-  const removeFeature = (plan: 'basic'|'pro'|'enterprise', idx: number) => {
-    setFeatures(prev => ({ ...prev, [plan]: prev[plan].filter((_, i) => i !== idx) }));
-  };
-  const handleSave = () => {
-    const updated = { ...config, planFeatures: features };
-    saveConfig(updated); onSave(updated);
-  };
-  const handleReset = () => setFeatures(DEFAULT_CONFIG.planFeatures);
-
-  return (
-    <div>
-      <div style={s.grid3}>
-        {PLANS.map(plan => (
-          <div key={plan.key} style={s.card}>
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, color: '#005BFF' }}>{plan.label}</div>
-            {features[plan.key].map((f, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-                <input value={f} onChange={e => setFeature(plan.key, idx, e.target.value)}
-                  style={{ ...s.input, flex: 1, fontSize: 13, padding: '8px 10px' }} />
-                <button onClick={() => removeFeature(plan.key, idx)}
-                  style={{ ...s.btn('danger'), padding: '7px 10px', fontSize: 13 }}>✕</button>
-              </div>
-            ))}
-            <button onClick={() => addFeature(plan.key)}
-              style={{ ...s.btn('ghost'), width: '100%', marginTop: 4, fontSize: 13 }}>
-              + إضافة ميزة
-            </button>
+            <div>
+              <label style={s.label}>السؤال (إنجليزي)</label>
+              <input dir="ltr" style={s.input} value={item.qEn} onChange={e => update(item.id, { qEn: e.target.value })} />
+            </div>
+            <div>
+              <label style={s.label}>الإجابة (عربي)</label>
+              <input style={s.input} value={item.aAr} onChange={e => update(item.id, { aAr: e.target.value })} />
+            </div>
+            <div>
+              <label style={s.label}>الإجابة (إنجليزي)</label>
+              <input dir="ltr" style={s.input} value={item.aEn} onChange={e => update(item.id, { aEn: e.target.value })} />
+            </div>
           </div>
-        ))}
-      </div>
-      <p style={{ fontSize: 12.5, color: '#8A90A8', marginBottom: 16 }}>
-        ملاحظة: هذه الميزات تظهر باللغة العربية. الميزات بالإنجليزية لا تتأثر.
-      </p>
+          <button onClick={() => removeItem(item.id)} style={{ ...s.btn('danger'), marginTop: 12 }}>🗑️ حذف</button>
+        </div>
+      ))}
       <div style={{ display: 'flex', gap: 12 }}>
-        <button onClick={handleSave} style={{ ...s.btn('primary'), padding: '12px 32px', fontSize: 15 }}>💾 حفظ الميزات</button>
-        <button onClick={handleReset} style={{ ...s.btn('ghost'), padding: '12px 20px', fontSize: 15 }}>إعادة ضبط الافتراضي</button>
+        <button onClick={addItem} style={{ ...s.btn('ghost'), padding: '12px 20px', fontSize: 15 }}>+ إضافة سؤال</button>
+        <button onClick={handleSave} style={{ ...s.btn('primary'), padding: '12px 32px', fontSize: 15 }}>💾 حفظ الأسئلة</button>
       </div>
     </div>
   );
 }
 
 /* ─── Main AdminPanel ─── */
-type Tab = 'dashboard' | 'leads' | 'settings' | 'pricing' | 'features';
+type Tab = 'dashboard' | 'leads' | 'settings' | 'faq';
 
 export default function AdminPanel() {
   const [authed, setAuthed] = useState(isAdminAuthenticated());
@@ -484,8 +435,7 @@ export default function AdminPanel() {
     { key: 'dashboard', label: '📊 الإحصاء' },
     { key: 'leads', label: `📬 الطلبات ${leads.filter(l => l.status === 'new').length > 0 ? `(${leads.filter(l => l.status === 'new').length})` : ''}` },
     { key: 'settings', label: '⚙️ الإعدادات' },
-    { key: 'pricing', label: '💰 الأسعار' },
-    { key: 'features', label: '📋 الباقات' },
+    { key: 'faq', label: '❓ الأسئلة الشائعة' },
   ];
 
   return (
@@ -515,8 +465,7 @@ export default function AdminPanel() {
         {tab === 'dashboard' && <DashboardTab leads={leads} />}
         {tab === 'leads'     && <LeadsTab leads={leads} setLeads={setLeads} />}
         {tab === 'settings'  && <SettingsTab config={config} onSave={handleSave} />}
-        {tab === 'pricing'   && <PricingTab config={config} onSave={handleSave} />}
-        {tab === 'features'  && <FeaturesTab config={config} onSave={handleSave} />}
+        {tab === 'faq'       && <FaqTab config={config} onSave={handleSave} />}
       </div>
 
       {/* Toast */}
