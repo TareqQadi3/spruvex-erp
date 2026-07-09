@@ -15,15 +15,19 @@ import {
   Calculator,
   BarChart3,
   Settings,
+  Receipt,
+  PackageSearch,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { key: "nav.dashboard", href: "/", icon: LayoutDashboard },
   { key: "nav.pos", href: "/pos", icon: ShoppingCart },
+  { key: "nav.sales", href: "/sales", icon: Receipt },
   { key: "nav.repairs", href: "/repairs", icon: Wrench },
   { key: "nav.inventory", href: "/inventory", icon: Package },
   { key: "nav.customers", href: "/customers", icon: Users },
   { key: "nav.suppliers", href: "/suppliers", icon: Truck },
+  { key: "nav.purchases", href: "/purchases", icon: PackageSearch },
   { key: "nav.vouchers", href: "/vouchers", icon: ReceiptText },
   { key: "nav.accounting", href: "/accounting", icon: Calculator },
   { key: "nav.reports", href: "/reports", icon: BarChart3 },

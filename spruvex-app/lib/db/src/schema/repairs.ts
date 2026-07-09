@@ -18,6 +18,8 @@ export const repairsTable = pgTable("repairs", {
   estimatedCost: numeric("estimated_cost", { precision: 10, scale: 2 }),
   isPaid: boolean("is_paid").notNull().default(false),
   warrantyExpiresAt: timestamp("warranty_expires_at"),
+  technicianId: uuid("technician_id"), // optional link to the assigned technician (users.id)
+  approvedAt: timestamp("approved_at"), // set when the customer has explicitly approved the repair estimate
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [

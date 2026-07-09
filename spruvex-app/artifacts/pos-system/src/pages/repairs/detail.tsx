@@ -9,12 +9,37 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "wouter";
-import { ArrowLeft, Printer, Phone, CheckCircle } from "lucide-react";
+import { ArrowLeft, Printer, Phone, CheckCircle, UserCog, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
+import { TOKEN_KEY } from "@/contexts/AuthContext";
+
+interface RepairUser {
+  id: number;
+  username: string;
+  role: string;
+  isActive: boolean;
+}
+
+async function authFetch(path: string, options: RequestInit = {}) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(`/api${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Request failed" }));
+    throw new Error(err.error ?? "Request failed");
+  }
+  return res.status === 204 ? null : res.json();
+}
 
 const STATUS_KEYS = [
   { value: "received", color: "bg-gray-500 text-white" },
@@ -32,6 +57,35 @@ export default function RepairDetailPage() {
   const updateStatus = useUpdateRepairStatus();
   const updateRepair = useUpdateRepair();
   const { t } = useTranslation();
+
+  // totalCost/technicianId/approvedAt aren't in the generated OpenAPI client yet — the API
+  // route already returns them (see artifacts/api-server/src/routes/repairs.ts), so read
+  // them off the same response the generated hook already fetched.
+  const repairExtra = repair as unknown as { totalCost?: number; technicianId?: number | null; approvedAt?: string | null } | undefined;
+
+  const { data: users } = useQuery<RepairUser[]>({
+    queryKey: ["auth-users"],
+    queryFn: () => authFetch("/auth/users"),
+  });
+
+  const assignTechnician = useMutation({
+    mutationFn: (technicianId: number | null) =>
+      authFetch(`/repairs/${id}/technician`, { method: "PATCH", body: JSON.stringify({ technicianId }) }),
+    onSuccess: () => {
+      toast.success(t("repairs.technician_assigned"));
+      queryClient.invalidateQueries({ queryKey: getGetRepairQueryKey(Number(id)) });
+    },
+    onError: () => toast.error(t("repairs.technician_assign_failed")),
+  });
+
+  const approveRepair = useMutation({
+    mutationFn: () => authFetch(`/repairs/${id}/approve`, { method: "PATCH" }),
+    onSuccess: () => {
+      toast.success(t("repairs.approved_success"));
+      queryClient.invalidateQueries({ queryKey: getGetRepairQueryKey(Number(id)) });
+    },
+    onError: () => toast.error(t("repairs.approved_failed")),
+  });
 
   const [newStatus, setNewStatus] = useState("");
   const [notes, setNotes] = useState("");
@@ -156,10 +210,44 @@ export default function RepairDetailPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader><CardTitle>{t("common.status")}</CardTitle></CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               <Badge variant="outline" className={`border-transparent text-sm px-3 py-1 ${statusInfo?.color || "bg-gray-500 text-white"}`}>
                 {t(`repairs.status_${repair.status}`)}
               </Badge>
+              <div className="flex items-center justify-between text-sm pt-2 border-t">
+                <span className="text-muted-foreground">{t("repairs.customer_approval")}</span>
+                {repairExtra?.approvedAt ? (
+                  <span className="flex items-center gap-1 text-green-500 font-medium">
+                    <ShieldCheck className="h-3.5 w-3.5" /> {t("repairs.approved_on", { date: format(new Date(repairExtra.approvedAt), "MMM d, yyyy HH:mm") })}
+                  </span>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={() => approveRepair.mutate()} disabled={approveRepair.isPending}>
+                    {approveRepair.isPending ? t("common.updating") : t("repairs.mark_approved")}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>{t("repairs.technician")}</CardTitle></CardHeader>
+            <CardContent>
+              <Select
+                value={repairExtra?.technicianId ? String(repairExtra.technicianId) : "unassigned"}
+                onValueChange={(value) => assignTechnician.mutate(value === "unassigned" ? null : Number(value))}
+                disabled={assignTechnician.isPending}
+              >
+                <SelectTrigger>
+                  <UserCog className="me-2 h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder={t("repairs.select_technician")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">{t("repairs.unassigned")}</SelectItem>
+                  {users?.filter(u => u.isActive).map(u => (
+                    <SelectItem key={u.id} value={String(u.id)}>{u.username}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </CardContent>
           </Card>
 
@@ -182,6 +270,8 @@ export default function RepairDetailPage() {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="text-muted-foreground">{t("repairs.estimated")}</div>
                 <div className="font-medium text-end">{repair.estimatedCost ? Number(repair.estimatedCost).toFixed(2) : "—"}</div>
+                <div className="text-muted-foreground">{t("repairs.total_cost")}</div>
+                <div className="font-medium text-end">{repairExtra?.totalCost !== undefined ? repairExtra.totalCost.toFixed(2) : "—"}</div>
                 <div className="text-muted-foreground">{t("repairs.final_cost")}</div>
                 <div className="font-medium text-end">{repair.repairCost ? Number(repair.repairCost).toFixed(2) : "—"}</div>
                 <div className="text-muted-foreground">{t("common.paid")}</div>

@@ -20,7 +20,14 @@ function findWorkspaceRoot(startDir: string): string {
   }
 }
 
-const envPath = path.join(findWorkspaceRoot(import.meta.dirname), ".env");
+// import.meta.dirname is unavailable when this module is bundled to CJS
+// (e.g. drizzle-kit bundling drizzle.config.ts with esbuild before running
+// it) — fall back to CJS __dirname, which is defined in that situation.
+const currentDir = import.meta.dirname ?? (typeof __dirname !== "undefined" ? __dirname : undefined);
+if (!currentDir) {
+  throw new Error("Could not determine current directory to load .env from.");
+}
+const envPath = path.join(findWorkspaceRoot(currentDir), ".env");
 if (existsSync(envPath)) {
   process.loadEnvFile(envPath);
 }

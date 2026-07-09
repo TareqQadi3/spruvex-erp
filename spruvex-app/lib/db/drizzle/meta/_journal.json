@@ -8,6 +8,20 @@
       "when": 1783172390187,
       "tag": "0000_nosy_carlie_cooper",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783585141146,
+      "tag": "0001_melodic_power_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783587000000,
+      "tag": "0002_fix_sale_payments_created_at",
+      "breakpoints": true
     }
   ]
 }

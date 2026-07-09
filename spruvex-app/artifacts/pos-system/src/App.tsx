@@ -26,6 +26,8 @@ import PaymentMethodsSettingsPage from "@/pages/settings/payment-methods";
 import WarehousesSettingsPage from "@/pages/settings/warehouses";
 import InstallmentPlansSettingsPage from "@/pages/settings/installment-plans";
 import SuppliersPage from "@/pages/suppliers";
+import PurchasesPage from "@/pages/purchases";
+import SalesPage from "@/pages/sales";
 import VouchersPage from "@/pages/vouchers";
 
 const queryClient = new QueryClient();
@@ -72,6 +74,7 @@ function AppRouter() {
       <Switch>
         <Route path="/" component={() => <GuardedPage component={Dashboard} basePath="/" />} />
         <Route path="/pos" component={() => <GuardedPage component={PosPage} basePath="/pos" />} />
+        <Route path="/sales" component={() => <GuardedPage component={SalesPage} basePath="/sales" />} />
         <Route path="/repairs/new" component={() => <GuardedPage component={NewRepairPage} basePath="/repairs" />} />
         <Route path="/repairs/:id" component={() => <GuardedPage component={RepairDetailPage} basePath="/repairs" />} />
         <Route path="/repairs" component={() => <GuardedPage component={RepairsPage} basePath="/repairs" />} />
@@ -80,6 +83,7 @@ function AppRouter() {
         <Route path="/customers/:id" component={() => <GuardedPage component={CustomerDetailPage} basePath="/customers" />} />
         <Route path="/customers" component={() => <GuardedPage component={CustomersPage} basePath="/customers" />} />
         <Route path="/suppliers" component={() => <GuardedPage component={SuppliersPage} basePath="/suppliers" />} />
+        <Route path="/purchases" component={() => <GuardedPage component={PurchasesPage} basePath="/purchases" />} />
         <Route path="/vouchers" component={() => <GuardedPage component={VouchersPage} basePath="/vouchers" />} />
         <Route path="/accounting" component={() => <GuardedPage component={AccountingPage} basePath="/accounting" />} />
         <Route path="/reports" component={() => <GuardedPage component={ReportsPage} basePath="/reports" />} />
