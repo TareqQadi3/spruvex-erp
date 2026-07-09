@@ -399,6 +399,175 @@ export interface ExpenseInput {
   notes?: string;
 }
 
+export type AccountType = typeof AccountType[keyof typeof AccountType];
+
+
+export const AccountType = {
+  asset: 'asset',
+  liability: 'liability',
+  equity: 'equity',
+  revenue: 'revenue',
+  expense: 'expense',
+} as const;
+
+export type AccountNormalBalance = typeof AccountNormalBalance[keyof typeof AccountNormalBalance];
+
+
+export const AccountNormalBalance = {
+  debit: 'debit',
+  credit: 'credit',
+} as const;
+
+export interface Account {
+  id: string;
+  code: string;
+  name: string;
+  /** @nullable */
+  nameAr?: string | null;
+  type: AccountType;
+  /** @nullable */
+  subtype?: string | null;
+  /** @nullable */
+  parentId?: string | null;
+  normalBalance: AccountNormalBalance;
+  isSystem: boolean;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export type AccountInputType = typeof AccountInputType[keyof typeof AccountInputType];
+
+
+export const AccountInputType = {
+  asset: 'asset',
+  liability: 'liability',
+  equity: 'equity',
+  revenue: 'revenue',
+  expense: 'expense',
+} as const;
+
+export interface AccountInput {
+  /** @minLength 1 */
+  code: string;
+  /** @minLength 1 */
+  name: string;
+  nameAr?: string;
+  type: AccountInputType;
+  subtype?: string;
+  /** @nullable */
+  parentId?: string | null;
+}
+
+export interface AccountUpdateInput {
+  /** @minLength 1 */
+  name?: string;
+  /** @nullable */
+  nameAr?: string | null;
+  /** @nullable */
+  parentId?: string | null;
+  isActive?: boolean;
+}
+
+export interface JournalEntryLineInput {
+  accountId: string;
+  /** @minimum 0 */
+  debit?: number;
+  /** @minimum 0 */
+  credit?: number;
+  memo?: string;
+}
+
+export interface JournalEntryInput {
+  date: string;
+  memo?: string;
+  /** @minItems 1 */
+  lines: JournalEntryLineInput[];
+}
+
+export type JournalEntrySourceType = typeof JournalEntrySourceType[keyof typeof JournalEntrySourceType];
+
+
+export const JournalEntrySourceType = {
+  sale: 'sale',
+  purchase: 'purchase',
+  expense: 'expense',
+  voucher_receipt: 'voucher_receipt',
+  voucher_payment: 'voucher_payment',
+  manual: 'manual',
+  sale_return: 'sale_return',
+  purchase_return: 'purchase_return',
+} as const;
+
+export interface JournalEntry {
+  id: string;
+  entryNumber: string;
+  date: string;
+  /** @nullable */
+  memo?: string | null;
+  sourceType: JournalEntrySourceType;
+  /** @nullable */
+  sourceId?: string | null;
+  isManual: boolean;
+  /** @nullable */
+  createdBy?: string | null;
+  createdAt: string;
+}
+
+export interface JournalEntryLine {
+  id: string;
+  journalEntryId: string;
+  accountId: string;
+  /** @nullable */
+  accountCode?: string | null;
+  /** @nullable */
+  accountName?: string | null;
+  /** @nullable */
+  accountNameAr?: string | null;
+  debit: string;
+  credit: string;
+  /** @nullable */
+  memo?: string | null;
+}
+
+export type JournalEntryWithLines = JournalEntry & {
+  lines: JournalEntryLine[];
+};
+
+export type TrialBalanceLineAccountType = typeof TrialBalanceLineAccountType[keyof typeof TrialBalanceLineAccountType];
+
+
+export const TrialBalanceLineAccountType = {
+  asset: 'asset',
+  liability: 'liability',
+  equity: 'equity',
+  revenue: 'revenue',
+  expense: 'expense',
+} as const;
+
+export interface TrialBalanceLine {
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  /** @nullable */
+  accountNameAr?: string | null;
+  accountType: TrialBalanceLineAccountType;
+  debit: number;
+  credit: number;
+}
+
+export interface TrialBalanceResult {
+  /** @nullable */
+  asOf: string | null;
+  lines: TrialBalanceLine[];
+  totalDebit: number;
+  totalCredit: number;
+  isBalanced: boolean;
+}
+
+export interface ErrorResponse {
+  error: string;
+}
+
 export interface DashboardStats {
   todaySales: number;
   todayRevenue: number;
@@ -595,6 +764,19 @@ export type GetExpensesParams = {
 from?: string;
 to?: string;
 category?: string;
+};
+
+export type GetJournalEntriesParams = {
+from?: string;
+to?: string;
+sourceType?: string;
+};
+
+export type GetTrialBalanceParams = {
+/**
+ * Include only journal entries dated on or before this date
+ */
+asOf?: string;
 };
 
 export type GetSalesSummaryParams = {

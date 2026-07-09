@@ -15,11 +15,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Trash2, LockOpen, Lock, TrendingDown } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "@/i18n";
+import ChartOfAccounts from "./chart-of-accounts";
+import JournalEntries from "./journal-entries";
+import TrialBalance from "./trial-balance";
 
 const CATEGORY_COLORS: Record<string, string> = {
   rent: "bg-blue-500/10 text-blue-600 border-blue-500/20",
@@ -171,133 +175,159 @@ export default function AccountingPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight">{t("accounting.title")}</h1>
-        <AddExpenseDialog onCreated={() => queryClient.invalidateQueries({ queryKey: getGetExpensesQueryKey() })} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {activeSession
-                ? <LockOpen className="h-5 w-5 text-green-500" />
-                : <Lock className="h-5 w-5 text-muted-foreground" />}
-              {t("accounting.cash_session")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {activeSession ? (
-              <>
-                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                  <div className="text-sm font-medium text-green-700 dark:text-green-400">{t("accounting.session_open")}</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {t("accounting.session_opened", {
-                      date: format(new Date(activeSession.openedAt), "MMM d, HH:mm"),
-                      balance: Number(activeSession.openingBalance).toFixed(2)
-                    })}
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>{t("accounting.closing_balance")}</Label>
-                  <div className="flex gap-2">
-                    <Input type="number" step="0.01" placeholder={t("accounting.count_cash")} value={closingBalance} onChange={(e) => setClosingBalance(e.target.value)} />
-                    <Button variant="destructive" onClick={handleCloseSession} disabled={!closingBalance || closeSession.isPending}>
-                      <Lock className="me-2 h-4 w-4" /> {t("accounting.close_session")}
-                    </Button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-                  {t("accounting.no_active_session")}
-                </div>
-                <div className="space-y-1.5">
-                  <Label>{t("accounting.opening_balance")}</Label>
-                  <div className="flex gap-2">
-                    <Input type="number" step="0.01" placeholder={t("accounting.cash_in_drawer")} value={openingBalance} onChange={(e) => setOpeningBalance(e.target.value)} />
-                    <Button onClick={handleOpenSession} disabled={!openingBalance || openSession.isPending}>
-                      <LockOpen className="me-2 h-4 w-4" /> {t("accounting.open_session")}
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">{t("accounting.tab_overview")}</TabsTrigger>
+          <TabsTrigger value="chart-of-accounts">{t("accounting.tab_chart_of_accounts")}</TabsTrigger>
+          <TabsTrigger value="journal-entries">{t("accounting.tab_journal_entries")}</TabsTrigger>
+          <TabsTrigger value="trial-balance">{t("accounting.tab_trial_balance")}</TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-destructive" />
-              {t("accounting.expense_summary")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{totalExpenses.toFixed(2)}</div>
-            <p className="text-sm text-muted-foreground mt-1">{t("accounting.total_expenses")}</p>
-            <div className="mt-4 space-y-2">
-              {EXPENSE_CATEGORY_KEYS.map(cat => {
-                const catTotal = expenses?.filter(e => e.category === cat).reduce((s, e) => s + Number(e.amount), 0) ?? 0;
-                if (catTotal === 0) return null;
-                return (
-                  <div key={cat} className="flex items-center justify-between text-sm">
-                    <Badge variant="outline" className={CATEGORY_COLORS[cat]}>{t(`accounting.cat_${cat}`)}</Badge>
-                    <span className="font-medium">{catTotal.toFixed(2)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <TabsContent value="overview" className="space-y-6">
+          <div className="flex justify-end">
+            <AddExpenseDialog onCreated={() => queryClient.invalidateQueries({ queryKey: getGetExpensesQueryKey() })} />
+          </div>
 
-      <Card>
-        <CardHeader><CardTitle>{t("accounting.expense_records")}</CardTitle></CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("common.date")}</TableHead>
-                <TableHead>{t("common.description")}</TableHead>
-                <TableHead>{t("common.category")}</TableHead>
-                <TableHead className="text-end">{t("common.amount")}</TableHead>
-                <TableHead className="text-end">{t("common.actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                [1, 2, 3].map(i => (
-                  <TableRow key={i}>
-                    {[1, 2, 3, 4, 5].map(j => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  {activeSession
+                    ? <LockOpen className="h-5 w-5 text-green-500" />
+                    : <Lock className="h-5 w-5 text-muted-foreground" />}
+                  {t("accounting.cash_session")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {activeSession ? (
+                  <>
+                    <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                      <div className="text-sm font-medium text-green-700 dark:text-green-400">{t("accounting.session_open")}</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {t("accounting.session_opened", {
+                          date: format(new Date(activeSession.openedAt), "MMM d, HH:mm"),
+                          balance: Number(activeSession.openingBalance).toFixed(2)
+                        })}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>{t("accounting.closing_balance")}</Label>
+                      <div className="flex gap-2">
+                        <Input type="number" step="0.01" placeholder={t("accounting.count_cash")} value={closingBalance} onChange={(e) => setClosingBalance(e.target.value)} />
+                        <Button variant="destructive" onClick={handleCloseSession} disabled={!closingBalance || closeSession.isPending}>
+                          <Lock className="me-2 h-4 w-4" /> {t("accounting.close_session")}
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+                      {t("accounting.no_active_session")}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>{t("accounting.opening_balance")}</Label>
+                      <div className="flex gap-2">
+                        <Input type="number" step="0.01" placeholder={t("accounting.cash_in_drawer")} value={openingBalance} onChange={(e) => setOpeningBalance(e.target.value)} />
+                        <Button onClick={handleOpenSession} disabled={!openingBalance || openSession.isPending}>
+                          <LockOpen className="me-2 h-4 w-4" /> {t("accounting.open_session")}
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingDown className="h-5 w-5 text-destructive" />
+                  {t("accounting.expense_summary")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{totalExpenses.toFixed(2)}</div>
+                <p className="text-sm text-muted-foreground mt-1">{t("accounting.total_expenses")}</p>
+                <div className="mt-4 space-y-2">
+                  {EXPENSE_CATEGORY_KEYS.map(cat => {
+                    const catTotal = expenses?.filter(e => e.category === cat).reduce((s, e) => s + Number(e.amount), 0) ?? 0;
+                    if (catTotal === 0) return null;
+                    return (
+                      <div key={cat} className="flex items-center justify-between text-sm">
+                        <Badge variant="outline" className={CATEGORY_COLORS[cat]}>{t(`accounting.cat_${cat}`)}</Badge>
+                        <span className="font-medium">{catTotal.toFixed(2)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader><CardTitle>{t("accounting.expense_records")}</CardTitle></CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("common.date")}</TableHead>
+                    <TableHead>{t("common.description")}</TableHead>
+                    <TableHead>{t("common.category")}</TableHead>
+                    <TableHead className="text-end">{t("common.amount")}</TableHead>
+                    <TableHead className="text-end">{t("common.actions")}</TableHead>
                   </TableRow>
-                ))
-              ) : expenses?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t("accounting.no_expenses")}</TableCell>
-                </TableRow>
-              ) : (
-                expenses?.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell className="text-sm">{expense.date}</TableCell>
-                    <TableCell className="font-medium">{expense.description}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={CATEGORY_COLORS[expense.category]}>
-                        {t(`accounting.cat_${expense.category}`)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-end font-medium">{Number(expense.amount).toFixed(2)}</TableCell>
-                    <TableCell className="text-end">
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteExpense(expense.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    [1, 2, 3].map(i => (
+                      <TableRow key={i}>
+                        {[1, 2, 3, 4, 5].map(j => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
+                      </TableRow>
+                    ))
+                  ) : expenses?.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t("accounting.no_expenses")}</TableCell>
+                    </TableRow>
+                  ) : (
+                    expenses?.map((expense) => (
+                      <TableRow key={expense.id}>
+                        <TableCell className="text-sm">{expense.date}</TableCell>
+                        <TableCell className="font-medium">{expense.description}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={CATEGORY_COLORS[expense.category]}>
+                            {t(`accounting.cat_${expense.category}`)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-end font-medium">{Number(expense.amount).toFixed(2)}</TableCell>
+                        <TableCell className="text-end">
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteExpense(expense.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="chart-of-accounts">
+          <ChartOfAccounts />
+        </TabsContent>
+
+        <TabsContent value="journal-entries">
+          <JournalEntries />
+        </TabsContent>
+
+        <TabsContent value="trial-balance">
+          <TrialBalance />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

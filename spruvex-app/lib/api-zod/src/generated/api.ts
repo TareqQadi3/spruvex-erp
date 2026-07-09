@@ -746,6 +746,155 @@ export const DeleteExpenseParams = zod.object({
 
 
 /**
+ * @summary List chart of accounts
+ */
+export const GetAccountsResponseItem = zod.object({
+  "id": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "nameAr": zod.string().nullish(),
+  "type": zod.enum(['asset', 'liability', 'equity', 'revenue', 'expense']),
+  "subtype": zod.string().nullish(),
+  "parentId": zod.string().nullish(),
+  "normalBalance": zod.enum(['debit', 'credit']),
+  "isSystem": zod.boolean(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const GetAccountsResponse = zod.array(GetAccountsResponseItem)
+
+
+/**
+ * @summary Create an account
+ */
+
+
+
+
+export const CreateAccountBody = zod.object({
+  "code": zod.string().min(1),
+  "name": zod.string().min(1),
+  "nameAr": zod.string().optional(),
+  "type": zod.enum(['asset', 'liability', 'equity', 'revenue', 'expense']),
+  "subtype": zod.string().optional(),
+  "parentId": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update an account
+ */
+export const UpdateAccountParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+
+
+export const UpdateAccountBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "nameAr": zod.string().nullish(),
+  "parentId": zod.string().nullish(),
+  "isActive": zod.boolean().optional()
+})
+
+export const UpdateAccountResponse = zod.object({
+  "id": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "nameAr": zod.string().nullish(),
+  "type": zod.enum(['asset', 'liability', 'equity', 'revenue', 'expense']),
+  "subtype": zod.string().nullish(),
+  "parentId": zod.string().nullish(),
+  "normalBalance": zod.enum(['debit', 'credit']),
+  "isSystem": zod.boolean(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List journal entries
+ */
+export const GetJournalEntriesQueryParams = zod.object({
+  "from": zod.date().optional(),
+  "to": zod.date().optional(),
+  "sourceType": zod.coerce.string().optional()
+})
+
+export const GetJournalEntriesResponseItem = zod.object({
+  "id": zod.string(),
+  "entryNumber": zod.string(),
+  "date": zod.coerce.date(),
+  "memo": zod.string().nullish(),
+  "sourceType": zod.enum(['sale', 'purchase', 'expense', 'voucher_receipt', 'voucher_payment', 'manual', 'sale_return', 'purchase_return']),
+  "sourceId": zod.string().nullish(),
+  "isManual": zod.boolean(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "lines": zod.array(zod.object({
+  "id": zod.string(),
+  "journalEntryId": zod.string(),
+  "accountId": zod.string(),
+  "accountCode": zod.string().nullish(),
+  "accountName": zod.string().nullish(),
+  "accountNameAr": zod.string().nullish(),
+  "debit": zod.string(),
+  "credit": zod.string(),
+  "memo": zod.string().nullish()
+}))
+}))
+export const GetJournalEntriesResponse = zod.array(GetJournalEntriesResponseItem)
+
+
+/**
+ * @summary Create a manual journal entry (debits must equal credits)
+ */
+export const createJournalEntryBodyLinesItemDebitMin = 0;
+
+export const createJournalEntryBodyLinesItemCreditMin = 0;
+
+
+
+
+export const CreateJournalEntryBody = zod.object({
+  "date": zod.coerce.date(),
+  "memo": zod.string().optional(),
+  "lines": zod.array(zod.object({
+  "accountId": zod.string(),
+  "debit": zod.number().min(createJournalEntryBodyLinesItemDebitMin).optional(),
+  "credit": zod.number().min(createJournalEntryBodyLinesItemCreditMin).optional(),
+  "memo": zod.string().optional()
+})).min(1)
+})
+
+
+/**
+ * @summary Get the trial balance report
+ */
+export const GetTrialBalanceQueryParams = zod.object({
+  "asOf": zod.date().optional().describe('Include only journal entries dated on or before this date')
+})
+
+export const GetTrialBalanceResponse = zod.object({
+  "asOf": zod.coerce.date().nullable(),
+  "lines": zod.array(zod.object({
+  "accountId": zod.string(),
+  "accountCode": zod.string(),
+  "accountName": zod.string(),
+  "accountNameAr": zod.string().nullish(),
+  "accountType": zod.enum(['asset', 'liability', 'equity', 'revenue', 'expense']),
+  "debit": zod.number(),
+  "credit": zod.number()
+})),
+  "totalDebit": zod.number(),
+  "totalCredit": zod.number(),
+  "isBalanced": zod.boolean()
+})
+
+
+/**
  * @summary Get dashboard summary stats
  */
 export const GetDashboardStatsResponse = zod.object({

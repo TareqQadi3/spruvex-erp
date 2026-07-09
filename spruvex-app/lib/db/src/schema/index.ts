@@ -31,3 +31,7 @@ export * from "./signatures";
 export * from "./zatcaLogs";
 export * from "./offlineQueue";
 export * from "./syncLogs";
+export * from "./restaurantTables";
+export * from "./menu";
+export * from "./restaurantOrders";
+export * from "./restaurantShifts";
