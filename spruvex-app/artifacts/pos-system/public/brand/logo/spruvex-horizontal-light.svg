@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="165" viewBox="0 0 560 165" role="img" aria-label="SpruVex logo">
+<defs>
+  <linearGradient id="sv-s" x1="40" y1="24" x2="178" y2="212" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#00D4FF"/>
+    <stop offset="0.48" stop-color="#005BFF"/>
+    <stop offset="1" stop-color="#6A2CFF"/>
+  </linearGradient>
+  <linearGradient id="sv-v" x1="120" y1="110" x2="224" y2="210" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#00D4FF"/>
+    <stop offset="0.5" stop-color="#1976FF"/>
+    <stop offset="1" stop-color="#3114B8"/>
+  </linearGradient>
+  <linearGradient id="word" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#00D4FF"/>
+    <stop offset="0.55" stop-color="#005BFF"/>
+    <stop offset="1" stop-color="#6A2CFF"/>
+  </linearGradient>
+</defs>
+<g transform="translate(24,12) scale(0.45)">
+<path d="M181 47H112C80 47 62 60 62 82C62 104 79 113 111 122C143 131 157 145 157 163C157 187 137 205 103 205H55"
+      fill="none" stroke="url(#sv-s)" stroke-width="37" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M128 118L165 203L218 91" fill="none" stroke="url(#sv-v)" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M54 205H103C127 205 145 196 153 181" fill="none" stroke="#6A2CFF" stroke-width="33" stroke-linecap="round" opacity="0.9"/>
+<g>
+  <rect x="213" y="65" width="12" height="12" rx="1.8" fill="#00D4FF"/>
+  <rect x="229" y="49" width="10" height="10" rx="1.5" fill="#1976FF"/>
+  <rect x="229" y="65" width="10" height="10" rx="1.5" fill="#005BFF"/>
+  <rect x="245" y="33" width="8" height="8" rx="1.3" fill="#00D4FF"/>
+  <rect x="245" y="49" width="8" height="8" rx="1.3" fill="#6A2CFF"/>
+</g></g>
+<text x="160" y="105" font-family="Noto Sans, DejaVu Sans, sans-serif" font-size="70" font-weight="650" letter-spacing="-2" fill="#0A0F1F">Spru</text>
+<text x="324" y="105" font-family="Noto Sans, DejaVu Sans, sans-serif" font-size="70" font-weight="650" letter-spacing="-2" fill="url(#word)">Vex</text>
+<text x="163" y="140" font-family="Noto Sans, DejaVu Sans, sans-serif" font-size="14" font-weight="550" letter-spacing="3.3" fill="#40506B">GROWTH  •  VISION  •  PROSPERITY</text>
+</svg>

@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "SpruVex Website"
+version = "1.0.0"
+id = "artifacts/spruvex-site"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18774
+
+[services.development]
+run = "pnpm --filter @workspace/spruvex-site run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/spruvex-site", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/spruvex-site/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18774"
+BASE_PATH = "/"

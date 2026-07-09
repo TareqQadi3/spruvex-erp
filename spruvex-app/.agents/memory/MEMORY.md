@@ -1,0 +1,8 @@
+- [PostgreSQL numeric strings](pg-numeric-strings.md) — pg driver returns `numeric` columns as JS strings; always wrap with Number() before .toFixed() or arithmetic.
+- [Reports profit SQL aliases](reports-profit-sql.md) — raw SQL in Drizzle must use column interpolation (${table.col}) not table aliases like `si.quantity`; aliases aren't defined by Drizzle's query builder.
+- [shadcn Select empty value](shadcn-select-empty-value.md) — SelectItem cannot have value="" (empty string); use a sentinel like "__walk_in__" to represent "no selection" state.
+- [Toast library](toast-library.md) — project uses `toast` from `sonner`, NOT shadcn's `useToast`, even though both Toaster components exist in the codebase.
+- [Auth system](auth-system.md) — JWT auth with bcryptjs; users table seeded on startup; setAuthTokenGetter() wires JWT to all API calls; route protection in App.tsx via AuthContext.
+- [Invoice printing](invoice-printing.md) — use window.open() with full HTML template written to new window; NEVER window.print() on main page (screenshots the whole POS UI).
+- [Settings + Express body limit](settings-body-limit.md) — express.json() defaults to 100kb; base64 logo images exceed this; always use limit:"10mb". openapi.yaml is source of truth for generated types — missing fields are silently stripped.
+- [openapi codegen discipline](openapi-codegen-rules.md) — every new DB field that flows through the API must be added to both response AND input schema in openapi.yaml, then pnpm --filter @workspace/api-spec codegen.

@@ -1,0 +1,291 @@
+{
+  "brand": "SpruVex",
+  "version": "1.0.0",
+  "fileCount": 71,
+  "files": [
+    {
+      "path": "README_AR_EN.md",
+      "bytes": 874
+    },
+    {
+      "path": "assets/app-icons/app-icon-1024.png",
+      "bytes": 66877
+    },
+    {
+      "path": "assets/app-icons/app-icon-128.png",
+      "bytes": 5711
+    },
+    {
+      "path": "assets/app-icons/app-icon-16.png",
+      "bytes": 593
+    },
+    {
+      "path": "assets/app-icons/app-icon-180.png",
+      "bytes": 8387
+    },
+    {
+      "path": "assets/app-icons/app-icon-192.png",
+      "bytes": 8913
+    },
+    {
+      "path": "assets/app-icons/app-icon-256.png",
+      "bytes": 12185
+    },
+    {
+      "path": "assets/app-icons/app-icon-32.png",
+      "bytes": 1228
+    },
+    {
+      "path": "assets/app-icons/app-icon-48.png",
+      "bytes": 1978
+    },
+    {
+      "path": "assets/app-icons/app-icon-512.png",
+      "bytes": 28074
+    },
+    {
+      "path": "assets/app-icons/app-icon-64.png",
+      "bytes": 2724
+    },
+    {
+      "path": "assets/app-icons/favicon-128.png",
+      "bytes": 6396
+    },
+    {
+      "path": "assets/app-icons/favicon-16.png",
+      "bytes": 675
+    },
+    {
+      "path": "assets/app-icons/favicon-256.png",
+      "bytes": 13583
+    },
+    {
+      "path": "assets/app-icons/favicon-32.png",
+      "bytes": 1384
+    },
+    {
+      "path": "assets/app-icons/favicon-48.png",
+      "bytes": 2182
+    },
+    {
+      "path": "assets/app-icons/favicon-64.png",
+      "bytes": 2973
+    },
+    {
+      "path": "assets/app-icons/spruvex-app-icon.svg",
+      "bytes": 1819
+    },
+    {
+      "path": "assets/app-icons/spruvex-favicon.svg",
+      "bytes": 1802
+    },
+    {
+      "path": "assets/logo/png/spruvex-horizontal-dark.png",
+      "bytes": 48688
+    },
+    {
+      "path": "assets/logo/png/spruvex-horizontal-light.png",
+      "bytes": 45087
+    },
+    {
+      "path": "assets/logo/png/spruvex-stacked-dark.png",
+      "bytes": 50320
+    },
+    {
+      "path": "assets/logo/png/spruvex-stacked-light.png",
+      "bytes": 50921
+    },
+    {
+      "path": "assets/logo/png/spruvex-symbol-1024.png",
+      "bytes": 65887
+    },
+    {
+      "path": "assets/logo/png/spruvex-symbol-128.png",
+      "bytes": 5282
+    },
+    {
+      "path": "assets/logo/png/spruvex-symbol-256.png",
+      "bytes": 11699
+    },
+    {
+      "path": "assets/logo/png/spruvex-symbol-512.png",
+      "bytes": 27297
+    },
+    {
+      "path": "assets/logo/png/spruvex-symbol-black-512.png",
+      "bytes": 16097
+    },
+    {
+      "path": "assets/logo/png/spruvex-symbol-white-512.png",
+      "bytes": 12446
+    },
+    {
+      "path": "assets/logo/svg/spruvex-horizontal-dark.svg",
+      "bytes": 2291
+    },
+    {
+      "path": "assets/logo/svg/spruvex-horizontal-light.svg",
+      "bytes": 2242
+    },
+    {
+      "path": "assets/logo/svg/spruvex-stacked-dark.svg",
+      "bytes": 2270
+    },
+    {
+      "path": "assets/logo/svg/spruvex-stacked-light.svg",
+      "bytes": 2404
+    },
+    {
+      "path": "assets/logo/svg/spruvex-symbol-black.svg",
+      "bytes": 972
+    },
+    {
+      "path": "assets/logo/svg/spruvex-symbol-white.svg",
+      "bytes": 972
+    },
+    {
+      "path": "assets/logo/svg/spruvex-symbol.svg",
+      "bytes": 1704
+    },
+    {
+      "path": "assets/ui-icons/spruvex-icons-sprite.svg",
+      "bytes": 4721
+    },
+    {
+      "path": "assets/ui-icons/svg/accounting.svg",
+      "bytes": 330
+    },
+    {
+      "path": "assets/ui-icons/svg/branches.svg",
+      "bytes": 302
+    },
+    {
+      "path": "assets/ui-icons/svg/customers.svg",
+      "bytes": 380
+    },
+    {
+      "path": "assets/ui-icons/svg/dashboard.svg",
+      "bytes": 415
+    },
+    {
+      "path": "assets/ui-icons/svg/inventory.svg",
+      "bytes": 306
+    },
+    {
+      "path": "assets/ui-icons/svg/logout.svg",
+      "bytes": 279
+    },
+    {
+      "path": "assets/ui-icons/svg/notifications.svg",
+      "bytes": 306
+    },
+    {
+      "path": "assets/ui-icons/svg/pos.svg",
+      "bytes": 348
+    },
+    {
+      "path": "assets/ui-icons/svg/repairs.svg",
+      "bytes": 323
+    },
+    {
+      "path": "assets/ui-icons/svg/reports.svg",
+      "bytes": 266
+    },
+    {
+      "path": "assets/ui-icons/svg/search.svg",
+      "bytes": 274
+    },
+    {
+      "path": "assets/ui-icons/svg/settings.svg",
+      "bytes": 819
+    },
+    {
+      "path": "assets/ui-icons/svg/subscriptions.svg",
+      "bytes": 303
+    },
+    {
+      "path": "assets/ui-icons/svg/suppliers.svg",
+      "bytes": 339
+    },
+    {
+      "path": "assets/ui-icons/svg/users.svg",
+      "bytes": 329
+    },
+    {
+      "path": "assets/ui-icons/svg/vouchers.svg",
+      "bytes": 279
+    },
+    {
+      "path": "claude-code/CLAUDE_CODE_MASTER_PROMPT_AR_EN.md",
+      "bytes": 8711
+    },
+    {
+      "path": "claude-code/CLAUDE_CODE_MASTER_PROMPT_AR_EN.txt",
+      "bytes": 8711
+    },
+    {
+      "path": "claude-code/IMPLEMENTATION_CHECKLIST.md",
+      "bytes": 871
+    },
+    {
+      "path": "claude-code/SPRUVEX_AI_CONTEXT.json",
+      "bytes": 1703
+    },
+    {
+      "path": "claude-code/START_HERE.txt",
+      "bytes": 643
+    },
+    {
+      "path": "design-system/BrandLogo.tsx",
+      "bytes": 482
+    },
+    {
+      "path": "design-system/i18n-ar-en.json",
+      "bytes": 1618
+    },
+    {
+      "path": "design-system/icon-map.ts",
+      "bytes": 667
+    },
+    {
+      "path": "design-system/spruvex-tokens.css",
+      "bytes": 1421
+    },
+    {
+      "path": "design-system/tailwind.preset.cjs",
+      "bytes": 662
+    },
+    {
+      "path": "design-system/tokens.json",
+      "bytes": 1670
+    },
+    {
+      "path": "docs/SpruVex_Brand_Guide_AR_EN.html",
+      "bytes": 21667
+    },
+    {
+      "path": "docs/SpruVex_Brand_Guide_AR_EN.pdf",
+      "bytes": 587135
+    },
+    {
+      "path": "docs/UI_AUDIT_AR_EN.md",
+      "bytes": 2306
+    },
+    {
+      "path": "prototype/dashboard.html",
+      "bytes": 12462
+    },
+    {
+      "path": "reference/current-ui/current-dashboard-cropped.jpeg",
+      "bytes": 350412
+    },
+    {
+      "path": "reference/current-ui/current-dashboard-dark.jpeg",
+      "bytes": 382899
+    },
+    {
+      "path": "reference/current-ui/current-dashboard-light.jpeg",
+      "bytes": 458989
+    }
+  ]
+}
