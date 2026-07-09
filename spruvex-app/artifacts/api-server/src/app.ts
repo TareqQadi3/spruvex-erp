@@ -21,6 +21,7 @@ import subscriptionsRouter from "./modules/subscriptions/routes/subscriptions.ro
 import platformRouter from "./modules/platform/routes/platform.routes";
 import supportRouter from "./modules/support/routes/support.routes";
 import publicRouter from "./modules/public/routes/public.routes";
+import aiRouter from "./modules/ai/routes/ai.routes";
 
 // Only auth + rbac are mounted so far. Every other module under modules/<name>
 // lands here as it's rebuilt against the new core/ + shared/ layer; the
@@ -92,6 +93,7 @@ app.use("/api/zatca", zatcaRouter);
 app.use("/api/sync", syncRouter);
 app.use("/api/subscriptions", subscriptionsRouter);
 app.use("/api/support", supportRouter);
+app.use("/api/ai", aiRouter);
 // Cross-tenant super-admin routes — guarded by requirePlatformAdmin (checks
 // usersTable.isPlatformAdmin directly), not enforceTenantIsolation. See
 // modules/platform/middleware/platformAdmin.middleware.ts.

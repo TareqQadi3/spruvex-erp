@@ -81,7 +81,13 @@ export function resolveEffectiveLimits(company: Company, activeAddons: CompanyAd
   const plan = PLAN_CATALOG[company.plan as PlanCode];
   const limits: PlanLimits = plan
     ? { ...plan }
-    : { maxUsers: 0, maxBranches: 0, maxProducts: 0, maxCustomers: 0, maxInvoicesPerMonth: 0, storageQuotaMb: 0, modules: [] };
+    : {
+        maxUsers: 0, maxBranches: 0, maxProducts: 0, maxCustomers: 0,
+        maxInvoicesPerMonth: 0, storageQuotaMb: 0, modules: [],
+        // Display fields (added to PlanLimits in Phase 6 for the public
+        // pricing endpoint) — meaningless for an unknown plan code.
+        nameAr: "", nameEn: "", taglineAr: "", taglineEn: "", priceMonthlySar: null,
+      };
 
   limits.maxUsers = company.maxUsers;
   limits.maxBranches = company.maxBranches;
