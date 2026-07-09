@@ -1,6 +1,6 @@
 # SpruVex ERP — Current Status
 
-> آخر تحديث: 2026-07-09 (بعد إتمام المرحلة 4)
+> آخر تحديث: 2026-07-09 (بعد إتمام المرحلة 5)
 
 ## نظرة عامة | Overview
 
@@ -29,6 +29,7 @@ Multi-tenant ERP + POS SaaS platform targeting the Saudi market (ZATCA complianc
 - **مكتمل بالمرحلة 2**: تعيين فني الصيانة + بوابة موافقة العميل، مرتجعات المبيعات/المشتريات، سجل حركات المخزون وتحويل المستودعات، دورة البيع بالتقسيط الكاملة، إدارة الحسابات وميزان المراجعة
 - **مكتمل بالمرحلة 3**: تسجيل شركة جديدة (signup wizard 3 خطوات) ينشئ tenant + branch + settings + اشتراك trial في معاملة واحدة، تعيين الموديولات حسب نوع النشاط
 - **مكتمل بالمرحلة 4**: نظام باقات وإضافات (plan/addon catalog كـ code constants)، `company_addons`، `users.isPlatformAdmin`، `planLimitsService` كمصدر وحيد لحالة الاشتراك الفعلية (trial/active/expired/suspended)، middleware لفرض الموديولات والحدود على مستوى الـ API، مسارات `/api/platform/*` لإدارة الشركات (تغيير باقة، إيقاف/تفعيل، تفعيل إضافات، تجديد اشتراك يدوي). لا توجد بوابة دفع بعد (Mada/Tabby/Tamara/Stripe مخطط لها لاحقاً، البنية جاهزة لها)
+- **مكتمل بالمرحلة 5**: نظام تذاكر دعم العملاء على مستوى المنصة (الشركة/tenant تفتح تذكرة مع فريق SpruVex) — جداول `support_tickets`, `support_ticket_messages`, `support_ticket_attachments` (بيانات وصفية فقط، بلا backend رفع ملفات)، `support_ticket_status_history`، وجدول `notifications` عام. حالات: open/pending/in_progress/resolved/closed، أولويات: low/medium/high/critical. مسارات المستأجر `/api/support/*` ومسارات الإدارة الملحقة بـ `/api/platform/support/*`. أساس WhatsApp/Chatbot في السكيما فقط (`channel` enum) بلا تكامل فعلي
 
 ## التشغيل المحلي | Local Development
 
@@ -43,4 +44,4 @@ cd spruvex-app
 
 - لا تضع أسراراً أو توكنات في أي ملف متتبَّع في git.
 - قاعدة البيانات حالياً Neon PostgreSQL سحابية (وليست محلية) — هي بيئة التطوير الرسمية حتى مرحلة النشر.
-- خارطة الطريق الكاملة (11 مرحلة) موثقة في محادثات التطوير — المراحل 1-4 مكتملة. المرحلة الحالية: **المرحلة 5 — نظام دعم العملاء (Customer Support / Tickets)**.
+- خارطة الطريق الكاملة (11 مرحلة) موثقة في محادثات التطوير — المراحل 1-5 مكتملة. بانتظار توجيه المرحلة 6.
