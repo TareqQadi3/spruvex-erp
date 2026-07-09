@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { requireAuth } from "../../../core/middleware/auth.middleware";
-import { buildSuccess } from "../../../shared/utils/responseEnvelope";
+import { AppError } from "../../../core/errors/AppError";
+import { buildPaginated, buildSuccess } from "../../../shared/utils/responseEnvelope";
 import { uuidParamSchema } from "../../../shared/validators/common.validators";
 import { requirePlatformAdmin } from "../middleware/platformAdmin.middleware";
 import {
@@ -11,6 +12,13 @@ import {
   upsertAddonSchema,
 } from "../validators/platform.validators";
 import * as platformService from "../services/platformService";
+import {
+  assignTicketSchema,
+  createAdminMessageSchema,
+  listAllTicketsQuerySchema,
+  updateStatusSchema,
+} from "../../support/validators/support.validators";
+import * as supportService from "../../support/services/supportService";
 
 const router: IRouter = Router();
 
@@ -78,6 +86,71 @@ router.put("/companies/:id/addons/:addonCode", async (req, res, next) => {
     const input = upsertAddonSchema.parse(req.body);
     const addon = await platformService.upsertAddon(companyId, addonCode, input);
     res.status(200).json(buildSuccess(addon));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/support/tickets", async (req, res, next) => {
+  try {
+    const filters = listAllTicketsQuerySchema.parse(req.query);
+    const result = await supportService.listAllTickets(filters);
+    res.status(200).json(buildPaginated(result.data, result.meta));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/support/tickets/:id", async (req, res, next) => {
+  try {
+    const ticketId = uuidParamSchema.parse(req.params.id);
+    const ticket = await supportService.getTicketForAdmin(ticketId);
+    res.status(200).json(buildSuccess(ticket));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/support/tickets/:id/messages", async (req, res, next) => {
+  try {
+    const ticketId = uuidParamSchema.parse(req.params.id);
+    const messages = await supportService.listMessagesForAdmin(ticketId);
+    res.status(200).json(buildSuccess(messages));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/support/tickets/:id/messages", async (req, res, next) => {
+  try {
+    if (!req.tenant) throw AppError.unauthorized();
+    const ticketId = uuidParamSchema.parse(req.params.id);
+    const input = createAdminMessageSchema.parse(req.body);
+    const message = await supportService.addAdminMessage(req.tenant.userId, ticketId, input);
+    res.status(201).json(buildSuccess(message));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/support/tickets/:id/status", async (req, res, next) => {
+  try {
+    if (!req.tenant) throw AppError.unauthorized();
+    const ticketId = uuidParamSchema.parse(req.params.id);
+    const input = updateStatusSchema.parse(req.body);
+    const ticket = await supportService.updateTicketStatus(req.tenant.userId, ticketId, input);
+    res.status(200).json(buildSuccess(ticket));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/support/tickets/:id/assign", async (req, res, next) => {
+  try {
+    const ticketId = uuidParamSchema.parse(req.params.id);
+    const { assignedToId } = assignTicketSchema.parse(req.body);
+    const ticket = await supportService.assignTicket(ticketId, assignedToId);
+    res.status(200).json(buildSuccess(ticket));
   } catch (err) {
     next(err);
   }

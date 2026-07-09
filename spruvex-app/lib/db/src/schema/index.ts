@@ -43,3 +43,5 @@ export * from "./ecommerceConnections";
 export * from "./branches";
 export * from "./companyAddons";
 export * from "./planCatalog";
+export * from "./supportTickets";
+export * from "./notifications";
