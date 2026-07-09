@@ -1,6 +1,6 @@
 # SpruVex ERP — Current Status
 
-> آخر تحديث: 2026-07-09 (بعد إتمام المرحلة 6)
+> آخر تحديث: 2026-07-10 (بعد إتمام المرحلة 7)
 
 ## نظرة عامة | Overview
 
@@ -23,7 +23,7 @@ Multi-tenant ERP + POS SaaS platform targeting the Saudi market (ZATCA complianc
 
 ## حالة الوحدات | Module Status
 
-- **Backend** (`spruvex-app/artifacts/api-server`): auth, rbac, pos, inventory, sync, zatca, subscriptions, platform, support, public (بنية modular) + مسارات legacy (products, repairs, reports, settings...)
+- **Backend** (`spruvex-app/artifacts/api-server`): auth, rbac, pos, inventory, sync, zatca, subscriptions, platform, support, public, ai (بنية modular) + مسارات legacy (products, repairs, reports, settings...)
 - **الموقع التسويقي** (`spruvex-site/artifacts/spruvex-site`): Vite + React SPA مستقل تماماً، 9 صفحات (رئيسية، ERP، POS، مطاعم، مبيعات وصيانة، باقات، مميزات، أسئلة شائعة، تواصل)، عربي RTL / إنجليزي LTR
 - **Frontend** (`spruvex-app/artifacts/pos-system`): POS, dashboard, inventory, repairs, accounting, reports, settings, signup wizard + i18n عربي/إنجليزي
 - **Database** (`spruvex-app/lib/db`): سكيما Drizzle تشمل multi-tenancy، ZATCA، subscriptions/company_addons، branches، product 2.0 (price lists, units/UOM, variants, e-commerce)، وأساس موديول المطاعم (بلا واجهة بعد)
@@ -39,6 +39,8 @@ Multi-tenant ERP + POS SaaS platform targeting the Saudi market (ZATCA complianc
   - **لوحة إدارة أساسية** (`AdminPanel.tsx`, `?admin`): لإدارة نصوص الصفحة الرئيسية والأسئلة الشائعة والعروض (لا تزال تخزّن في localStorage — أساس فقط، ربطها بنظام Admin حقيقي مؤجل لمرحلة لاحقة كما طُلب). الأسعار لم تعد قابلة للتعديل من هنا (تُدار من الباكند فقط).
   - **SEO**: عناوين/أوصاف ديناميكية لكل صفحة، `sitemap.xml` و`robots.txt` حقيقيان، JSON-LD Organization في `index.html`.
   - بقيت مشكلة حقيقية اكتُشفت أثناء التحقق المستقل (غير مبلّغ عنها من الوكيل المنفّذ) وتم إصلاحها: تسميات الإضافات (add-ons) في صفحة الباقات كانت تعرض رموزاً خام غير مترجمة لعدم تطابق قائمة الأكواد المفترَضة مع `ADDON_CATALOG` الحقيقي في الباكند.
+  - **الهوية البصرية الرسمية**: شعار SV بالتدرج (cyan→blue→purple) في الهيدر والفوتر والـ favicon وأيقونات التطبيق وog:image — نفس حزمة الأصول المستخدمة في `pos-system`.
+- **مكتمل بالمرحلة 7**: أساس ميزات الذكاء الاصطناعي — جدولا `ai_settings` (مزوّد/موديل/مفتاح BYOK اختياري/تعطيل لكل شركة) و`ai_usage_logs` (سجل استهلاك لكل استدعاء: كود الميزة، المزوّد، التوكنز، الحالة — أساس الفوترة لاحقاً). طبقة مزودين قابلة للتبديل (`modules/ai/providers`): "anthropic" (جاهز، المفتاح من إعدادات الشركة أو env المنصة) و"mock" (بلا مفتاح/شبكة — للتطوير وإثبات عدم الارتباط بمزود واحد). **مساعد المنتجات** `/api/ai/product-assistant` بخمسة إجراءات (وصف، تحسين اسم ×3، اقتراح تصنيف، 8-12 كلمة بحث، وصف متجر إلكتروني SEO) بالعربية أو الإنجليزية. **مساعد الأعمال (أساس)**: `/api/ai/business-assistant/summary` يجمع مبيعات آخر 30 يوم مقابل الـ 30 السابقة من جدول المبيعات الفعلي ويطلب ملخصاً إدارياً — تنبيهات المخزون وأفضل المنتجات مؤجلة عمداً. البوابة: كل المسارات خلف `requireModule("ai_features")` — الإضافة كانت موجودة في كتالوج المرحلة 4، فلم تحتج آلية جديدة. لا واجهة UI بعد (الأساس backend فقط كما طُلب)
 
 ## التشغيل المحلي | Local Development
 
@@ -55,4 +57,4 @@ cd spruvex-app
 
 - لا تضع أسراراً أو توكنات في أي ملف متتبَّع في git.
 - قاعدة البيانات حالياً Neon PostgreSQL سحابية (وليست محلية) — هي بيئة التطوير الرسمية حتى مرحلة النشر.
-- خارطة الطريق الكاملة (11 مرحلة) موثقة في محادثات التطوير — المراحل 1-6 مكتملة. بانتظار توجيه المرحلة 7.
+- خارطة الطريق الكاملة (11 مرحلة) موثقة في محادثات التطوير — المراحل 1-7 مكتملة. بانتظار توجيه المرحلة 8 (التكاملات: سلة/زد/Shopify + Tabby/Tamara/Mada).
