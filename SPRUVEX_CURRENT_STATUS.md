@@ -25,7 +25,8 @@ Multi-tenant ERP + POS SaaS platform targeting the Saudi market (ZATCA complianc
 
 - **Backend** (`spruvex-app/artifacts/api-server`): auth, rbac, pos, inventory, sync, zatca (بنية modular) + مسارات legacy (products, repairs, reports, settings...)
 - **Frontend** (`spruvex-app/artifacts/pos-system`): POS, dashboard, inventory, repairs, accounting, reports, settings + i18n عربي/إنجليزي
-- **Database** (`spruvex-app/lib/db`): سكيما Drizzle كاملة (33 جدولاً) تشمل multi-tenancy و ZATCA و subscriptions
+- **Database** (`spruvex-app/lib/db`): سكيما Drizzle (60+ جدولاً) تشمل multi-tenancy، ZATCA، subscriptions، وأساس موديول المطاعم (بلا واجهة بعد)
+- **مكتمل بالمرحلة 2**: تعيين فني الصيانة + بوابة موافقة العميل، مرتجعات المبيعات/المشتريات، سجل حركات المخزون وتحويل المستودعات، دورة البيع بالتقسيط الكاملة، إدارة الحسابات وميزان المراجعة
 
 ## التشغيل المحلي | Local Development
 
@@ -40,4 +41,4 @@ cd spruvex-app
 
 - لا تضع أسراراً أو توكنات في أي ملف متتبَّع في git.
 - قاعدة البيانات حالياً Neon PostgreSQL سحابية (وليست محلية) — هي بيئة التطوير الرسمية حتى مرحلة النشر.
-- خارطة الطريق الكاملة (11 مرحلة) موثقة في محادثات التطوير — المرحلة الحالية: **المرحلة 2 — إكمال ميزات ERP/POS**.
+- خارطة الطريق الكاملة (11 مرحلة) موثقة في محادثات التطوير — المرحلة الحالية: **المرحلة 3 — ربط الموقع بالتطبيق (SaaS onboarding)**.
