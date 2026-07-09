@@ -606,7 +606,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 footer { background: var(--ink); color: rgba(255,255,255,.7); padding: 64px 0 28px; margin-top: 40px; }
 .footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 50px; }
-.footer-brand img { height: 34px; margin-bottom: 16px; filter: brightness(0) invert(1); opacity: .95; border-radius: 6px; object-fit: contain; }
+.footer-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.footer-logo img { height: 32px; width: 32px; object-fit: contain; }
+.footer-logo span { font-weight: 700; font-size: 19px; letter-spacing: -.01em; color: #fff; }
 .footer-brand p { font-size: 14px; line-height: 1.8; max-width: 280px; color: rgba(255,255,255,.5); }
 .footer-col h5 { font-size: 13.5px; font-weight: 700; color: #fff; margin-bottom: 18px; letter-spacing: .02em; }
 .footer-col ul { display: flex; flex-direction: column; gap: 11px; }

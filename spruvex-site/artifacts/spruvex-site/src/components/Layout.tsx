@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'wouter';
-import fullLogo from '@assets/IMG_9856_1782692974743.jpeg';
 import { useLang } from '../context/LangContext';
 import { getConfig } from '../config';
 import { signupUrl } from '../lib/api';
@@ -45,7 +44,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <header className="navbar">
         <div className="container nav-inner">
           <Link href="/" className="nav-logo">
-            <img src={fullLogo} alt="SpruVex Logo" />
+            <img src="/brand/logo/spruvex-symbol.svg" alt="SpruVex Logo" />
             <span className="nav-wordmark">{t('brand')}</span>
           </Link>
           <nav className="nav-links">
@@ -88,7 +87,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="container">
           <div className="footer-grid">
             <div className="footer-brand">
-              <img src={fullLogo} alt="SpruVex" />
+              <div className="footer-logo">
+                <img src="/brand/logo/spruvex-symbol.svg" alt="SpruVex" />
+                <span>{t('brand')}</span>
+              </div>
               <p>{t('footer_desc')}</p>
             </div>
             <div className="footer-col">
