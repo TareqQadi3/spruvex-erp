@@ -1,0 +1,17 @@
+﻿node_modules/
+dist/
+build/
+.env
+.env.*
+*.log
+
+.DS_Store
+
+coverage/
+
+.vscode/
+
+*.local
+
+database.sqlite
+*.db
