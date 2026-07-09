@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Plus, Trash2, Warehouse } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, Plus, Trash2, Warehouse } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
 
@@ -58,10 +58,18 @@ export default function WarehousesSettingsPage() {
           </Link>
           <h1 className="text-2xl font-bold tracking-tight">{t("warehouses.title")}</h1>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="me-2 h-4 w-4" />
-          {t("warehouses.add")}
-        </Button>
+        <div className="flex gap-2">
+          <Link href="/inventory/movements">
+            <Button variant="outline">
+              <ArrowLeftRight className="me-2 h-4 w-4" />
+              {t("warehouses.transfer_stock")}
+            </Button>
+          </Link>
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="me-2 h-4 w-4" />
+            {t("warehouses.add")}
+          </Button>
+        </div>
       </div>
 
       <Card>

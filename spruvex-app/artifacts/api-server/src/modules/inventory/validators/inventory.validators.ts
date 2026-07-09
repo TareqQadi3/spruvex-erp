@@ -33,3 +33,12 @@ export const reserveStockSchema = z.object({
 });
 
 export const commitStockDeductionSchema = reserveStockSchema;
+
+export const listStockMovementsQuerySchema = z.object({
+  productId: z.string().uuid().optional(),
+  warehouseId: z.string().uuid().optional(),
+  dateFrom: z.coerce.date().optional(),
+  dateTo: z.coerce.date().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+});

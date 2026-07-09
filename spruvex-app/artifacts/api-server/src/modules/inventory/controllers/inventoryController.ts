@@ -1,11 +1,12 @@
 import type { NextFunction, Request, Response } from "express";
 import { AppError } from "../../../core/errors/AppError";
-import { buildSuccess } from "../../../shared/utils/responseEnvelope";
+import { buildPaginated, buildSuccess } from "../../../shared/utils/responseEnvelope";
 import { uuidParamSchema } from "../../../shared/validators/common.validators";
 import {
   adjustStockSchema,
   commitStockDeductionSchema,
   getStockQuerySchema,
+  listStockMovementsQuerySchema,
   reserveStockSchema,
   transferStockSchema,
 } from "../validators/inventory.validators";
@@ -18,6 +19,17 @@ export async function getStockHandler(req: Request, res: Response, next: NextFun
     const { warehouseId } = getStockQuerySchema.parse(req.query);
     const stock = await inventoryService.getStock(req.tenant.companyId, productId, warehouseId);
     res.status(200).json(buildSuccess(stock));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listStockMovementsHandler(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.tenant) throw AppError.unauthorized();
+    const filters = listStockMovementsQuerySchema.parse(req.query);
+    const result = await inventoryService.listStockMovements(req.tenant.companyId, filters);
+    res.status(200).json(buildPaginated(result.data, result.meta));
   } catch (err) {
     next(err);
   }

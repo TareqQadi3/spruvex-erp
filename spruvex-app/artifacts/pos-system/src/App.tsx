@@ -16,6 +16,7 @@ import NewRepairPage from "@/pages/repairs/new";
 import RepairDetailPage from "@/pages/repairs/detail";
 import InventoryPage from "@/pages/inventory";
 import NewProductPage from "@/pages/inventory/new";
+import StockMovementsPage from "@/pages/inventory/movements";
 import CustomersPage from "@/pages/customers";
 import CustomerDetailPage from "@/pages/customers/detail";
 import AccountingPage from "@/pages/accounting";
@@ -79,6 +80,7 @@ function AppRouter() {
         <Route path="/repairs/:id" component={() => <GuardedPage component={RepairDetailPage} basePath="/repairs" />} />
         <Route path="/repairs" component={() => <GuardedPage component={RepairsPage} basePath="/repairs" />} />
         <Route path="/inventory/new" component={() => <GuardedPage component={NewProductPage} basePath="/inventory" />} />
+        <Route path="/inventory/movements" component={() => <GuardedPage component={StockMovementsPage} basePath="/inventory" />} />
         <Route path="/inventory" component={() => <GuardedPage component={InventoryPage} basePath="/inventory" />} />
         <Route path="/customers/:id" component={() => <GuardedPage component={CustomerDetailPage} basePath="/customers" />} />
         <Route path="/customers" component={() => <GuardedPage component={CustomersPage} basePath="/customers" />} />

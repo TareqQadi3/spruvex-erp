@@ -3,7 +3,7 @@ import { AppError } from "../../../core/errors/AppError";
 import { recordAuditEvent } from "../../../core/logging/auditLogger";
 import type { TenantContext } from "../../../shared/types/tenantContext";
 import { StockRepository } from "../repositories/stockRepository";
-import { StockMovementRepository } from "../repositories/stockMovementRepository";
+import { StockMovementRepository, type ListMovementsFilters } from "../repositories/stockMovementRepository";
 import type {
   AdjustStockInput,
   AggregatedStock,
@@ -63,6 +63,16 @@ export async function getStock(companyId: string, productId: string, warehouseId
     totalReserved,
     totalAvailable: totalQuantity - totalReserved,
     byWarehouse: filtered,
+  };
+}
+
+// A2. listStockMovements — paginated audit-trail read, joined to
+// product/warehouse/user names for display. Read-only, no tenant mutation.
+export async function listStockMovements(companyId: string, filters: ListMovementsFilters) {
+  const { rows, total } = await movementRepo.listWithDetails(companyId, filters);
+  return {
+    data: rows,
+    meta: { page: filters.page, pageSize: filters.pageSize, total },
   };
 }
 

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, Edit } from "lucide-react";
+import { Plus, Search, Trash2, Edit, History } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -37,9 +37,14 @@ export default function InventoryPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight">{t("inventory.title")}</h1>
-        <Link href="/inventory/new">
-          <Button><Plus className="me-2 h-4 w-4" /> {t("inventory.add_product")}</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/inventory/movements">
+            <Button variant="outline"><History className="me-2 h-4 w-4" /> {t("inventory.view_movements")}</Button>
+          </Link>
+          <Link href="/inventory/new">
+            <Button><Plus className="me-2 h-4 w-4" /> {t("inventory.add_product")}</Button>
+          </Link>
+        </div>
       </div>
 
       <Card>

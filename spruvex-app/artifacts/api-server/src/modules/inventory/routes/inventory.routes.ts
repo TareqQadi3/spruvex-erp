@@ -7,6 +7,7 @@ import {
   adjustStockHandler,
   commitStockDeductionHandler,
   getStockHandler,
+  listStockMovementsHandler,
   reserveStockHandler,
   transferStockHandler,
 } from "../controllers/inventoryController";
@@ -15,6 +16,8 @@ const router: IRouter = Router();
 
 router.use(requireAuth, enforceTenantIsolation);
 
+// Must precede /stock/:productId — otherwise "movements" would be parsed as a productId.
+router.get("/stock/movements", listStockMovementsHandler);
 router.get("/stock/:productId", getStockHandler);
 router.post("/stock/adjust", requirePermission(PERMISSIONS.MANAGE_INVENTORY), adjustStockHandler);
 router.post("/stock/transfer", requirePermission(PERMISSIONS.MANAGE_INVENTORY), transferStockHandler);
