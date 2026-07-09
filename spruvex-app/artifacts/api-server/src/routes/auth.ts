@@ -6,6 +6,16 @@ import { eq, and } from "drizzle-orm";
 import { JWT_SECRET } from "../lib/jwt-secret";
 import { requireAuth, requireRole, type AuthedRequest } from "../lib/auth-middleware";
 import { ensureSeeded as ensureChartOfAccountsSeeded } from "../modules/accounting";
+// requireAuth from lib/auth-middleware only populates req.user, not
+// req.tenant — requireWithinLimit needs req.tenant (see
+// core/middleware/subscription.middleware.ts). Both legacy and modular
+// tokens carry `sub`/`companyId`/`role` (legacy signs `sub` as an alias of
+// `id` specifically so modular auth.middleware can decode it), so chaining
+// the modular requireAuth alongside the legacy one just re-derives the same
+// identity into req.tenant without changing legacy behavior.
+import { requireAuth as requireAuthModular } from "../core/middleware/auth.middleware";
+import { requireWithinLimit } from "../core/middleware/subscription.middleware";
+import { countCurrentUsersForCompany } from "../modules/subscriptions/services/planLimitsService";
 
 const router = Router();
 const JWT_EXPIRES = "7d";
@@ -141,7 +151,13 @@ router.get("/users", requireAuth, requireRole("admin"), async (req: AuthedReques
   res.json(users);
 });
 
-router.post("/users", requireAuth, requireRole("admin"), async (req: AuthedRequest, res) => {
+router.post(
+  "/users",
+  requireAuth,
+  requireRole("admin"),
+  requireAuthModular,
+  requireWithinLimit("maxUsers", countCurrentUsersForCompany),
+  async (req: AuthedRequest, res) => {
   const { username, password, role, permissions } = req.body;
   if (!username || !password || !role) {
     res.status(400).json({ error: "username, password and role are required" });
@@ -166,7 +182,8 @@ router.post("/users", requireAuth, requireRole("admin"), async (req: AuthedReque
     permissions: usersTable.permissions, isActive: usersTable.isActive, createdAt: usersTable.createdAt,
   });
   res.status(201).json(user);
-});
+},
+);
 
 router.put("/users/:id", requireAuth, requireRole("admin"), async (req: AuthedRequest, res) => {
   const id = req.params.id as string;

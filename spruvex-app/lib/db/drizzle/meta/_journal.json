@@ -50,6 +50,13 @@
       "when": 1783601446428,
       "tag": "0006_repair_subscriptions_table",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1783604108357,
+      "tag": "0007_stale_mongu",
+      "breakpoints": true
     }
   ]
 }

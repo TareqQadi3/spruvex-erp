@@ -8,8 +8,16 @@ import { z } from "zod/v4";
 export const subscriptionsTable = pgTable("subscriptions", {
   id: uuid("id").primaryKey().defaultRandom(),
   companyId: uuid("company_id").notNull(),
-  plan: text("plan").notNull().default("trial"), // trial | basic | pro | custom
-  status: text("status").notNull().default("trialing"), // trialing | active | past_due | canceled
+  // Same SaaS package vocabulary as companies.plan: erp_business | restaurant
+  // | sales_repair | enterprise.
+  plan: text("plan").notNull().default("erp_business"),
+  // Billing lifecycle: trial | active | expired | suspended | cancelled.
+  // Computed/normalized lazily by planLimitsService.resolveSubscriptionStatus
+  // (no cron job yet — trial/period expiry is detected on read by comparing
+  // trialEndsAt/currentPeriodEnd to now(), pending real payment-gateway
+  // webhooks). Legacy rows may still say "trialing"/"canceled" from before
+  // this vocabulary was finalized; the resolver treats those as synonyms.
+  status: text("status").notNull().default("trial"),
   billingCycle: text("billing_cycle").notNull().default("monthly"), // monthly | yearly
   price: numeric("price", { precision: 10, scale: 2 }).notNull().default("0"),
   currency: text("currency").notNull().default("SAR"),

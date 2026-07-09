@@ -17,6 +17,8 @@ import salesRouter from "./modules/pos/routes/sales.routes";
 import inventoryRouter from "./modules/inventory/routes/inventory.routes";
 import zatcaRouter from "./modules/zatca/routes/zatca.routes";
 import syncRouter from "./modules/sync/routes/sync.routes";
+import subscriptionsRouter from "./modules/subscriptions/routes/subscriptions.routes";
+import platformRouter from "./modules/platform/routes/platform.routes";
 
 // Only auth + rbac are mounted so far. Every other module under modules/<name>
 // lands here as it's rebuilt against the new core/ + shared/ layer; the
@@ -79,6 +81,11 @@ app.use("/api/sales", salesRouter);
 app.use("/api/inventory", inventoryRouter);
 app.use("/api/zatca", zatcaRouter);
 app.use("/api/sync", syncRouter);
+app.use("/api/subscriptions", subscriptionsRouter);
+// Cross-tenant super-admin routes — guarded by requirePlatformAdmin (checks
+// usersTable.isPlatformAdmin directly), not enforceTenantIsolation. See
+// modules/platform/middleware/platformAdmin.middleware.ts.
+app.use("/api/platform", platformRouter);
 
 // Remaining business module routers are mounted here as each is rebuilt, e.g.:
 //   app.use("/api/branches", requireAuth, enforceTenantIsolation, branchesRouter);

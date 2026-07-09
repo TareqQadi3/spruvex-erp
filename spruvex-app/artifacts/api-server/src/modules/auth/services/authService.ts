@@ -14,7 +14,10 @@ import type { AuthResult, LoginInput, RegisterCompanyInput } from "../types/auth
 const TRIAL_PERIOD_DAYS = 14;
 const DEFAULT_BRANCH_NAME = "الفرع الرئيسي";
 
-const BCRYPT_ROUNDS = 12;
+// Exported so scripts/seedPlatformAdmin.ts (the only other place that ever
+// creates a password hash outside this service) reuses the same cost factor
+// instead of redefining it.
+export const BCRYPT_ROUNDS = 12;
 const ADMIN_ROLE_NAME = "admin";
 
 const repo = new UserAuthRepository();

@@ -41,3 +41,5 @@ export * from "./productImages";
 export * from "./productEcommerce";
 export * from "./ecommerceConnections";
 export * from "./branches";
+export * from "./companyAddons";
+export * from "./planCatalog";
