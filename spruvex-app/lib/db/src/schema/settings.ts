@@ -19,6 +19,9 @@ export const settingsTable = pgTable("settings", {
   showBarcode: boolean("show_barcode").notNull().default(false),
   invoiceType: text("invoice_type").notNull().default("a4"),
   repairsModuleEnabled: boolean("repairs_module_enabled").notNull().default(true),
+  // The "☑ تفعيل المتجر الإلكتروني" toggle — off by default so a plain-POS
+  // merchant never sees e-commerce/SEO/shipping fields anywhere in the UI.
+  ecommerceModuleEnabled: boolean("ecommerce_module_enabled").notNull().default(false),
   // Accounting / fiscal year (note #12)
   openingBalance: numeric("opening_balance", { precision: 12, scale: 2 }).notNull().default("0"),
   fiscalYearStart: text("fiscal_year_start"),

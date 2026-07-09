@@ -35,3 +35,8 @@ export * from "./restaurantTables";
 export * from "./menu";
 export * from "./restaurantOrders";
 export * from "./restaurantShifts";
+export * from "./priceLists";
+export * from "./units";
+export * from "./productImages";
+export * from "./productEcommerce";
+export * from "./ecommerceConnections";

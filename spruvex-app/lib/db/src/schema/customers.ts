@@ -11,6 +11,10 @@ export const customersTable = pgTable("customers", {
   address: text("address"),
   outstandingBalance: numeric("outstanding_balance", { precision: 10, scale: 2 }).notNull().default("0"),
   totalPurchases: integer("total_purchases").notNull().default(0),
+  // Default price tier for this customer (e.g. a "distributor" or "VIP" list
+  // from price_lists) — POS can pre-select it at checkout, still overridable
+  // per sale. Null = use products.sellingPrice as usual.
+  priceListId: uuid("price_list_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
