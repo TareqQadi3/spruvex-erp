@@ -133,6 +133,13 @@ export default function LoginPage() {
             <span>accountant / accountant123</span>
           </div>
         </div>
+
+        <p className="text-center text-sm text-muted-foreground">
+          {t("auth.no_account")}{" "}
+          <a href="/signup" className="text-primary hover:underline font-medium">
+            {t("auth.sign_up_link")}
+          </a>
+        </p>
       </div>
     </div>
   );

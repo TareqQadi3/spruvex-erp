@@ -5,9 +5,14 @@ import { AppError } from "../../../core/errors/AppError";
 import { recordAuditEvent } from "../../../core/logging/auditLogger";
 import type { TenantContext } from "../../../shared/types/tenantContext";
 import { permissionResolver } from "../../rbac/services/permissionResolverService";
+import { ensureSeeded as ensureChartOfAccountsSeeded } from "../../accounting";
 import { UserAuthRepository } from "../repositories/userAuthRepository";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "./tokenService";
+import { resolveBusinessTypeDefaults } from "./businessTypeDefaults";
 import type { AuthResult, LoginInput, RegisterCompanyInput } from "../types/auth.types";
+
+const TRIAL_PERIOD_DAYS = 14;
+const DEFAULT_BRANCH_NAME = "الفرع الرئيسي";
 
 const BCRYPT_ROUNDS = 12;
 const ADMIN_ROLE_NAME = "admin";
@@ -53,9 +58,23 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Auth
   if (existing) throw AppError.conflict("Username is already taken");
 
   const passwordHash = await bcrypt.hash(input.adminPassword, BCRYPT_ROUNDS);
+  const moduleDefaults = resolveBusinessTypeDefaults(input.businessType);
+  const now = new Date();
+  const trialEndsAt = new Date(now.getTime() + TRIAL_PERIOD_DAYS * 24 * 60 * 60 * 1000);
 
   return withTransaction(async (tx) => {
     const company = await repo.createCompany(input.companyName, tx);
+    await repo.setCompanyOnboardingFields(
+      company.id,
+      {
+        plan: input.plan,
+        businessType: input.businessType,
+        enabledModules: JSON.stringify(moduleDefaults.enabledModules),
+        trialEndsAt,
+      },
+      tx,
+    );
+
     const user = await repo.createUser(
       {
         companyId: company.id,
@@ -71,9 +90,45 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Auth
     if (!adminRole) throw AppError.internal("Default 'admin' role is not seeded");
     await repo.assignUserRole({ companyId: company.id, userId: user.id, roleId: adminRole.id }, tx);
 
+    const branch = await repo.createBranch(
+      { companyId: company.id, name: DEFAULT_BRANCH_NAME, isDefault: true, isActive: true },
+      tx,
+    );
+
+    // Same defaults as the legacy route's seedOrgDefaults() (settings, payment
+    // methods, chart of accounts) plus the module-gating flags this business
+    // type gets — see businessTypeDefaults.ts.
+    await repo.createSettings(
+      {
+        companyId: company.id,
+        shopName: input.companyName,
+        currency: "SAR",
+        repairsModuleEnabled: moduleDefaults.repairsModuleEnabled,
+        ecommerceModuleEnabled: moduleDefaults.ecommerceModuleEnabled,
+      },
+      tx,
+    );
+    await repo.createDefaultPaymentMethods(company.id, tx);
+    await ensureChartOfAccountsSeeded(tx, company.id);
+
+    await repo.createSubscription(
+      {
+        companyId: company.id,
+        plan: input.plan,
+        status: "trialing",
+        billingCycle: "monthly",
+        price: "0",
+        currency: "SAR",
+        trialEndsAt,
+        currentPeriodStart: now,
+      },
+      tx,
+    );
+
     const tenant = await buildTenantContext(company.id, user.id, tx);
     recordAuditEvent(tenant, { action: "register_company", entityType: "company", entityId: company.id });
-    return await toAuthResult(user, tenant, tx);
+    const result = await toAuthResult(user, tenant, tx);
+    return { ...result, branchId: branch.id, enabledModules: moduleDefaults.enabledModules };
   });
 }
 

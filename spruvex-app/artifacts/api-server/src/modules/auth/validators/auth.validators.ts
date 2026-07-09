@@ -5,6 +5,8 @@ export const registerCompanySchema = z.object({
   adminUsername: z.string().trim().min(3).max(50),
   adminEmail: z.string().trim().email().optional(),
   adminPassword: z.string().min(8).max(200),
+  businessType: z.enum(["retail", "electronics", "repair", "restaurant", "ecommerce"]),
+  plan: z.enum(["erp_business", "restaurant", "sales_repair", "enterprise"]),
 });
 
 export const loginSchema = z.object({

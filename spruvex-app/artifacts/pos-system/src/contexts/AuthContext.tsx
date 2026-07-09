@@ -12,6 +12,11 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
+  // Used by the signup wizard: register-company already returns tokens (the
+  // modular auth response shape, not the legacy { token, user } one login()
+  // consumes), so this stores them the same way login() does without a
+  // second network round-trip.
+  setSession: (token: string, user: AuthUser) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -78,8 +83,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const setSession = useCallback((token: string, sessionUser: AuthUser) => {
+    localStorage.setItem(TOKEN_KEY, token);
+    setUser(sessionUser);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, setSession }}>
       {children}
     </AuthContext.Provider>
   );

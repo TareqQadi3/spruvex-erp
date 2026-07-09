@@ -40,3 +40,4 @@ export * from "./units";
 export * from "./productImages";
 export * from "./productEcommerce";
 export * from "./ecommerceConnections";
+export * from "./branches";

@@ -8,6 +8,7 @@ import { AuthProvider, useAuth, canAccess } from "@/contexts/AuthContext";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout/app-layout";
 import LoginPage from "@/pages/login";
+import SignupPage from "@/pages/signup";
 
 import Dashboard from "@/pages/dashboard";
 import PosPage from "@/pages/pos";
@@ -66,6 +67,11 @@ function AppRouter() {
   if (location === "/login") {
     if (user) return <Redirect to="/" />;
     return <LoginPage />;
+  }
+
+  if (location === "/signup") {
+    if (user) return <Redirect to="/" />;
+    return <SignupPage />;
   }
 
   if (!user) return <Redirect to="/login" />;

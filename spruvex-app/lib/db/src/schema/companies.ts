@@ -6,8 +6,14 @@ export const companiesTable = pgTable("companies", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   // Licensing / subscription — controls trial period, seat/branch limits,
-  // and which optional modules a customer has paid for.
-  plan: text("plan").notNull().default("trial"), // trial | basic | pro | custom
+  // and which optional modules a customer has paid for. Values are this
+  // project's SaaS package codes: erp_business | restaurant | sales_repair |
+  // enterprise (see PROJECT_VISION_UPDATED.md's commercial packaging model).
+  plan: text("plan").notNull().default("erp_business"),
+  // The tenant's declared line of business at signup (retail | electronics |
+  // repair | restaurant | ecommerce) — drives the default enabledModules set;
+  // kept even after signup for analytics/future plan-recommendation use.
+  businessType: text("business_type"),
   status: text("status").notNull().default("active"), // active | suspended
   trialEndsAt: timestamp("trial_ends_at"),
   subscriptionEndsAt: timestamp("subscription_ends_at"),
