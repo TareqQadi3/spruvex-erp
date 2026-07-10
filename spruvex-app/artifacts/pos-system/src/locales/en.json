@@ -553,7 +553,9 @@
     "available_to_return": "{{count}} available to return",
     "refund_method": "Refund Method",
     "refund_cash": "Cash",
-    "refund_store_credit": "Store Credit"
+    "refund_store_credit": "Store Credit",
+    "print_invoice": "Print Invoice",
+    "credit_note_skipped": "Credit note not issued (the original sale has no invoice yet)"
   },
   "purchases": {
     "title": "Purchases",
@@ -571,7 +573,8 @@
     "available_to_return": "{{count}} available to return",
     "refund_method": "Refund Method",
     "refund_cash": "Cash",
-    "refund_credit_note": "Credit Note"
+    "refund_credit_note": "Credit Note",
+    "print_invoice": "Print Invoice"
   },
   "vouchers": {
     "title": "Vouchers",

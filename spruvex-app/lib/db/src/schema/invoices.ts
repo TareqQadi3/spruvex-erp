@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, numeric } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, numeric, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -15,6 +15,10 @@ export const invoicesTable = pgTable("invoices", {
   id: uuid("id").primaryKey().defaultRandom(),
   companyId: uuid("company_id").notNull(),
   saleId: uuid("sale_id"),
+  // Set only for invoiceType "credit_note" issued against a sale_returns row
+  // (see modules/zatca's createCreditNoteFromReturn) — line items for such an
+  // invoice come from sale_return_items, not sale_items.
+  saleReturnId: uuid("sale_return_id"),
   relatedInvoiceId: uuid("related_invoice_id"),
   invoiceNumber: text("invoice_number").notNull(),
   invoiceType: text("invoice_type").notNull().default("simplified"),
@@ -32,7 +36,10 @@ export const invoicesTable = pgTable("invoices", {
   buyerVatNumber: text("buyer_vat_number"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  // A sale_return can be credit-noted at most once.
+  uniqueIndex("invoices_sale_return_idx").on(table.saleReturnId),
+]);
 
 export const insertInvoiceSchema = createInsertSchema(invoicesTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;

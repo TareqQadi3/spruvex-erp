@@ -12,10 +12,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Undo2 } from "lucide-react";
+import { Undo2, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
+import { openServerPrint } from "@/utils/openServerPrint";
 
 interface Purchase {
   id: string;
@@ -41,6 +42,21 @@ export default function PurchasesPage() {
 
   const productName = (productId: string) =>
     products?.find(p => String(p.id) === String(productId))?.name ?? productId;
+
+  // Purchase invoice documents are on-demand too — created (or idempotently
+  // reused) only when printed, same pattern as sales invoices.
+  const [printingPurchaseId, setPrintingPurchaseId] = useState<string | null>(null);
+  const handlePrintPurchase = async (purchase: Purchase) => {
+    setPrintingPurchaseId(purchase.id);
+    try {
+      const doc = await api<{ id: string }>(`/purchase-invoices/from-purchase/${purchase.id}`, { method: "POST" });
+      await openServerPrint(`/invoicing/print/purchases/${doc.id}?printType=a4`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("common.error"));
+    } finally {
+      setPrintingPurchaseId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -91,6 +107,15 @@ export default function PurchasesPage() {
                       </TableCell>
                       <TableCell className="text-end font-medium">{Number(purchase.totalCost).toFixed(2)}</TableCell>
                       <TableCell className="text-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={printingPurchaseId === purchase.id}
+                          onClick={() => handlePrintPurchase(purchase)}
+                        >
+                          <Printer className="me-2 h-3.5 w-3.5" />
+                          {t("purchases.print_invoice")}
+                        </Button>
                         <Button variant="ghost" size="sm" disabled={available <= 0} onClick={() => setReturnPurchase(purchase)}>
                           <Undo2 className="me-2 h-3.5 w-3.5" />
                           {t("purchases.return")}
@@ -132,14 +157,23 @@ function PurchaseReturnDialog({
 
   const returnMutation = useMutation({
     mutationFn: () =>
-      api(`/purchases/${purchase.id}/returns`, {
+      api<{ id: string }>(`/purchases/${purchase.id}/returns`, {
         method: "POST",
         body: JSON.stringify({ quantity: Number(quantity), reason: reason || undefined, refundMethod }),
       }),
-    onSuccess: () => {
+    onSuccess: async (ret) => {
       queryClient.invalidateQueries({ queryKey: ["purchases"] });
       toast.success(t("purchases.return_success"));
       onClose();
+      // Best-effort: issue and print the purchase-return debit note. Unlike
+      // sales credit notes this never fails on "no prior document" (purchase
+      // documents are plain records, not chained to a required original).
+      try {
+        const doc = await api<{ id: string }>(`/purchase-invoices/from-return/${ret.id}`, { method: "POST" });
+        await openServerPrint(`/invoicing/print/purchases/${doc.id}?printType=a4`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : t("common.error"));
+      }
     },
     onError: (err: Error) => toast.error(err.message),
   });

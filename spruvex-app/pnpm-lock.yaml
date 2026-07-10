@@ -202,6 +202,9 @@ importers:
       pino-http:
         specifier: ^10.5.0
         version: 10.5.0
+      qrcode:
+        specifier: ^1.5.4
+        version: 1.5.4
       zod:
         specifier: 'catalog:'
         version: 3.25.76
@@ -224,6 +227,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.6.2
+      '@types/qrcode':
+        specifier: ^1.5.6
+        version: 1.5.6
       esbuild:
         specifier: 0.27.3
         version: 0.27.3

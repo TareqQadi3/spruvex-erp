@@ -1,10 +1,13 @@
-import { and, count, desc, eq, lt } from "drizzle-orm";
+import { and, count, desc, eq, lt, sql } from "drizzle-orm";
 import {
   companiesTable,
   invoiceXmlTable,
   invoicesTable,
+  productsTable,
   qrCodesTable,
   saleItemsTable,
+  saleReturnItemsTable,
+  saleReturnsTable,
   salesTable,
   settingsTable,
   signaturesTable,
@@ -75,6 +78,46 @@ export class InvoiceRepository {
       .where(withTenantScope(invoicesTable.companyId, companyId, eq(invoicesTable.saleId, saleId)))
       .limit(1);
     return invoice ?? null;
+  }
+
+  async findBySaleReturnId(companyId: string, saleReturnId: string, client: DbOrTx = db) {
+    const [invoice] = await client
+      .select()
+      .from(invoicesTable)
+      .where(withTenantScope(invoicesTable.companyId, companyId, eq(invoicesTable.saleReturnId, saleReturnId)))
+      .limit(1);
+    return invoice ?? null;
+  }
+
+  async findSaleReturnById(companyId: string, saleReturnId: string, client: DbOrTx = db) {
+    const [saleReturn] = await client
+      .select()
+      .from(saleReturnsTable)
+      .where(compositeKeyMatch(saleReturnsTable.companyId, saleReturnsTable.id, companyId, saleReturnId))
+      .limit(1);
+    return saleReturn ?? null;
+  }
+
+  // Return-item lines with product names joined in (sale_return_items has no
+  // productName column of its own — see lib/db/src/schema/sales.ts). A left
+  // join means a deleted/missing product row doesn't blow up XML/print
+  // generation for an otherwise-valid return; it just falls back to "Product".
+  // Returns both returned and exchanged-in rows (isExchange included) —
+  // callers building ZATCA output must filter out isExchange: true themselves,
+  // since a credit note reverses only the returned units, not replacement stock.
+  async findSaleReturnItems(companyId: string, saleReturnId: string, client: DbOrTx = db) {
+    return client
+      .select({
+        productId: saleReturnItemsTable.productId,
+        productName: sql<string>`coalesce(${productsTable.name}, 'Product')`,
+        quantity: saleReturnItemsTable.quantity,
+        unitPrice: saleReturnItemsTable.unitPrice,
+        subtotal: saleReturnItemsTable.subtotal,
+        isExchange: saleReturnItemsTable.isExchange,
+      })
+      .from(saleReturnItemsTable)
+      .leftJoin(productsTable, eq(productsTable.id, saleReturnItemsTable.productId))
+      .where(withTenantScope(saleReturnItemsTable.companyId, companyId, eq(saleReturnItemsTable.saleReturnId, saleReturnId)));
   }
 
   async findById(companyId: string, invoiceId: string, client: DbOrTx = db) {
@@ -152,5 +195,14 @@ export class InvoiceRepository {
   async saveQrCode(entry: typeof qrCodesTable.$inferInsert, client: DbOrTx = db) {
     const [row] = await client.insert(qrCodesTable).values(entry).returning();
     return row;
+  }
+
+  async findQrByInvoiceId(companyId: string, invoiceId: string, client: DbOrTx = db) {
+    const [row] = await client
+      .select()
+      .from(qrCodesTable)
+      .where(withTenantScope(qrCodesTable.companyId, companyId, eq(qrCodesTable.invoiceId, invoiceId)))
+      .limit(1);
+    return row ?? null;
   }
 }

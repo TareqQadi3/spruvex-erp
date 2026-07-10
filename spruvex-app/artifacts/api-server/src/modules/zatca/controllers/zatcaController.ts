@@ -2,7 +2,11 @@ import type { NextFunction, Request, Response } from "express";
 import { AppError } from "../../../core/errors/AppError";
 import { buildSuccess } from "../../../shared/utils/responseEnvelope";
 import { uuidParamSchema } from "../../../shared/validators/common.validators";
-import { createInvoiceFromSaleSchema, submitToZatcaSchema } from "../validators/zatca.validators";
+import {
+  createCreditNoteFromReturnSchema,
+  createInvoiceFromSaleSchema,
+  submitToZatcaSchema,
+} from "../validators/zatca.validators";
 import * as zatcaService from "../services/zatcaService";
 
 export async function createInvoiceHandler(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -11,6 +15,28 @@ export async function createInvoiceHandler(req: Request, res: Response, next: Ne
     const input = createInvoiceFromSaleSchema.parse(req.body);
     const invoice = await zatcaService.createInvoiceFromSale(req.tenant, input);
     res.status(201).json(buildSuccess(invoice));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function createCreditNoteHandler(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.tenant) throw AppError.unauthorized();
+    const input = createCreditNoteFromReturnSchema.parse(req.body);
+    const invoice = await zatcaService.createCreditNoteFromReturn(req.tenant, input);
+    res.status(201).json(buildSuccess(invoice));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getOrCreateInvoiceForSaleHandler(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.tenant) throw AppError.unauthorized();
+    const saleId = uuidParamSchema.parse(req.params.saleId);
+    const invoice = await zatcaService.getOrCreateInvoiceForSale(req.tenant, saleId);
+    res.status(200).json(buildSuccess(invoice));
   } catch (err) {
     next(err);
   }

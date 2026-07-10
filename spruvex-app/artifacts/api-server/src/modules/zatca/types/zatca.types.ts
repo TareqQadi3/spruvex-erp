@@ -4,6 +4,10 @@ export interface CreateInvoiceFromSaleInput {
   buyerVatNumber?: string;
 }
 
+export interface CreateCreditNoteFromReturnInput {
+  saleReturnId: string;
+}
+
 export interface SubmitToZatcaInput {
   mode: "compliance_check" | "reporting" | "clearance";
 }
@@ -32,6 +36,11 @@ export interface UblXmlContext {
   taxAmount: string;
   totalAmount: string;
   lines: InvoiceLineForXml[];
+  // Set only for invoiceType credit_note/debit_note when the original invoice
+  // it corrects is known — emits a <cac:BillingReference> block. Both null
+  // means no BillingReference is emitted (e.g. original invoice not found).
+  relatedInvoiceNumber?: string | null;
+  relatedInvoiceZatcaUuid?: string | null;
 }
 
 export interface ZatcaQrFields {

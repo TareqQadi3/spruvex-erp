@@ -9,3 +9,7 @@ export const createInvoiceFromSaleSchema = z.object({
 export const submitToZatcaSchema = z.object({
   mode: z.enum(["compliance_check", "reporting", "clearance"]),
 });
+
+export const createCreditNoteFromReturnSchema = z.object({
+  saleReturnId: z.string().uuid(),
+});

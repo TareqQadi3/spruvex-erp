@@ -553,7 +553,9 @@
     "available_to_return": "{{count}} متاح للإرجاع",
     "refund_method": "طريقة الاسترداد",
     "refund_cash": "نقدًا",
-    "refund_store_credit": "رصيد للعميل"
+    "refund_store_credit": "رصيد للعميل",
+    "print_invoice": "طباعة الفاتورة",
+    "credit_note_skipped": "لم يتم إصدار إشعار دائن (لا توجد فاتورة على البيع الأصلي بعد)"
   },
   "purchases": {
     "title": "المشتريات",
@@ -571,7 +573,8 @@
     "available_to_return": "{{count}} متاح للإرجاع",
     "refund_method": "طريقة الاسترداد",
     "refund_cash": "نقدًا",
-    "refund_credit_note": "إشعار دائن"
+    "refund_credit_note": "إشعار دائن",
+    "print_invoice": "طباعة الفاتورة"
   },
   "vouchers": {
     "title": "السندات",

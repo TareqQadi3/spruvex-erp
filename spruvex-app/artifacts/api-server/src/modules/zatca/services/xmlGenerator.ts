@@ -15,6 +15,8 @@ function escapeXml(value: string): string {
 // Not byte-for-byte certified against ZATCA's official XSD/hash-placement
 // rules — that requires the full schema package and a provisioned CSID
 // certificate, neither available in this environment (see signingService.ts).
+// Also emits a <cac:BillingReference> for credit/debit notes when the
+// original invoice they correct is known (see UblXmlContext).
 export function generateUblXml(context: UblXmlContext): { xml: string; hash: string } {
   const lines = context.lines
     .map(
@@ -52,6 +54,19 @@ export function generateUblXml(context: UblXmlContext): { xml: string; hash: str
   </cac:AccountingCustomerParty>`
     : "";
 
+  const billingReference =
+    (context.invoiceType === "credit_note" || context.invoiceType === "debit_note") &&
+    context.relatedInvoiceNumber &&
+    context.relatedInvoiceZatcaUuid
+      ? `
+  <cac:BillingReference>
+    <cac:InvoiceDocumentReference>
+      <cbc:ID>${escapeXml(context.relatedInvoiceNumber)}</cbc:ID>
+      <cbc:UUID>${context.relatedInvoiceZatcaUuid}</cbc:UUID>
+    </cac:InvoiceDocumentReference>
+  </cac:BillingReference>`
+      : "";
+
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
          xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
@@ -62,7 +77,7 @@ export function generateUblXml(context: UblXmlContext): { xml: string; hash: str
   <cbc:IssueDate>${context.issueDate.toISOString().slice(0, 10)}</cbc:IssueDate>
   <cbc:IssueTime>${context.issueDate.toISOString().slice(11, 19)}</cbc:IssueTime>
   <cbc:InvoiceTypeCode>${context.invoiceType}</cbc:InvoiceTypeCode>
-  <cbc:DocumentCurrencyCode>${context.currency}</cbc:DocumentCurrencyCode>
+  <cbc:DocumentCurrencyCode>${context.currency}</cbc:DocumentCurrencyCode>${billingReference}
   <cbc:TaxCurrencyCode>${context.currency}</cbc:TaxCurrencyCode>
   <cac:AccountingSupplierParty>
     <cac:Party>

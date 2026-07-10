@@ -11,10 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Undo2, CalendarClock, Check } from "lucide-react";
+import { Undo2, CalendarClock, Check, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
+import { openServerPrint } from "@/utils/openServerPrint";
 
 interface Sale {
   id: string;
@@ -79,6 +80,22 @@ export default function SalesPage() {
     queryFn: () => api("/sales"),
   });
 
+  // Invoicing is on-demand: most sales never need a formal ZATCA invoice
+  // printed, so one isn't created at checkout time — this creates it (or
+  // reuses the existing one, idempotently) only when the user asks to print.
+  const [printingSaleId, setPrintingSaleId] = useState<string | null>(null);
+  const handlePrintInvoice = async (sale: Sale) => {
+    setPrintingSaleId(sale.id);
+    try {
+      const invoice = await api<{ id: string }>(`/zatca/invoices/for-sale/${sale.id}`, { method: "POST" });
+      await openServerPrint(`/invoicing/print/sales/${invoice.id}?printType=a4`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("common.error"));
+    } finally {
+      setPrintingSaleId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -121,6 +138,15 @@ export default function SalesPage() {
                     <TableCell><Badge variant="outline" className="capitalize">{sale.paymentMethod}</Badge></TableCell>
                     <TableCell><Badge variant={sale.status === "completed" ? "default" : "destructive"} className="capitalize">{sale.status}</Badge></TableCell>
                     <TableCell className="text-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={printingSaleId === sale.id}
+                        onClick={() => handlePrintInvoice(sale)}
+                      >
+                        <Printer className="me-2 h-3.5 w-3.5" />
+                        {t("sales.print_invoice")}
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => setInstallmentSale(sale)}>
                         <CalendarClock className="me-2 h-3.5 w-3.5" />
                         {t("installments.sale_action")}
@@ -307,14 +333,27 @@ function SaleReturnDialog({ sale, onClose }: { sale: Sale; onClose: () => void }
 
   const returnMutation = useMutation({
     mutationFn: (items: { saleItemId: string; quantity: number }[]) =>
-      api(`/sales/${sale.id}/returns`, {
+      api<{ id: string }>(`/sales/${sale.id}/returns`, {
         method: "POST",
         body: JSON.stringify({ items, reason: reason || undefined, refundMethod }),
       }),
-    onSuccess: () => {
+    onSuccess: async (ret) => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       toast.success(t("sales.return_success"));
       onClose();
+      // Best-effort: issue and print the ZATCA credit note for this return.
+      // A 409 here (e.g. the original sale was never invoiced) is expected
+      // and not a failure of the return itself, which already succeeded —
+      // surface it as an informational toast, not an error.
+      try {
+        const creditNote = await api<{ id: string }>("/zatca/invoices/from-return", {
+          method: "POST",
+          body: JSON.stringify({ saleReturnId: ret.id }),
+        });
+        await openServerPrint(`/invoicing/print/sales/${creditNote.id}?printType=a4`);
+      } catch (err) {
+        toast.info(err instanceof Error ? err.message : t("sales.credit_note_skipped"));
+      }
     },
     onError: (err: Error) => toast.error(err.message),
   });

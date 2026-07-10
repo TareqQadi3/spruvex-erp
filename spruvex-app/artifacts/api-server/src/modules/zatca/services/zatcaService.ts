@@ -9,7 +9,12 @@ import { generateUblXml } from "./xmlGenerator";
 import { generateZatcaQr } from "./qrGenerator";
 import { signInvoiceHash } from "./signingService";
 import { assertContentMutable, assertTransition, type InvoiceStatus } from "./invoiceStateMachine";
-import type { CreateInvoiceFromSaleInput, SubmitToZatcaInput } from "../types/zatca.types";
+import type {
+  CreateCreditNoteFromReturnInput,
+  CreateInvoiceFromSaleInput,
+  InvoiceLineForXml,
+  SubmitToZatcaInput,
+} from "../types/zatca.types";
 
 const invoiceRepo = new InvoiceRepository();
 const logRepo = new ZatcaLogRepository();
@@ -79,6 +84,89 @@ export async function createInvoiceFromSale(tenant: TenantContext, input: Create
   });
 }
 
+// A2. createCreditNoteFromReturn — drafts a credit_note invoice from a
+// completed sale return. Mirrors createInvoiceFromSale's structure: amounts
+// come from the return record (server-computed by the returns flow), not
+// the request body — the request only says which return to credit-note.
+export async function createCreditNoteFromReturn(tenant: TenantContext, input: CreateCreditNoteFromReturnInput) {
+  return withTransaction(async (tx) => {
+    // Serializes invoice-number assignment for this company only — credit
+    // notes share the same numbering pool as sales invoices.
+    await invoiceRepo.lockCompanyForNumbering(tenant.companyId, tx);
+
+    const saleReturn = await invoiceRepo.findSaleReturnById(tenant.companyId, input.saleReturnId, tx);
+    if (!saleReturn) throw AppError.notFound("Sale return not found");
+
+    const existing = await invoiceRepo.findBySaleReturnId(tenant.companyId, input.saleReturnId, tx);
+    if (existing) throw AppError.conflict(`Sale return ${input.saleReturnId} already has an invoice`);
+
+    // Real ZATCA credit notes must reference an original invoice — the
+    // original sale's invoice need not be signed/submitted yet (draft is
+    // fine), it just has to exist.
+    const originalInvoice = await invoiceRepo.findBySaleId(tenant.companyId, saleReturn.saleId, tx);
+    if (!originalInvoice) {
+      throw AppError.conflict("The original sale has no invoice yet — create one before issuing a credit note");
+    }
+
+    const company = await invoiceRepo.findCompanyById(tenant.companyId, tx);
+    if (!company) throw AppError.internal("Company not found");
+    const settings = await invoiceRepo.findSettings(tenant.companyId, tx);
+    const taxRate = settings ? Number(settings.taxRate) : DEFAULT_TAX_RATE;
+
+    // The credit note carries the positive magnitude of the refunded amount
+    // (not netAmount — exchanges are netted separately at the sale-balance
+    // level, not part of what ZATCA needs to see reversed here). Treated as
+    // VAT-inclusive, same backing-out-tax math as createInvoiceFromSale.
+    const totalCents = toCents(saleReturn.refundAmount);
+    const taxCents = Math.round(totalCents - totalCents / (1 + taxRate / 100));
+    const subtotalCents = totalCents - taxCents;
+
+    const sequence = (await invoiceRepo.countForCompany(tenant.companyId, tx)) + 1;
+
+    const invoice = await invoiceRepo.create(
+      {
+        companyId: tenant.companyId,
+        saleId: saleReturn.saleId,
+        saleReturnId: saleReturn.id,
+        relatedInvoiceId: originalInvoice.id,
+        invoiceNumber: formatInvoiceNumber(sequence),
+        invoiceType: "credit_note",
+        status: "draft",
+        currency: settings?.currency ?? "SAR",
+        subtotal: fromCents(subtotalCents),
+        discountAmount: "0",
+        taxAmount: fromCents(taxCents),
+        totalAmount: fromCents(totalCents),
+        sellerName: settings?.shopName ?? company.name,
+        sellerVatNumber: settings?.vatNumber ?? null,
+        // A return has no separate buyer capture — inherit from the original invoice.
+        buyerName: originalInvoice.buyerName,
+        buyerVatNumber: originalInvoice.buyerVatNumber,
+      },
+      tx,
+    );
+
+    recordAuditEvent(tenant, {
+      action: "create_credit_note",
+      entityType: "invoice",
+      entityId: invoice.id,
+      details: { saleReturnId: saleReturn.id, relatedInvoiceId: originalInvoice.id, invoiceNumber: invoice.invoiceNumber },
+    });
+
+    return invoice;
+  });
+}
+
+// A2. getOrCreateInvoiceForSale — idempotent wrapper the POS "print invoice"
+// action uses: most sales won't have an invoice yet (creation is optional and
+// happens on-demand at print time), but a re-print of an already-invoiced
+// sale must return the existing one rather than 409ing the UI.
+export async function getOrCreateInvoiceForSale(tenant: TenantContext, saleId: string) {
+  const existing = await invoiceRepo.findBySaleId(tenant.companyId, saleId);
+  if (existing) return existing;
+  return createInvoiceFromSale(tenant, { saleId });
+}
+
 // B. generateUBLXML — builds the UBL document and freezes the invoice
 // content hash it will be signed against. Regenerable while still in
 // draft/xml_generated (not yet signed).
@@ -88,7 +176,31 @@ export async function generateUBLXML(tenant: TenantContext, invoiceId: string) {
     if (!invoice) throw AppError.notFound("Invoice not found");
     assertContentMutable(invoice.status as InvoiceStatus);
 
-    const items = await invoiceRepo.findSaleItems(tenant.companyId, invoice.saleId ?? "", tx);
+    // Credit notes source their lines from the return, not the original sale
+    // — and exclude exchanged-in rows, which reverse nothing ZATCA-relevant.
+    const lines: InvoiceLineForXml[] = invoice.saleReturnId
+      ? (await invoiceRepo.findSaleReturnItems(tenant.companyId, invoice.saleReturnId, tx))
+          .filter((item) => !item.isExchange)
+          .map((item) => ({
+            productName: item.productName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            discount: "0.00",
+            subtotal: item.subtotal,
+          }))
+      : (await invoiceRepo.findSaleItems(tenant.companyId, invoice.saleId ?? "", tx)).map((item) => ({
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          discount: item.discount,
+          subtotal: item.subtotal,
+        }));
+
+    // For credit/debit notes, look up the original invoice being corrected
+    // so the XML can carry a BillingReference back to it.
+    const relatedInvoice = invoice.relatedInvoiceId
+      ? await invoiceRepo.findById(tenant.companyId, invoice.relatedInvoiceId, tx)
+      : null;
 
     const { xml, hash } = generateUblXml({
       invoiceId: invoice.id,
@@ -105,13 +217,9 @@ export async function generateUBLXML(tenant: TenantContext, invoiceId: string) {
       discountAmount: invoice.discountAmount,
       taxAmount: invoice.taxAmount,
       totalAmount: invoice.totalAmount,
-      lines: items.map((item) => ({
-        productName: item.productName,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        discount: item.discount,
-        subtotal: item.subtotal,
-      })),
+      lines,
+      relatedInvoiceNumber: relatedInvoice?.invoiceNumber ?? null,
+      relatedInvoiceZatcaUuid: relatedInvoice?.zatcaUuid ?? null,
     });
 
     // generateUblXml is a pure function of invoice + line items, and neither
@@ -282,4 +390,102 @@ export async function getInvoiceDetail(companyId: string, invoiceId: string) {
   ]);
 
   return { invoice, xml, signature, logs };
+}
+
+// F. getSalesPrintData — read-only contract function consumed by
+// modules/invoicing for generic template/print rendering. No state
+// mutation, no transaction: just assembles what's already on record.
+const DOCUMENT_TITLES: Record<string, { ar: string; en: string }> = {
+  simplified: { ar: "فاتورة ضريبية مبسطة", en: "Simplified Tax Invoice" },
+  standard: { ar: "فاتورة ضريبية", en: "Tax Invoice" },
+  credit_note: { ar: "إشعار دائن", en: "Credit Note" },
+  debit_note: { ar: "إشعار مدين", en: "Debit Note" },
+};
+
+// Statuses at or after "signed" in the lifecycle — see invoiceStateMachine.ts.
+const SIGNED_OR_LATER: ReadonlySet<InvoiceStatus> = new Set(["signed", "submitted", "accepted", "rejected"]);
+
+export interface SalesPrintLine {
+  name: string;
+  quantity: number;
+  unitPrice: string;
+  discount: string;
+  subtotal: string;
+}
+
+export interface SalesPrintData {
+  documentKind: "sales";
+  documentType: string; // invoice.invoiceType: simplified | standard | credit_note | debit_note
+  documentTitleAr: string;
+  documentTitleEn: string;
+  documentNumber: string;
+  issueDate: string; // ISO string
+  currency: string;
+  seller: { name: string; vatNumber: string | null };
+  buyer: { name: string | null; vatNumber: string | null } | null;
+  lines: SalesPrintLine[];
+  subtotal: string;
+  discountAmount: string;
+  taxAmount: string;
+  totalAmount: string;
+  qrContent: string | null; // base64 TLV from qr_codes row; null if not generated yet
+  relatedDocumentNumber: string | null; // original invoice's invoiceNumber, for credit/debit notes
+  isZatcaCompliant: boolean; // true only when status is "signed" or later AND a qr_codes row exists
+}
+
+export async function getSalesPrintData(companyId: string, invoiceId: string): Promise<SalesPrintData> {
+  const invoice = await invoiceRepo.findById(companyId, invoiceId);
+  if (!invoice) throw AppError.notFound("Invoice not found");
+
+  const [lines, qrRow, relatedInvoice] = await Promise.all([
+    invoice.saleReturnId
+      ? invoiceRepo
+          .findSaleReturnItems(companyId, invoice.saleReturnId)
+          .then((items) =>
+            items
+              .filter((item) => !item.isExchange)
+              .map((item) => ({
+                name: item.productName,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                discount: "0.00",
+                subtotal: item.subtotal,
+              })),
+          )
+      : invoiceRepo
+          .findSaleItems(companyId, invoice.saleId ?? "")
+          .then((items) =>
+            items.map((item) => ({
+              name: item.productName,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              discount: item.discount,
+              subtotal: item.subtotal,
+            })),
+          ),
+    invoiceRepo.findQrByInvoiceId(companyId, invoiceId),
+    invoice.relatedInvoiceId ? invoiceRepo.findById(companyId, invoice.relatedInvoiceId) : Promise.resolve(null),
+  ]);
+
+  const titles = DOCUMENT_TITLES[invoice.invoiceType] ?? DOCUMENT_TITLES.simplified;
+
+  return {
+    documentKind: "sales",
+    documentType: invoice.invoiceType,
+    documentTitleAr: titles.ar,
+    documentTitleEn: titles.en,
+    documentNumber: invoice.invoiceNumber,
+    issueDate: invoice.issueDate.toISOString(),
+    currency: invoice.currency,
+    seller: { name: invoice.sellerName, vatNumber: invoice.sellerVatNumber },
+    buyer: invoice.buyerName ? { name: invoice.buyerName, vatNumber: invoice.buyerVatNumber } : null,
+    lines,
+    subtotal: invoice.subtotal,
+    discountAmount: invoice.discountAmount,
+    taxAmount: invoice.taxAmount,
+    totalAmount: invoice.totalAmount,
+    qrContent: qrRow?.qrContent ?? null,
+    relatedDocumentNumber: relatedInvoice?.invoiceNumber ?? null,
+    isZatcaCompliant: SIGNED_OR_LATER.has(invoice.status as InvoiceStatus) && qrRow !== null,
+  };
 }
