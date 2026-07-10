@@ -1,6 +1,6 @@
 # SpruVex ERP — Current Status
 
-> آخر تحديث: 2026-07-10 (خطة الإطلاق التجريبي جاهزة — انظر `PILOT_LAUNCH_PLAN.md`)
+> آخر تحديث: 2026-07-10 (قرارات البنية التشغيلية جاهزة — انظر `INFRASTRUCTURE_DECISIONS.md` ثم `PILOT_LAUNCH_PLAN.md`)
 
 ## نظرة عامة | Overview
 
