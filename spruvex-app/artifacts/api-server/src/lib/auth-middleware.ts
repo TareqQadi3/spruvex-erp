@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
 import { db, usersTable, DEFAULT_ROLES, type Permission } from "@workspace/db";
 import { JWT_SECRET } from "./jwt-secret";
+import { getEffectiveState } from "../modules/subscriptions/services/planLimitsService";
 
 export interface AuthedRequest extends Request {
   user?: { id: string; username: string; role: string; companyId: string };
@@ -38,6 +39,34 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
     next();
   } catch {
     res.status(401).json({ error: "Invalid or expired token" });
+  }
+}
+
+const INACTIVE_STATUSES = new Set(["expired", "suspended", "cancelled"]);
+
+// The legacy router aggregate (routes/index.ts) mounts this once, right
+// after requireAuth, for every legacy-stack endpoint — the entire live POS
+// surface (products, sales, customers, repairs, purchases, accounting,
+// warehouses...). Those routers never checked subscription status at all
+// before this: a suspended/expired/cancelled company could keep using the
+// whole app freely. Response shape matches this legacy stack's convention
+// (`{ error: "..." }`, a flat string — see pos-system's api.ts, which reads
+// `err.error` as a string), not the modular `{ error: { code, message } }`
+// envelope.
+export async function requireActiveSubscription(req: AuthedRequest, res: Response, next: NextFunction): Promise<void> {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  try {
+    const state = await getEffectiveState(req.user.companyId);
+    if (INACTIVE_STATUSES.has(state.status)) {
+      res.status(403).json({ error: "Subscription inactive" });
+      return;
+    }
+    next();
+  } catch (err) {
+    next(err);
   }
 }
 

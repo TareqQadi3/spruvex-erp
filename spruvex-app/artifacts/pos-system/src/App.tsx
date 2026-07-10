@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,30 +8,44 @@ import { LanguageProvider } from "@/i18n";
 import { AuthProvider, useAuth, canAccess } from "@/contexts/AuthContext";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout/app-layout";
-import LoginPage from "@/pages/login";
-import SignupPage from "@/pages/signup";
 
-import Dashboard from "@/pages/dashboard";
-import PosPage from "@/pages/pos";
-import RepairsPage from "@/pages/repairs";
-import NewRepairPage from "@/pages/repairs/new";
-import RepairDetailPage from "@/pages/repairs/detail";
-import InventoryPage from "@/pages/inventory";
-import NewProductPage from "@/pages/inventory/new";
-import StockMovementsPage from "@/pages/inventory/movements";
-import CustomersPage from "@/pages/customers";
-import CustomerDetailPage from "@/pages/customers/detail";
-import AccountingPage from "@/pages/accounting";
-import ReportsPage from "@/pages/reports";
-import SettingsPage from "@/pages/settings";
-import UsersSettingsPage from "@/pages/settings/users";
-import PaymentMethodsSettingsPage from "@/pages/settings/payment-methods";
-import WarehousesSettingsPage from "@/pages/settings/warehouses";
-import InstallmentPlansSettingsPage from "@/pages/settings/installment-plans";
-import SuppliersPage from "@/pages/suppliers";
-import PurchasesPage from "@/pages/purchases";
-import SalesPage from "@/pages/sales";
-import VouchersPage from "@/pages/vouchers";
+// Route-level code splitting: each page becomes its own chunk instead of one
+// ~1.15MB bundle loaded up front for every user regardless of which pages
+// they ever visit. Only NotFound (tiny, always the Switch's fallback route)
+// stays a static import — everything else is fetched on first navigation to
+// that route and cached by the browser after.
+const LoginPage = lazy(() => import("@/pages/login"));
+const SignupPage = lazy(() => import("@/pages/signup"));
+
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const PosPage = lazy(() => import("@/pages/pos"));
+const RepairsPage = lazy(() => import("@/pages/repairs"));
+const NewRepairPage = lazy(() => import("@/pages/repairs/new"));
+const RepairDetailPage = lazy(() => import("@/pages/repairs/detail"));
+const InventoryPage = lazy(() => import("@/pages/inventory"));
+const NewProductPage = lazy(() => import("@/pages/inventory/new"));
+const StockMovementsPage = lazy(() => import("@/pages/inventory/movements"));
+const CustomersPage = lazy(() => import("@/pages/customers"));
+const CustomerDetailPage = lazy(() => import("@/pages/customers/detail"));
+const AccountingPage = lazy(() => import("@/pages/accounting"));
+const ReportsPage = lazy(() => import("@/pages/reports"));
+const SettingsPage = lazy(() => import("@/pages/settings"));
+const UsersSettingsPage = lazy(() => import("@/pages/settings/users"));
+const PaymentMethodsSettingsPage = lazy(() => import("@/pages/settings/payment-methods"));
+const WarehousesSettingsPage = lazy(() => import("@/pages/settings/warehouses"));
+const InstallmentPlansSettingsPage = lazy(() => import("@/pages/settings/installment-plans"));
+const SuppliersPage = lazy(() => import("@/pages/suppliers"));
+const PurchasesPage = lazy(() => import("@/pages/purchases"));
+const SalesPage = lazy(() => import("@/pages/sales"));
+const VouchersPage = lazy(() => import("@/pages/vouchers"));
+
+function PageLoadingSpinner() {
+  return (
+    <div className="flex h-full min-h-[50vh] items-center justify-center">
+      <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+    </div>
+  );
+}
 
 const queryClient = new QueryClient();
 
@@ -66,18 +81,27 @@ function AppRouter() {
 
   if (location === "/login") {
     if (user) return <Redirect to="/" />;
-    return <LoginPage />;
+    return (
+      <Suspense fallback={<PageLoadingSpinner />}>
+        <LoginPage />
+      </Suspense>
+    );
   }
 
   if (location === "/signup") {
     if (user) return <Redirect to="/" />;
-    return <SignupPage />;
+    return (
+      <Suspense fallback={<PageLoadingSpinner />}>
+        <SignupPage />
+      </Suspense>
+    );
   }
 
   if (!user) return <Redirect to="/login" />;
 
   return (
     <AppLayout>
+      <Suspense fallback={<PageLoadingSpinner />}>
       <Switch>
         <Route path="/" component={() => <GuardedPage component={Dashboard} basePath="/" />} />
         <Route path="/pos" component={() => <GuardedPage component={PosPage} basePath="/pos" />} />
@@ -102,6 +126,7 @@ function AppRouter() {
         <Route path="/settings" component={() => <GuardedPage component={SettingsPage} basePath="/settings" />} />
         <Route component={NotFound} />
       </Switch>
+      </Suspense>
     </AppLayout>
   );
 }

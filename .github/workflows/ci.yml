@@ -107,6 +107,14 @@ jobs:
         working-directory: spruvex-app/lib/db
         run: pnpm run migrate
 
+      - name: Unit tests (Auth/Sales/Inventory/Billing/Subscription foundation)
+        working-directory: spruvex-app/artifacts/api-server
+        run: pnpm test
+
+      - name: Integration tests (real ephemeral Postgres, self-cleaning)
+        working-directory: spruvex-app/artifacts/api-server
+        run: pnpm run test:integration
+
       - name: Migration drift check (schema must match committed migrations)
         working-directory: spruvex-app/lib/db
         run: |
