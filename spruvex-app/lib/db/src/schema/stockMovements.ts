@@ -1,4 +1,4 @@
-import { pgTable, uuid, integer, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, integer, text, timestamp, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -29,7 +29,10 @@ export const stockMovementsTable = pgTable("stock_movements", {
   referenceId: uuid("reference_id"),
   createdBy: uuid("created_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("stock_movements_company_product_idx").on(table.companyId, table.productId),
+  index("stock_movements_company_created_idx").on(table.companyId, table.createdAt),
+]);
 
 export const insertStockMovementSchema = createInsertSchema(stockMovementsTable).omit({ id: true, createdAt: true });
 export type InsertStockMovement = z.infer<typeof insertStockMovementSchema>;

@@ -1,0 +1,234 @@
+name: CI
+
+# Blocks merge on failure by design: every job below must succeed for this
+# workflow to pass. Enable branch protection on `main` requiring the "CI"
+# check (or each job individually) to pass before merge — that setting lives
+# in GitHub repo Settings > Branches and can't be expressed in this file.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan tracked files for credential-shaped strings
+        run: |
+          set -e
+          PATTERN='(sk-[a-zA-Z0-9]{20,}|AKIA[0-9A-Z]{16}|postgres(ql)?://[^ '"'"'"]*:[^ '"'"'"]*@|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----)'
+          MATCHES=$(git grep -lIE "$PATTERN" -- . ':(exclude)*.env.example' ':(exclude)**/pnpm-lock.yaml' || true)
+          if [ -n "$MATCHES" ]; then
+            echo "Possible hardcoded secret(s) found in:"
+            echo "$MATCHES"
+            exit 1
+          fi
+          echo "No credential-shaped strings found in tracked files."
+      - name: Confirm no .env files are tracked
+        run: |
+          set -e
+          TRACKED_ENV=$(git ls-files | grep -E '(^|/)\.env$' || true)
+          if [ -n "$TRACKED_ENV" ]; then
+            echo "A real .env file is tracked in git — this must never happen:"
+            echo "$TRACKED_ENV"
+            exit 1
+          fi
+          echo "No .env files tracked."
+
+  api-server:
+    name: api-server (typecheck, build, migration check)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: spruvex
+          POSTGRES_PASSWORD: spruvex
+          POSTGRES_DB: spruvex_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U spruvex"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://spruvex:spruvex@localhost:5432/spruvex_ci
+      JWT_SECRET: ci-only-test-secret-not-for-real-use-0123456789
+      PORT: 5000
+      VITE_PORT: 5173
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: development
+      AI_PROVIDER: mock
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: spruvex-app/pnpm-lock.yaml
+
+      - name: Install
+        working-directory: spruvex-app
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (all workspace packages)
+        working-directory: spruvex-app
+        run: pnpm run typecheck
+
+      - name: Build (all workspace packages)
+        working-directory: spruvex-app
+        run: pnpm run build
+
+      - name: Apply migrations to a throwaway database
+        working-directory: spruvex-app/lib/db
+        run: pnpm run migrate
+
+      - name: Migration drift check (schema must match committed migrations)
+        working-directory: spruvex-app/lib/db
+        run: |
+          set -e
+          pnpm run generate
+          if ! git diff --quiet -- drizzle/; then
+            echo "Schema changes are not reflected in a committed migration file."
+            echo "Run 'pnpm run generate' in spruvex-app/lib/db and commit the result."
+            git diff --stat -- drizzle/
+            exit 1
+          fi
+          echo "No pending schema drift."
+
+      - name: Smoke test (boot the real server, hit health + a real request)
+        working-directory: spruvex-app/artifacts/api-server
+        run: |
+          set -e
+          node --enable-source-maps dist/index.mjs &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5000/healthz >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -sf http://localhost:5000/healthz | grep -q '"ok"'
+          curl -sf http://localhost:5000/readyz | grep -q '"ok"'
+          curl -sf http://localhost:5000/api/public/plans >/dev/null
+          kill $SERVER_PID
+
+  pos-system:
+    name: pos-system (typecheck, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: spruvex-app/pnpm-lock.yaml
+      - name: Install
+        working-directory: spruvex-app
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        working-directory: spruvex-app/artifacts/pos-system
+        run: pnpm run typecheck
+      - name: Build
+        working-directory: spruvex-app/artifacts/pos-system
+        env:
+          PORT: "0"
+          BASE_PATH: "/"
+        run: pnpm run build
+
+  spruvex-site:
+    name: spruvex-site (typecheck, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: spruvex-site/pnpm-lock.yaml
+      - name: Install
+        working-directory: spruvex-site
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        working-directory: spruvex-site
+        run: pnpm run typecheck
+      - name: Build
+        working-directory: spruvex-site/artifacts/spruvex-site
+        env:
+          BASE_PATH: "/"
+          VITE_API_URL: "https://api.example.com"
+          VITE_APP_URL: "https://app.example.com"
+        run: pnpm run build
+
+  docker-build:
+    name: Docker image build validation (no push)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - context: spruvex-app
+            dockerfile: artifacts/api-server/Dockerfile
+          - context: spruvex-app
+            dockerfile: artifacts/pos-system/Dockerfile
+          - context: spruvex-site
+            dockerfile: artifacts/spruvex-site/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build ${{ matrix.dockerfile }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.context }}/${{ matrix.dockerfile }}
+          push: false
+          tags: ci-validation:latest
+
+  dependency-audit:
+    name: Dependency vulnerability audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Non-blocking on purpose: pnpm audit's advisory database has enough
+      # false-positive/low-severity noise on a large tree that hard-failing
+      # CI on every finding would train reviewers to ignore this step.
+      # Track its output; escalate specific findings manually.
+      - name: pnpm audit (api/pos workspace)
+        working-directory: spruvex-app
+        run: pnpm audit --prod || true
+      - name: pnpm audit (site workspace)
+        working-directory: spruvex-site
+        run: pnpm audit --prod || true

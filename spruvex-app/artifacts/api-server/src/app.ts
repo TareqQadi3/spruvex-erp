@@ -37,6 +37,15 @@ import biRouter from "./modules/bi/routes/bi.routes";
 // left in place on disk, untouched, until migrated.
 const app: Express = express();
 
+// Only trust X-Forwarded-For when TRUST_PROXY=true is explicitly set (see
+// config/env.ts) — required for req.ip (used by rate limiting and audit
+// logging) to reflect the real client behind a reverse proxy instead of the
+// proxy's own address, but only safe to enable when that proxy is the sole
+// entry point (otherwise a client could forge the header directly).
+if (env.trustProxy) {
+  app.set("trust proxy", 1);
+}
+
 // Security headers (CSP, X-Content-Type-Options, no X-Powered-By, etc.) —
 // this is a pure JSON API with no server-rendered HTML, so helmet's
 // defaults are safe as-is with no per-route CSP tuning needed.

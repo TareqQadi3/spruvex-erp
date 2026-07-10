@@ -3,6 +3,7 @@ import { PERMISSIONS } from "@workspace/db";
 import { requireAuth } from "../../../core/middleware/auth.middleware";
 import { enforceTenantIsolation } from "../../../core/middleware/tenant.middleware";
 import { requirePermission } from "../../../core/middleware/permission.middleware";
+import { requireModule } from "../../../core/middleware/subscription.middleware";
 import {
   adjustStockHandler,
   commitStockDeductionHandler,
@@ -14,7 +15,13 @@ import {
 
 const router: IRouter = Router();
 
-router.use(requireAuth, enforceTenantIsolation);
+// requireModule("inventory") only adds the subscription-active check here in
+// practice — "inventory" is in every plan's base module list (see
+// PLAN_CATALOG), so this can never newly-block a legitimately active
+// tenant; it closes a real gap where this router previously had no
+// subscription-status check at all, unlike modules built with gating in
+// mind (zatca/ai/ecommerce/payments/bi).
+router.use(requireAuth, enforceTenantIsolation, requireModule("inventory"));
 
 // Must precede /stock/:productId — otherwise "movements" would be parsed as a productId.
 router.get("/stock/movements", listStockMovementsHandler);

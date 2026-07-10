@@ -41,4 +41,12 @@ export const env = {
   // worker.ts) requires this to be set, since its job queue has no
   // in-process fallback.
   redisUrl: process.env.REDIS_URL,
+  // Whether this process sits behind a reverse proxy (nginx, load balancer)
+  // that sets X-Forwarded-For. Off by default: enabling it when there is no
+  // trusted proxy in front of this process lets any client spoof its own
+  // X-Forwarded-For header and forge req.ip, defeating IP-based rate
+  // limiting (see core/middleware/rateLimit.middleware.ts) — only turn this
+  // on in an environment where a proxy you control is guaranteed to be the
+  // sole entry point.
+  trustProxy: process.env.TRUST_PROXY === "true",
 };

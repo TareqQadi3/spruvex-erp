@@ -1,0 +1,98 @@
+# Reference production/staging topology. DATABASE_URL points at a managed
+# Postgres (Neon) by design for this project — there is deliberately no
+# `postgres:` service here; do not add one and repoint DATABASE_URL at it
+# without first confirming that's an intended move away from Neon.
+#
+# Usage:
+#   cp spruvex-app/.env.example spruvex-app/.env       # fill in real values
+#   cp spruvex-site/.env.example spruvex-site/.env.build  # build-arg values, see below
+#   docker compose --profile full up -d --build
+#
+# Profiles: `api` (api-server + worker + redis only, e.g. behind an
+# externally-managed proxy/CDN for the frontends) or `full` (adds pos-system,
+# spruvex-site, and the nginx reverse proxy — a complete single-host deploy).
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    profiles: ["api", "full"]
+
+  api:
+    build:
+      context: ./spruvex-app
+      dockerfile: artifacts/api-server/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./spruvex-app/.env
+    environment:
+      REDIS_URL: redis://redis:6379
+      TRUST_PROXY: "true"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    profiles: ["api", "full"]
+
+  worker:
+    build:
+      context: ./spruvex-app
+      dockerfile: artifacts/api-server/Dockerfile
+    command: ["node", "--enable-source-maps", "dist/worker.mjs"]
+    restart: unless-stopped
+    env_file:
+      - ./spruvex-app/.env
+    environment:
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles: ["api", "full"]
+
+  pos-system:
+    build:
+      context: ./spruvex-app
+      dockerfile: artifacts/pos-system/Dockerfile
+    restart: unless-stopped
+    profiles: ["full"]
+
+  spruvex-site:
+    build:
+      context: ./spruvex-site
+      dockerfile: artifacts/spruvex-site/Dockerfile
+      args:
+        VITE_API_URL: ${SITE_VITE_API_URL:-https://api.spruvex.com}
+        VITE_APP_URL: ${SITE_VITE_APP_URL:-https://app.spruvex.com}
+    restart: unless-stopped
+    profiles: ["full"]
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/proxy_params_spruvex.conf:/etc/nginx/proxy_params_spruvex.conf:ro
+      - ./deploy/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - api
+      - pos-system
+      - spruvex-site
+    profiles: ["full"]
+
+volumes:
+  redis-data:

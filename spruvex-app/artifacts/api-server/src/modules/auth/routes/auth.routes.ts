@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { requireAuth } from "../../../core/middleware/auth.middleware";
 import { enforceTenantIsolation } from "../../../core/middleware/tenant.middleware";
+import { rateLimitAuth } from "../../../core/middleware/rateLimit.middleware";
 import { AppError } from "../../../core/errors/AppError";
 import { buildSuccess } from "../../../shared/utils/responseEnvelope";
 import { registerCompanySchema, loginSchema, refreshSchema } from "../validators/auth.validators";
@@ -8,7 +9,7 @@ import * as authService from "../services/authService";
 
 const router: IRouter = Router();
 
-router.post("/register-company", async (req, res, next) => {
+router.post("/register-company", rateLimitAuth, async (req, res, next) => {
   try {
     const input = registerCompanySchema.parse(req.body);
     const result = await authService.registerCompany(input);
@@ -18,7 +19,7 @@ router.post("/register-company", async (req, res, next) => {
   }
 });
 
-router.post("/login", async (req, res, next) => {
+router.post("/login", rateLimitAuth, async (req, res, next) => {
   try {
     const input = loginSchema.parse(req.body);
     const result = await authService.login(input);

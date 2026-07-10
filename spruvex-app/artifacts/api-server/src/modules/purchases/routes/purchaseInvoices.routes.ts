@@ -3,6 +3,7 @@ import { PERMISSIONS } from "@workspace/db";
 import { requireAuth } from "../../../core/middleware/auth.middleware";
 import { enforceTenantIsolation } from "../../../core/middleware/tenant.middleware";
 import { requirePermission } from "../../../core/middleware/permission.middleware";
+import { requireActiveSubscription } from "../../../core/middleware/subscription.middleware";
 import { AppError } from "../../../core/errors/AppError";
 import { buildSuccess } from "../../../shared/utils/responseEnvelope";
 import { uuidParamSchema } from "../../../shared/validators/common.validators";
@@ -14,7 +15,12 @@ import {
 
 const router: IRouter = Router();
 
-router.use(requireAuth, enforceTenantIsolation, requirePermission(PERMISSIONS.MANAGE_ACCOUNTING));
+// "purchases" has no dedicated module code in PLAN_CATALOG (purchasing is
+// core ERP functionality in every plan, not a gated add-on), so this uses
+// the status-only check rather than requireModule — closes the same kind
+// of gap as inventory.routes.ts without inventing a module code that
+// doesn't otherwise exist anywhere in the catalog.
+router.use(requireAuth, enforceTenantIsolation, requireActiveSubscription(), requirePermission(PERMISSIONS.MANAGE_ACCOUNTING));
 
 router.post("/from-purchase/:purchaseId", async (req, res, next) => {
   try {

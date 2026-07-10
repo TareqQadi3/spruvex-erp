@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, integer, numeric } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, integer, numeric, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -14,7 +14,10 @@ export const purchasesTable = pgTable("purchases", {
   totalCost: numeric("total_cost", { precision: 10, scale: 2 }).notNull(),
   amountPaid: numeric("amount_paid", { precision: 10, scale: 2 }).notNull().default("0"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("purchases_company_created_idx").on(table.companyId, table.createdAt),
+  index("purchases_company_supplier_idx").on(table.companyId, table.supplierId),
+]);
 
 export const insertPurchaseSchema = createInsertSchema(purchasesTable).omit({ id: true, createdAt: true });
 export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
@@ -30,7 +33,9 @@ export const purchaseReturnsTable = pgTable("purchase_returns", {
   unitCost: numeric("unit_cost", { precision: 10, scale: 2 }).notNull(),
   totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("purchase_returns_company_purchase_idx").on(table.companyId, table.purchaseId),
+]);
 
 export const insertPurchaseReturnSchema = createInsertSchema(purchaseReturnsTable).omit({ id: true, createdAt: true });
 export type InsertPurchaseReturn = z.infer<typeof insertPurchaseReturnSchema>;

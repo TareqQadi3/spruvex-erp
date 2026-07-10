@@ -16,6 +16,7 @@ import { ensureSeeded as ensureChartOfAccountsSeeded } from "../modules/accounti
 import { requireAuth as requireAuthModular } from "../core/middleware/auth.middleware";
 import { requireWithinLimit } from "../core/middleware/subscription.middleware";
 import { countCurrentUsersForCompany } from "../modules/subscriptions/services/planLimitsService";
+import { rateLimitAuth } from "../core/middleware/rateLimit.middleware";
 
 const router = Router();
 const JWT_EXPIRES = "7d";
@@ -30,40 +31,9 @@ async function seedOrgDefaults(companyId: string, shopName: string) {
   await ensureChartOfAccountsSeeded(db, companyId);
 }
 
-export async function seedDefaultUsers() {
-  try {
-    const existing = await db.select({ id: usersTable.id }).from(usersTable).limit(1);
-    if (existing.length > 0) return;
-
-    const [org] = await db.insert(companiesTable).values({ name: "Demo Shop" }).returning();
-    await seedOrgDefaults(org.id, "Demo Shop");
-
-    const defaults = [
-      { username: "admin", role: "admin", password: "admin123" },
-      { username: "manager", role: "store_manager", password: "manager123" },
-      { username: "cashier", role: "cashier", password: "cashier123" },
-      { username: "warehouse", role: "warehouse_staff", password: "warehouse123" },
-      { username: "accountant", role: "accountant", password: "accountant123" },
-    ];
-
-    for (const u of defaults) {
-      const passwordHash = await bcrypt.hash(u.password, 10);
-      await db.insert(usersTable).values({
-        companyId: org.id,
-        username: u.username,
-        role: u.role,
-        passwordHash,
-        isActive: true,
-      });
-    }
-    console.log("✓ Default Company and users seeded");
-  } catch (err) {
-    console.error("Failed to seed users:", err);
-  }
-}
 
 // Creates a brand new tenant (Company) with its first admin user — the SaaS signup flow.
-router.post("/register", async (req, res) => {
+router.post("/register", rateLimitAuth, async (req, res) => {
   const { organizationName, username, password } = req.body;
   if (!organizationName || !username || !password) {
     res.status(400).json({ error: "organizationName, username and password are required" });
@@ -96,7 +66,7 @@ router.post("/register", async (req, res) => {
   res.status(201).json({ token, user: payload });
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", rateLimitAuth, async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     res.status(400).json({ error: "Username and password are required" });

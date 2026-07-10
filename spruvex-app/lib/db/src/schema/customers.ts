@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, numeric, integer } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, numeric, integer, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -16,7 +16,9 @@ export const customersTable = pgTable("customers", {
   // per sale. Null = use products.sellingPrice as usual.
   priceListId: uuid("price_list_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("customers_company_idx").on(table.companyId),
+]);
 
 export const insertCustomerSchema = createInsertSchema(customersTable).omit({ id: true, createdAt: true });
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;

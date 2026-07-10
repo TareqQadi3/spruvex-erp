@@ -3,7 +3,13 @@ dist/
 build/
 .env
 .env.*
+!.env.example
 *.log
+
+# Local MCP server config — holds a slot for real API tokens/connection
+# strings even though the checked-in template only has placeholders; keep
+# any locally-filled-in version out of git entirely.
+.mcp.json
 
 .DS_Store
 

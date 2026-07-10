@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, numeric, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, numeric, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -39,6 +39,8 @@ export const invoicesTable = pgTable("invoices", {
 }, (table) => [
   // A sale_return can be credit-noted at most once.
   uniqueIndex("invoices_sale_return_idx").on(table.saleReturnId),
+  index("invoices_company_status_idx").on(table.companyId, table.status),
+  index("invoices_company_sale_idx").on(table.companyId, table.saleId),
 ]);
 
 export const insertInvoiceSchema = createInsertSchema(invoicesTable).omit({ id: true, createdAt: true, updatedAt: true });

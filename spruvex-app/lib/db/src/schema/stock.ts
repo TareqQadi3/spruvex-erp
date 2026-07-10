@@ -1,4 +1,4 @@
-import { pgTable, uuid, integer, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, uuid, integer, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -16,6 +16,7 @@ export const stockTable = pgTable("stock", {
   reservedQuantity: integer("reserved_quantity").notNull().default(0),
 }, (table) => [
   uniqueIndex("stock_product_warehouse_idx").on(table.productId, table.warehouseId),
+  index("stock_company_idx").on(table.companyId),
 ]);
 
 export const insertStockSchema = createInsertSchema(stockTable).omit({ id: true });

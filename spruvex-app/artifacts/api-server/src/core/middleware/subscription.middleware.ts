@@ -55,6 +55,30 @@ export function requireModule(moduleCode: string) {
   };
 }
 
+// Status-only gate (no module-membership check) for routes that should be
+// blocked for a suspended/expired/cancelled tenant but aren't tied to a
+// specific paid-addon module — e.g. purchase-document generation. Use
+// requireModule instead when the route IS a specific catalog module (it
+// already includes this same status check).
+export function requireActiveSubscription() {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.tenant) {
+        next(AppError.unauthorized());
+        return;
+      }
+      const state = await getRequestEffectiveState(req);
+      if (INACTIVE_STATUSES.has(state.status)) {
+        next(AppError.forbidden("Subscription inactive"));
+        return;
+      }
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
+}
+
 export function requireWithinLimit(
   limitKey: keyof PlanLimits,
   countCurrent: (companyId: string) => Promise<number>,

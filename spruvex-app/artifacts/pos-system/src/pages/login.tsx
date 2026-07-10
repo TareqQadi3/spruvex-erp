@@ -123,17 +123,6 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        {/* Default accounts hint */}
-        <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30 p-4 text-xs text-muted-foreground space-y-1.5">
-          <div className="font-medium text-foreground/70">{t("auth.default_accounts")}</div>
-          <div className="grid grid-cols-2 gap-1">
-            <span>admin / admin123</span>
-            <span>manager / manager123</span>
-            <span>cashier / cashier123</span>
-            <span>accountant / accountant123</span>
-          </div>
-        </div>
-
         <p className="text-center text-sm text-muted-foreground">
           {t("auth.no_account")}{" "}
           <a href="/signup" className="text-primary hover:underline font-medium">
