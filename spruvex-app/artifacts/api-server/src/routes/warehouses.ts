@@ -45,13 +45,29 @@ router.get("/", async (req: AuthedRequest, res) => {
 });
 
 router.post("/", async (req: AuthedRequest, res) => {
-  const { name, isRepairStock } = req.body;
+  const { name, isRepairStock, isDefault } = req.body;
+  const companyId = req.user!.companyId;
   if (!name) {
     res.status(400).json({ error: "name is required" });
     return;
   }
+  if (isDefault === true) {
+    const [warehouse] = await db.transaction(async (tx) => {
+      await tx.update(warehousesTable)
+        .set({ isDefault: false })
+        .where(and(eq(warehousesTable.companyId, companyId), eq(warehousesTable.isDefault, true)));
+      return tx.insert(warehousesTable).values({
+        companyId,
+        name,
+        isRepairStock: isRepairStock ?? false,
+        isDefault: true,
+      }).returning();
+    });
+    res.status(201).json(warehouse);
+    return;
+  }
   const [warehouse] = await db.insert(warehousesTable).values({
-    companyId: req.user!.companyId,
+    companyId,
     name,
     isRepairStock: isRepairStock ?? false,
   }).returning();
@@ -60,11 +76,35 @@ router.post("/", async (req: AuthedRequest, res) => {
 
 router.put("/:id", async (req: AuthedRequest, res) => {
   const id = req.params.id as string;
-  const { name, isRepairStock } = req.body;
+  const companyId = req.user!.companyId;
+  const { name, isRepairStock, isDefault } = req.body;
+
+  // Exactly one default per company — clear the existing default first in
+  // the same transaction so a failed update never leaves zero or two.
+  if (isDefault === true) {
+    const [warehouse] = await db.transaction(async (tx) => {
+      await tx.update(warehousesTable)
+        .set({ isDefault: false })
+        .where(and(eq(warehousesTable.companyId, companyId), eq(warehousesTable.isDefault, true)));
+      return tx.update(warehousesTable).set({
+        ...(name !== undefined ? { name } : {}),
+        ...(isRepairStock !== undefined ? { isRepairStock } : {}),
+        isDefault: true,
+      }).where(and(eq(warehousesTable.id, id), eq(warehousesTable.companyId, companyId))).returning();
+    });
+    if (!warehouse) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.json(warehouse);
+    return;
+  }
+
   const [warehouse] = await db.update(warehousesTable).set({
     ...(name !== undefined ? { name } : {}),
     ...(isRepairStock !== undefined ? { isRepairStock } : {}),
-  }).where(and(eq(warehousesTable.id, id), eq(warehousesTable.companyId, req.user!.companyId))).returning();
+    ...(isDefault === false ? { isDefault: false } : {}),
+  }).where(and(eq(warehousesTable.id, id), eq(warehousesTable.companyId, companyId))).returning();
   if (!warehouse) {
     res.status(404).json({ error: "Not found" });
     return;

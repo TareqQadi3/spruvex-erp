@@ -3,6 +3,22 @@ import { AppError } from "../../../core/errors/AppError";
 import { aiRepository } from "../repositories/aiRepository";
 import { getProvider } from "../providers";
 import type { AiProvider } from "../providers/types";
+import { assertWithinAiQuota } from "./aiQuotaService";
+import {
+  getSalesProfitSummary,
+  getCashflowSummary,
+  getTopProducts,
+  getLowStockProducts,
+} from "../../bi/services/biService";
+import {
+  detectAnomalies,
+  buildAlerts,
+  buildReorderSuggestions,
+  buildSummaryPrompt,
+  type BusinessAlert,
+  type AnomalyFinding,
+  type ReorderSuggestion,
+} from "./businessInsightsBuilder";
 
 export interface ResolvedAiConfig {
   provider: AiProvider;
@@ -53,6 +69,7 @@ async function runFeature(
   prompt: string,
   maxTokens?: number,
 ): Promise<RunFeatureResult> {
+  await assertWithinAiQuota(companyId);
   const config = await resolveConfig(companyId);
 
   try {
@@ -161,27 +178,69 @@ export async function productAssistant(
   return runFeature(companyId, userId, feature, system, prompt);
 }
 
-// --- Business assistant (foundation) -----------------------------------------
-// Only a 30-day sales summary exists today. Inventory alerts and top-products
-// insights are future phases — deliberately not built here.
+// --- Business assistant --------------------------------------------------
+// The first real, end-to-end BI use case (Phase 10): a management summary
+// grounded entirely in modules/bi's server-computed numbers. The model's job
+// is prose ONLY — every figure in the response (revenue, profit, deltas,
+// low-stock count, reorder quantities) is computed in code before the model
+// ever sees a prompt, and the response includes that same `metrics` object
+// alongside the generated text so a caller can verify the two never diverge.
+
+export type BusinessSummaryPeriod = "daily" | "weekly" | "monthly";
+
+const PERIOD_DAYS: Record<BusinessSummaryPeriod, number> = { daily: 1, weekly: 7, monthly: 30 };
+const PERIOD_LABEL: Record<BusinessSummaryPeriod, string> = { daily: "today", weekly: "the last 7 days", monthly: "the last 30 days" };
+
+export interface BusinessSummaryResult extends RunFeatureResult {
+  period: BusinessSummaryPeriod;
+  from: string;
+  to: string;
+  metrics: {
+    current: Awaited<ReturnType<typeof getSalesProfitSummary>>;
+    previous: Awaited<ReturnType<typeof getSalesProfitSummary>>;
+    cashflow: Awaited<ReturnType<typeof getCashflowSummary>>;
+    topProducts: Awaited<ReturnType<typeof getTopProducts>>;
+    lowStock: Awaited<ReturnType<typeof getLowStockProducts>>;
+  };
+  anomalies: AnomalyFinding[];
+  alerts: BusinessAlert[];
+  reorderSuggestions: ReorderSuggestion[];
+}
 
 export async function businessSummary(
   companyId: string,
   userId: string,
+  period: BusinessSummaryPeriod = "monthly",
   language: "ar" | "en" = "ar",
-): Promise<RunFeatureResult> {
+): Promise<BusinessSummaryResult> {
+  const days = PERIOD_DAYS[period];
   const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+  const from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  const previousFrom = new Date(from.getTime() - days * 24 * 60 * 60 * 1000);
 
-  const [current, previous] = await Promise.all([
-    aiRepository.getSalesWindowAggregate(companyId, thirtyDaysAgo, now),
-    aiRepository.getSalesWindowAggregate(companyId, sixtyDaysAgo, thirtyDaysAgo),
+  const [current, previous, cashflow, topProducts, lowStock] = await Promise.all([
+    getSalesProfitSummary(companyId, from, now),
+    getSalesProfitSummary(companyId, previousFrom, from),
+    getCashflowSummary(companyId, from, now),
+    getTopProducts(companyId, from, now, 5),
+    getLowStockProducts(companyId, 20),
   ]);
 
-  const prompt =
-    `Sales last 30 days: ${current.count} invoices, total ${current.total.toFixed(2)} SAR. ` +
-    `Previous 30 days: ${previous.count} invoices, total ${previous.total.toFixed(2)} SAR.`;
+  const anomalies = detectAnomalies(current, previous);
+  const alerts = buildAlerts(anomalies, lowStock, language);
+  const reorderSuggestions = buildReorderSuggestions(lowStock);
+
+  const prompt = buildSummaryPrompt({
+    periodLabel: PERIOD_LABEL[period],
+    from: from.toISOString().slice(0, 10),
+    to: now.toISOString().slice(0, 10),
+    current,
+    previous,
+    cashflow,
+    topProducts,
+    anomalies,
+    lowStockCount: lowStock.length,
+  });
 
   const languageLine =
     language === "ar"
@@ -189,10 +248,25 @@ export async function businessSummary(
       : "Respond in English. Answer ONLY with the requested content, no preamble.";
   const system =
     "You are SpruVex's business assistant for Saudi/Gulf retail merchants. " +
-    "Given the sales figures, write a short management summary in 3-4 sentences with one actionable suggestion. " +
+    "You will be given real, already-computed figures for this company only. " +
+    "Use ONLY the numbers given below — never invent, estimate, guess, or round a figure that wasn't provided to you. " +
+    "Write a concise management summary (4-6 sentences) covering the period's performance, the most " +
+    "important change versus the previous period, and one concrete, actionable recommendation grounded strictly " +
+    "in the data given. " +
     languageLine;
 
-  return runFeature(companyId, userId, "business_summary", system, prompt);
+  const generated = await runFeature(companyId, userId, `business_summary_${period}`, system, prompt);
+
+  return {
+    ...generated,
+    period,
+    from: from.toISOString(),
+    to: now.toISOString(),
+    metrics: { current, previous, cashflow, topProducts, lowStock },
+    anomalies,
+    alerts,
+    reorderSuggestions,
+  };
 }
 
 // --- Settings -----------------------------------------------------------------

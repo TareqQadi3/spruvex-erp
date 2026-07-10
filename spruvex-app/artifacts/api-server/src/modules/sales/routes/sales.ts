@@ -16,7 +16,7 @@ router.get("/", async (req: AuthedRequest, res) => {
 
 router.post("/", async (req: AuthedRequest, res) => {
   try {
-    const sale = await salesService.createSale(req.user!.companyId, req.body);
+    const sale = await salesService.createSale(req.user!.companyId, req.body, req.user!.id);
     res.status(201).json(sale);
   } catch (err) {
     if (err instanceof salesService.SaleValidationError) {

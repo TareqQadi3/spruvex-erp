@@ -13,6 +13,7 @@ import type { AuthResult, LoginInput, RegisterCompanyInput } from "../types/auth
 
 const TRIAL_PERIOD_DAYS = 14;
 const DEFAULT_BRANCH_NAME = "الفرع الرئيسي";
+const DEFAULT_WAREHOUSE_NAME = "المستودع الرئيسي";
 
 // Exported so scripts/seedPlatformAdmin.ts (the only other place that ever
 // creates a password hash outside this service) reuses the same cost factor
@@ -95,6 +96,15 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Auth
 
     const branch = await repo.createBranch(
       { companyId: company.id, name: DEFAULT_BRANCH_NAME, isDefault: true, isActive: true },
+      tx,
+    );
+
+    // Every tenant needs a default warehouse before its first sale can go
+    // through the inventory engine (resolveWarehouseId falls back to it when
+    // no warehouseId is given) — without this, a fresh company's first POS
+    // sale fails with "No default warehouse configured for this company".
+    await repo.createWarehouse(
+      { companyId: company.id, name: DEFAULT_WAREHOUSE_NAME, isDefault: true, isRepairStock: false },
       tx,
     );
 

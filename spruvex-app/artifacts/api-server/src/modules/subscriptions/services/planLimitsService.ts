@@ -83,7 +83,7 @@ export function resolveEffectiveLimits(company: Company, activeAddons: CompanyAd
     ? { ...plan }
     : {
         maxUsers: 0, maxBranches: 0, maxProducts: 0, maxCustomers: 0,
-        maxInvoicesPerMonth: 0, storageQuotaMb: 0, modules: [],
+        maxInvoicesPerMonth: 0, storageQuotaMb: 0, maxAiRequestsPerMonth: 0, modules: [],
         // Display fields (added to PlanLimits in Phase 6 for the public
         // pricing endpoint) — meaningless for an unknown plan code.
         nameAr: "", nameEn: "", taglineAr: "", taglineEn: "", priceMonthlySar: null,

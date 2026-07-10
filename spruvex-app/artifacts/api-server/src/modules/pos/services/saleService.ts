@@ -142,6 +142,8 @@ export async function createSale(tenant: TenantContext, input: CreateSaleInput):
         paymentFee: fromCents(feeCents),
         status: "completed",
         notes: input.notes,
+        branchId: tenant.branchId,
+        createdByUserId: tenant.userId,
       },
       tx,
     );

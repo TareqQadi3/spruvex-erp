@@ -79,6 +79,26 @@ export class AiRepository {
     return { rows, total: count };
   }
 
+  // Quota counter — every AI feature (product assistant, business assistant)
+  // shares this one count, straight from the audit trail every call already
+  // writes to. Counts both success AND error rows deliberately: a failed
+  // provider call still consumed a request attempt against the plan's
+  // allowance from the tenant's perspective (and, for a real paid provider,
+  // may still have consumed tokens even on a non-2xx response).
+  async countUsageInWindow(companyId: string, since: Date, until: Date, client: DbOrTx = db): Promise<number> {
+    const [row] = await client
+      .select({ count: sql<number>`count(*)::int` })
+      .from(aiUsageLogsTable)
+      .where(
+        withTenantScope(
+          aiUsageLogsTable.companyId,
+          companyId,
+          and(gte(aiUsageLogsTable.createdAt, since), lt(aiUsageLogsTable.createdAt, until)),
+        ),
+      );
+    return row?.count ?? 0;
+  }
+
   // Aggregates for the business-summary assistant: invoice count + total sales
   // for [since, until) — used once for the trailing 30 days and once for the
   // 30 days before that, to give the model a comparison baseline.

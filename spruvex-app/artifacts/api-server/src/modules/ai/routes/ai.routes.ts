@@ -12,6 +12,7 @@ import {
 } from "../validators/ai.validators";
 import * as aiService from "../services/aiService";
 import { aiRepository } from "../repositories/aiRepository";
+import { getAiQuotaStatus } from "../services/aiQuotaService";
 
 const router: IRouter = Router();
 
@@ -52,9 +53,19 @@ router.post("/product-assistant", async (req, res, next) => {
 router.post("/business-assistant/summary", async (req, res, next) => {
   try {
     if (!req.tenant) throw AppError.unauthorized();
-    const { language } = businessSummarySchema.parse(req.body ?? {});
-    const result = await aiService.businessSummary(req.tenant.companyId, req.tenant.userId, language);
+    const { language, period } = businessSummarySchema.parse(req.body ?? {});
+    const result = await aiService.businessSummary(req.tenant.companyId, req.tenant.userId, period, language);
     res.status(200).json(buildSuccess(result));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/quota", async (req, res, next) => {
+  try {
+    if (!req.tenant) throw AppError.unauthorized();
+    const quota = await getAiQuotaStatus(req.tenant.companyId);
+    res.status(200).json(buildSuccess(quota));
   } catch (err) {
     next(err);
   }

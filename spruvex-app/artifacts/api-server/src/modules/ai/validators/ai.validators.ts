@@ -31,6 +31,7 @@ export const productAssistantSchema = z.object({
 
 export const businessSummarySchema = z.object({
   language: languageSchema,
+  period: z.enum(["daily", "weekly", "monthly"]).default("monthly"),
 });
 
 export const listUsageQuerySchema = paginationQuerySchema;

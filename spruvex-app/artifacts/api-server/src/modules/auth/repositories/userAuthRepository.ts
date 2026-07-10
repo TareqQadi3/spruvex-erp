@@ -8,9 +8,11 @@ import {
   settingsTable,
   subscriptionsTable,
   paymentMethodsTable,
+  warehousesTable,
   type InsertBranch,
   type InsertSettings,
   type InsertSubscription,
+  type InsertWarehouse,
 } from "@workspace/db";
 import { db } from "../../../core/database/connection";
 import type { DbOrTx } from "../../../core/database/transaction";
@@ -60,6 +62,11 @@ export class UserAuthRepository {
   async createSettings(input: InsertSettings, client: DbOrTx = db) {
     const [settings] = await client.insert(settingsTable).values(input).returning();
     return settings;
+  }
+
+  async createWarehouse(input: InsertWarehouse, client: DbOrTx = db) {
+    const [warehouse] = await client.insert(warehousesTable).values(input).returning();
+    return warehouse;
   }
 
   async createDefaultPaymentMethods(companyId: string, client: DbOrTx = db) {

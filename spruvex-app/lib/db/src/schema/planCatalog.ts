@@ -12,6 +12,13 @@ export interface PlanLimits {
   maxCustomers: number;
   maxInvoicesPerMonth: number;
   storageQuotaMb: number;
+  // AI request budget per calendar month, enforced by
+  // modules/ai/services/aiQuotaService regardless of which AI feature is
+  // called (product assistant or business assistant share one counter,
+  // counted from ai_usage_logs) — the cost-control lever for the ai_features
+  // add-on. Not currently boostable by a quantity add-on (no "additional_ai_requests"
+  // code exists yet); bump the plan constant directly if a tenant needs more.
+  maxAiRequestsPerMonth: number;
   // Modules included in this plan by default — a company's actual effective
   // modules are this list unioned with companies.enabledModules (set from
   // businessType at signup, see businessTypeDefaults.ts) and any active
@@ -33,7 +40,7 @@ export interface PlanLimits {
 export const PLAN_CATALOG: Record<PlanCode, PlanLimits> = {
   erp_business: {
     maxUsers: 5, maxBranches: 2, maxProducts: 1000, maxCustomers: 2000,
-    maxInvoicesPerMonth: 1000, storageQuotaMb: 500,
+    maxInvoicesPerMonth: 1000, storageQuotaMb: 500, maxAiRequestsPerMonth: 200,
     modules: ["pos", "inventory", "customers"],
     nameAr: "الأعمال ERP", nameEn: "Business ERP",
     taglineAr: "لإدارة المخزون والمبيعات والعملاء", taglineEn: "Inventory, sales, and customer management",
@@ -41,7 +48,7 @@ export const PLAN_CATALOG: Record<PlanCode, PlanLimits> = {
   },
   restaurant: {
     maxUsers: 8, maxBranches: 2, maxProducts: 500, maxCustomers: 2000,
-    maxInvoicesPerMonth: 3000, storageQuotaMb: 500,
+    maxInvoicesPerMonth: 3000, storageQuotaMb: 500, maxAiRequestsPerMonth: 200,
     modules: ["pos", "inventory", "customers", "restaurant"],
     nameAr: "المطاعم", nameEn: "Restaurant",
     taglineAr: "لإدارة الطاولات والطلبات والمطبخ", taglineEn: "Tables, orders, and kitchen management",
@@ -49,7 +56,7 @@ export const PLAN_CATALOG: Record<PlanCode, PlanLimits> = {
   },
   sales_repair: {
     maxUsers: 5, maxBranches: 2, maxProducts: 1000, maxCustomers: 2000,
-    maxInvoicesPerMonth: 1000, storageQuotaMb: 500,
+    maxInvoicesPerMonth: 1000, storageQuotaMb: 500, maxAiRequestsPerMonth: 200,
     modules: ["pos", "inventory", "customers", "repairs"],
     nameAr: "المبيعات والصيانة", nameEn: "Sales & Repair",
     taglineAr: "لإدارة تذاكر الصيانة وقطع الغيار", taglineEn: "Repair tickets and spare parts management",
@@ -57,7 +64,7 @@ export const PLAN_CATALOG: Record<PlanCode, PlanLimits> = {
   },
   enterprise: {
     maxUsers: 999_999, maxBranches: 999_999, maxProducts: 999_999, maxCustomers: 999_999,
-    maxInvoicesPerMonth: 999_999, storageQuotaMb: 50_000,
+    maxInvoicesPerMonth: 999_999, storageQuotaMb: 50_000, maxAiRequestsPerMonth: 5000,
     modules: ["pos", "inventory", "customers", "repairs", "restaurant", "ecommerce", "payment_gateways"],
     nameAr: "المؤسسات", nameEn: "Enterprise",
     taglineAr: "حلول مخصصة للمؤسسات الكبيرة", taglineEn: "Custom solutions for large organizations",

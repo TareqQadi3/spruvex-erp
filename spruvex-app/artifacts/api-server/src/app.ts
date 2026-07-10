@@ -29,6 +29,7 @@ import paymentWebhooksRouter from "./modules/payments/routes/paymentWebhooks.rou
 import purchaseInvoicesRouter from "./modules/purchases/routes/purchaseInvoices.routes";
 import invoiceTemplatesRouter from "./modules/invoicing/routes/templates.routes";
 import invoicePrintRouter from "./modules/invoicing/routes/print.routes";
+import biRouter from "./modules/bi/routes/bi.routes";
 
 // Only auth + rbac are mounted so far. Every other module under modules/<name>
 // lands here as it's rebuilt against the new core/ + shared/ layer; the
@@ -125,6 +126,7 @@ app.use("/api/payments", paymentsRouter);
 app.use("/api/purchase-invoices", purchaseInvoicesRouter);
 app.use("/api/invoicing/templates", invoiceTemplatesRouter);
 app.use("/api/invoicing/print", invoicePrintRouter);
+app.use("/api/bi", biRouter);
 // Cross-tenant super-admin routes — guarded by requirePlatformAdmin (checks
 // usersTable.isPlatformAdmin directly), not enforceTenantIsolation. See
 // modules/platform/middleware/platformAdmin.middleware.ts.

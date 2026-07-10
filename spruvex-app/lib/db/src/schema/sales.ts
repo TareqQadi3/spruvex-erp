@@ -7,6 +7,14 @@ export const salesTable = pgTable("sales", {
   companyId: uuid("company_id").notNull(),
   customerId: uuid("customer_id"),
   cashSessionId: uuid("cash_session_id"),
+  // Nullable by necessity: the legacy checkout path (still the one the live
+  // POS frontend uses) authenticates via a JWT that carries no branchId for
+  // single-branch tenants, so branch-level BI attribution degrades to an
+  // "unassigned" bucket for those sales rather than fabricating one — see
+  // modules/bi. createdByUserId is populated on every path (both legacy and
+  // modular checkout have the acting user's id) and powers per-user BI.
+  branchId: uuid("branch_id"),
+  createdByUserId: uuid("created_by_user_id"),
   subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull().default("0"),
   discount: numeric("discount", { precision: 10, scale: 2 }).notNull().default("0"),
   total: numeric("total", { precision: 10, scale: 2 }).notNull().default("0"),
