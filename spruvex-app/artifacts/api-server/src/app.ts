@@ -22,6 +22,10 @@ import platformRouter from "./modules/platform/routes/platform.routes";
 import supportRouter from "./modules/support/routes/support.routes";
 import publicRouter from "./modules/public/routes/public.routes";
 import aiRouter from "./modules/ai/routes/ai.routes";
+import ecommerceRouter from "./modules/ecommerce/routes/ecommerce.routes";
+import ecommerceWebhooksRouter from "./modules/ecommerce/routes/ecommerceWebhooks.routes";
+import paymentsRouter from "./modules/payments/routes/payments.routes";
+import paymentWebhooksRouter from "./modules/payments/routes/paymentWebhooks.routes";
 
 // Only auth + rbac are mounted so far. Every other module under modules/<name>
 // lands here as it's rebuilt against the new core/ + shared/ layer; the
@@ -61,7 +65,17 @@ app.use(
   ),
 );
 
-app.use(express.json({ limit: "10mb" }));
+app.use(
+  express.json({
+    limit: "10mb",
+    // Keep the raw body bytes alongside the parsed JSON: webhook endpoints
+    // (ecommerce platforms, payment gateways) verify HMAC signatures over the
+    // exact bytes sent, and re-serializing req.body would not round-trip.
+    verify: (req, _res, buf) => {
+      (req as express.Request & { rawBody?: Buffer }).rawBody = buf;
+    },
+  }),
+);
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(requestContext);
 app.use(rateLimitPerTenant);
@@ -82,6 +96,13 @@ app.use("/api", legacyRouter);
 // no route of its own) before falling through. Any unauthenticated route
 // must be registered ahead of that mount or it will 401 unconditionally.
 app.use("/api/public", publicRouter);
+// Webhook receivers are called by external platforms (Salla/Zid/Shopify,
+// Tabby/Tamara/Moyasar) with signature verification instead of JWT auth, so
+// like /api/public they must be mounted ahead of userRolesRouter's broad
+// requireAuth — and ahead of the auth-gated /api/ecommerce and /api/payments
+// mounts below, which would otherwise 401 these paths.
+app.use("/api/ecommerce/webhooks", ecommerceWebhooksRouter);
+app.use("/api/payments/webhooks", paymentWebhooksRouter);
 
 app.use("/api/auth", authRouter);
 app.use("/api/roles", rolesRouter);
@@ -94,6 +115,8 @@ app.use("/api/sync", syncRouter);
 app.use("/api/subscriptions", subscriptionsRouter);
 app.use("/api/support", supportRouter);
 app.use("/api/ai", aiRouter);
+app.use("/api/ecommerce", ecommerceRouter);
+app.use("/api/payments", paymentsRouter);
 // Cross-tenant super-admin routes — guarded by requirePlatformAdmin (checks
 // usersTable.isPlatformAdmin directly), not enforceTenantIsolation. See
 // modules/platform/middleware/platformAdmin.middleware.ts.

@@ -10,10 +10,11 @@ export const pricing = {
     price_addons_title: "إضافات اختيارية", price_addons_sub: "وسّع باقتك بإضافات حسب احتياج نشاطك.",
 
     mod_pos: "نقاط البيع", mod_inventory: "المخزون", mod_customers: "إدارة العملاء", mod_repairs: "الصيانة",
-    mod_restaurant: "إدارة المطاعم", mod_ecommerce: "المتجر الإلكتروني",
+    mod_restaurant: "إدارة المطاعم", mod_ecommerce: "المتجر الإلكتروني", mod_payment_gateways: "بوابات الدفع الإلكتروني",
 
     addon_ecommerce: "متجر إلكتروني", addon_loyalty: "برنامج ولاء العملاء", addon_advanced_reports: "تقارير متقدمة",
     addon_online_menu: "قائمة طعام إلكترونية", addon_customer_ordering: "طلب ذاتي للعملاء", addon_ai_features: "ميزات الذكاء الاصطناعي",
+    addon_payment_gateways: "بوابات الدفع (تابي، تمارا، مدى)",
     addon_additional_users: "مستخدمين إضافيين", addon_additional_branches: "فروع إضافية",
 
     pricing_meta_title: "الباقات والأسعار | SpruVex", pricing_meta_desc: "تعرّف على باقات SpruVex وأسعارها الشهرية لكل نوع نشاط: ERP، نقاط بيع، مطاعم، ومبيعات وصيانة.",
@@ -29,10 +30,11 @@ export const pricing = {
     price_addons_title: "Optional add-ons", price_addons_sub: "Extend your plan with add-ons based on your business needs.",
 
     mod_pos: "Point of Sale", mod_inventory: "Inventory", mod_customers: "Customer management", mod_repairs: "Repairs",
-    mod_restaurant: "Restaurant management", mod_ecommerce: "E-commerce store",
+    mod_restaurant: "Restaurant management", mod_ecommerce: "E-commerce store", mod_payment_gateways: "Payment gateways",
 
     addon_ecommerce: "E-commerce store", addon_loyalty: "Customer loyalty program", addon_advanced_reports: "Advanced reports",
     addon_online_menu: "Online menu", addon_customer_ordering: "Customer self-ordering", addon_ai_features: "AI features",
+    addon_payment_gateways: "Payment gateways (Tabby, Tamara, mada)",
     addon_additional_users: "Additional users", addon_additional_branches: "Additional branches",
 
     pricing_meta_title: "Plans & Pricing | SpruVex", pricing_meta_desc: "See SpruVex plans and monthly pricing for every business type: ERP, POS, restaurant, and sales & repair.",

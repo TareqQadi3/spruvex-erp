@@ -58,7 +58,7 @@ export const PLAN_CATALOG: Record<PlanCode, PlanLimits> = {
   enterprise: {
     maxUsers: 999_999, maxBranches: 999_999, maxProducts: 999_999, maxCustomers: 999_999,
     maxInvoicesPerMonth: 999_999, storageQuotaMb: 50_000,
-    modules: ["pos", "inventory", "customers", "repairs", "restaurant", "ecommerce"],
+    modules: ["pos", "inventory", "customers", "repairs", "restaurant", "ecommerce", "payment_gateways"],
     nameAr: "المؤسسات", nameEn: "Enterprise",
     taglineAr: "حلول مخصصة للمؤسسات الكبيرة", taglineEn: "Custom solutions for large organizations",
     priceMonthlySar: null,
@@ -70,7 +70,7 @@ export const PLAN_CATALOG: Record<PlanCode, PlanLimits> = {
 // (see company_addons.quantity in companyAddons.ts).
 export const ADDON_CODES = [
   "ecommerce", "loyalty", "advanced_reports", "online_menu", "customer_ordering",
-  "ai_features", "additional_users", "additional_branches",
+  "ai_features", "payment_gateways", "additional_users", "additional_branches",
 ] as const;
 export type AddonCode = typeof ADDON_CODES[number];
 
@@ -85,6 +85,7 @@ export const ADDON_CATALOG: Record<AddonCode, AddonDefinition> = {
   online_menu: { type: "module", grantsModule: "online_menu" },
   customer_ordering: { type: "module", grantsModule: "customer_ordering" },
   ai_features: { type: "module", grantsModule: "ai_features" },
+  payment_gateways: { type: "module", grantsModule: "payment_gateways" },
   additional_users: { type: "quantity", boostsLimit: "maxUsers" },
   additional_branches: { type: "quantity", boostsLimit: "maxBranches" },
 };

@@ -5,6 +5,7 @@ export const MODULE_LABEL_KEYS: Record<string, string> = {
   repairs: 'mod_repairs',
   restaurant: 'mod_restaurant',
   ecommerce: 'mod_ecommerce',
+  payment_gateways: 'mod_payment_gateways',
 };
 
 export const ADDON_LABEL_KEYS: Record<string, string> = {
@@ -14,6 +15,7 @@ export const ADDON_LABEL_KEYS: Record<string, string> = {
   online_menu: 'addon_online_menu',
   customer_ordering: 'addon_customer_ordering',
   ai_features: 'addon_ai_features',
+  payment_gateways: 'addon_payment_gateways',
   additional_users: 'addon_additional_users',
   additional_branches: 'addon_additional_branches',
 };

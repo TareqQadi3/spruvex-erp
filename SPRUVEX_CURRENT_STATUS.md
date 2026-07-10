@@ -1,6 +1,6 @@
 # SpruVex ERP — Current Status
 
-> آخر تحديث: 2026-07-10 (بعد إتمام المرحلة 7)
+> آخر تحديث: 2026-07-10 (بعد إتمام المرحلة 8)
 
 ## نظرة عامة | Overview
 
@@ -23,7 +23,7 @@ Multi-tenant ERP + POS SaaS platform targeting the Saudi market (ZATCA complianc
 
 ## حالة الوحدات | Module Status
 
-- **Backend** (`spruvex-app/artifacts/api-server`): auth, rbac, pos, inventory, sync, zatca, subscriptions, platform, support, public, ai (بنية modular) + مسارات legacy (products, repairs, reports, settings...)
+- **Backend** (`spruvex-app/artifacts/api-server`): auth, rbac, pos, inventory, sync, zatca, subscriptions, platform, support, public, ai, ecommerce, payments (بنية modular) + مسارات legacy (products, repairs, reports, settings...)
 - **الموقع التسويقي** (`spruvex-site/artifacts/spruvex-site`): Vite + React SPA مستقل تماماً، 9 صفحات (رئيسية، ERP، POS، مطاعم، مبيعات وصيانة، باقات، مميزات، أسئلة شائعة، تواصل)، عربي RTL / إنجليزي LTR
 - **Frontend** (`spruvex-app/artifacts/pos-system`): POS, dashboard, inventory, repairs, accounting, reports, settings, signup wizard + i18n عربي/إنجليزي
 - **Database** (`spruvex-app/lib/db`): سكيما Drizzle تشمل multi-tenancy، ZATCA، subscriptions/company_addons، branches، product 2.0 (price lists, units/UOM, variants, e-commerce)، وأساس موديول المطاعم (بلا واجهة بعد)
@@ -42,6 +42,8 @@ Multi-tenant ERP + POS SaaS platform targeting the Saudi market (ZATCA complianc
   - **الهوية البصرية الرسمية**: شعار SV بالتدرج (cyan→blue→purple) في الهيدر والفوتر والـ favicon وأيقونات التطبيق وog:image — نفس حزمة الأصول المستخدمة في `pos-system`.
 - **مكتمل بالمرحلة 7**: أساس ميزات الذكاء الاصطناعي — جدولا `ai_settings` (مزوّد/موديل/مفتاح BYOK اختياري/تعطيل لكل شركة) و`ai_usage_logs` (سجل استهلاك لكل استدعاء: كود الميزة، المزوّد، التوكنز، الحالة — أساس الفوترة لاحقاً). طبقة مزودين قابلة للتبديل (`modules/ai/providers`): "anthropic" (جاهز، المفتاح من إعدادات الشركة أو env المنصة) و"mock" (بلا مفتاح/شبكة — للتطوير وإثبات عدم الارتباط بمزود واحد). **مساعد المنتجات** `/api/ai/product-assistant` بخمسة إجراءات (وصف، تحسين اسم ×3، اقتراح تصنيف، 8-12 كلمة بحث، وصف متجر إلكتروني SEO) بالعربية أو الإنجليزية. **مساعد الأعمال (أساس)**: `/api/ai/business-assistant/summary` يجمع مبيعات آخر 30 يوم مقابل الـ 30 السابقة من جدول المبيعات الفعلي ويطلب ملخصاً إدارياً — تنبيهات المخزون وأفضل المنتجات مؤجلة عمداً. البوابة: كل المسارات خلف `requireModule("ai_features")` — الإضافة كانت موجودة في كتالوج المرحلة 4، فلم تحتج آلية جديدة. لا واجهة UI بعد (الأساس backend فقط كما طُلب)
 
+- **مكتمل بالمرحلة 8**: أساس التكاملات — **قنوات البيع الإلكترونية** (`modules/ecommerce`، خلف إضافة `ecommerce`): طبقة مزودين موحّدة (سلة، زد، Shopify — مكتوبة وفق التوثيق الرسمي لكن غير مُجرّبة على sandbox حقيقي بعد لعدم توفر حسابات تجار، + مزود `mock` حتمي استُخدم للتحقق الحي الكامل). اتصالات لكل شركة (بيانات الاعتماد لا تُعاد أبداً عبر الـ API)، دفع منتجات للمتجر الخارجي مع جدول ربط `product_external_mappings`، سحب طلبات، واستقبال webhooks موقّعة (HMAC على الـ raw body). الطلبات الخارجية تُجهَّز أولاً في جدول `ecommerce_orders` الجديد (dedupe تلقائي) ثم تُحوَّل بخطوة استيراد صريحة إلى **بيع حقيقي عبر `saleService.createSale` نفسه** (قفل المخزون، الخصم عبر محرك المخزون، فحوصات صلاحيات تعديل السعر — كلها مُعاد استخدامها). **بوابات الدفع** (`modules/payments`، خلف إضافة جديدة `payment_gateways` أُضيفت للكتالوج وتسمياتها لموقع التسويق): طبقة مزودين (تابي، تمارا، Moyasar — مدى شبكة بطاقات تمر عبر PSP مثل Moyasar وليست API مستقلة، + `mock`)، جداول `payment_gateway_settings` و`payment_transactions`، إنشاء checkout بمبلغ يُحسب من الخادم فقط (رصيد البيع المتبقي أو إجمالي الطلب المجهَّز) مع idempotencyKey، وwebhook موقّع يسوّي المعاملة **ويحدّث البيع** (سطر في `sale_payments` + `amountPaid`) في معاملة واحدة، واسترداد للمعاملات الملتقطة. الـ webhooks عمداً لا تفحص حالة الاشتراك (دفعة بدأت يجب أن تُسوّى حتى لو انتهت الإضافة أثناءها). ملاحظة مكتشفة أثناء التحقق (خارج نطاق المرحلة، موثقة كمهمة منفصلة): تسجيل شركة جديدة لا ينشئ مستودعاً افتراضياً ولا يوجد API لضبطه، ما يمنع أول بيع عبر محرك المخزون للمستأجرين الجدد.
+
 ## التشغيل المحلي | Local Development
 
 ```powershell
@@ -57,4 +59,4 @@ cd spruvex-app
 
 - لا تضع أسراراً أو توكنات في أي ملف متتبَّع في git.
 - قاعدة البيانات حالياً Neon PostgreSQL سحابية (وليست محلية) — هي بيئة التطوير الرسمية حتى مرحلة النشر.
-- خارطة الطريق الكاملة (11 مرحلة) موثقة في محادثات التطوير — المراحل 1-7 مكتملة. بانتظار توجيه المرحلة 8 (التكاملات: سلة/زد/Shopify + Tabby/Tamara/Mada).
+- خارطة الطريق الكاملة (11 مرحلة) موثقة في محادثات التطوير — المراحل 1-8 مكتملة. التالي: المرحلة 9 (الفواتير + ZATCA).
