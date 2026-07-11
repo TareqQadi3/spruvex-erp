@@ -31,17 +31,28 @@ async function main() {
       return;
     }
 
+    const owner = await db.user.create({
+      data: {
+        email: "owner@demo.spruvex.local",
+        name: "صاحب المطعم",
+        passwordHash: await hashPassword("SpruVex-Demo1"),
+        emailVerifiedAt: new Date(),
+      },
+    });
+
     const provisioned = await provisionTenant(db, {
       name: "مطعم التجربة",
       nameEn: "Demo Restaurant",
       slug: "demo",
+      type: "restaurant",
       vatNumber: "300000000000003",
       branch: { name: "الفرع الرئيسي", nameEn: "Main Branch", slug: "main" },
-      owner: {
-        name: "صاحب المطعم",
-        email: "owner@demo.spruvex.local",
-        password: "SpruVex-Demo1",
-      },
+      ownerUserId: owner.id,
+    });
+
+    await db.tenant.update({
+      where: { id: provisioned.tenantId },
+      data: { onboardingCompletedAt: new Date() },
     });
 
     // A cashier with a POS PIN so later phases are demoable out of the box.
@@ -50,6 +61,7 @@ async function main() {
         email: "cashier@demo.spruvex.local",
         name: "كاشير التجربة",
         passwordHash: await hashPassword("SpruVex-Demo1"),
+        emailVerifiedAt: new Date(),
       },
     });
     await db.userRole.create({
@@ -63,7 +75,7 @@ async function main() {
     await db.posPin.create({
       data: {
         tenantId: provisioned.tenantId,
-        branchId: provisioned.branchId,
+        branchId: provisioned.branchId!,
         userId: cashier.id,
         pinHash: await hashPin("1234"),
       },

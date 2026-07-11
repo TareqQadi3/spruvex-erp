@@ -8,30 +8,34 @@ import {
   SYSTEM_ROLES,
 } from "@spruvex-r/types";
 
-import { hashPassword } from "../identity/password";
-
 /**
- * Tenant provisioning — creates a tenant with its default branch, the five
- * system roles wired to the default permission sets, and the owner account.
+ * Tenant provisioning — creates a tenant, the five system roles wired to the
+ * default permission sets, the owner membership, and (optionally) a first
+ * branch. The owner user account must already exist (created at registration).
  *
  * Runs on an ADMIN (BYPASSRLS) connection because a tenant cannot be created
- * from inside a tenant context. Used by the seed today and by the Phase 1
- * onboarding flow.
+ * from inside a tenant context. Used by the onboarding wizard and the seed.
  */
 
 export interface ProvisionTenantInput {
   name: string;
   nameEn?: string;
   slug: string;
+  type?: string;
+  country?: string;
+  currency?: string;
+  defaultLocale?: string;
+  logoUrl?: string;
   vatNumber?: string;
   crNumber?: string;
+  /** Omit to create the tenant without a branch (wizard creates it in step 3). */
   branch?: { name?: string; nameEn?: string; slug?: string };
-  owner: { name: string; email: string; phone?: string; password: string };
+  ownerUserId: string;
 }
 
 export interface ProvisionedTenant {
   tenantId: string;
-  branchId: string;
+  branchId?: string;
   ownerUserId: string;
   roleIdsByKey: Record<string, string>;
 }
@@ -51,27 +55,36 @@ export async function provisionTenant(
   db: PrismaClient,
   input: ProvisionTenantInput,
 ): Promise<ProvisionedTenant> {
-  const passwordHash = await hashPassword(input.owner.password);
-
   return db.$transaction(async (tx) => {
     const tenant = await tx.tenant.create({
       data: {
         name: input.name,
         nameEn: input.nameEn,
         slug: input.slug,
+        type: input.type,
+        country: input.country ?? "SA",
+        currency: input.currency ?? "SAR",
+        defaultLocale: input.defaultLocale ?? "ar",
+        logoUrl: input.logoUrl,
         vatNumber: input.vatNumber,
         crNumber: input.crNumber,
+        createdBy: input.ownerUserId,
       },
     });
 
-    const branch = await tx.branch.create({
-      data: {
-        tenantId: tenant.id,
-        name: input.branch?.name ?? "الفرع الرئيسي",
-        nameEn: input.branch?.nameEn ?? "Main Branch",
-        slug: input.branch?.slug ?? "main",
-      },
-    });
+    let branchId: string | undefined;
+    if (input.branch) {
+      const branch = await tx.branch.create({
+        data: {
+          tenantId: tenant.id,
+          name: input.branch.name ?? "الفرع الرئيسي",
+          nameEn: input.branch.nameEn ?? "Main Branch",
+          slug: input.branch.slug ?? "main",
+          createdBy: input.ownerUserId,
+        },
+      });
+      branchId = branch.id;
+    }
 
     const permissions = await tx.permission.findMany();
     const permissionIdByKey = new Map(permissions.map((p) => [p.key, p.id]));
@@ -85,6 +98,7 @@ export async function provisionTenant(
           nameAr: ROLE_LABELS[roleKey].ar,
           nameEn: ROLE_LABELS[roleKey].en,
           isSystem: true,
+          createdBy: input.ownerUserId,
         },
       });
       roleIdsByKey[roleKey] = role.id;
@@ -102,28 +116,20 @@ export async function provisionTenant(
       });
     }
 
-    const owner = await tx.user.create({
-      data: {
-        email: input.owner.email,
-        phone: input.owner.phone,
-        name: input.owner.name,
-        passwordHash,
-      },
-    });
-
     await tx.userRole.create({
       data: {
         tenantId: tenant.id,
-        userId: owner.id,
+        userId: input.ownerUserId,
         roleId: roleIdsByKey.owner,
         branchId: null, // tenant-wide
+        createdBy: input.ownerUserId,
       },
     });
 
     return {
       tenantId: tenant.id,
-      branchId: branch.id,
-      ownerUserId: owner.id,
+      branchId,
+      ownerUserId: input.ownerUserId,
       roleIdsByKey,
     };
   });

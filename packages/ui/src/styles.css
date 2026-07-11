@@ -1,0 +1,45 @@
+/*
+ * SpruVex R theme tokens — green identity extracted from the brand logo:
+ *   lime  #8BC34A · green #4CAF50 · dark green #1B5E20
+ * Light, clean SaaS look: white cards, soft shadows. (KDS dark mode comes
+ * with the KDS app in Phase 4.)
+ */
+:root {
+  --background: 120 20% 99%;
+  --foreground: 150 10% 12%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 150 10% 12%;
+
+  --primary: 123 46% 34%; /* #2E7D32 — accessible brand green */
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 122 39% 94%;
+  --secondary-foreground: 125 55% 20%;
+
+  --muted: 120 12% 95%;
+  --muted-foreground: 150 6% 40%;
+
+  --accent: 88 50% 53%; /* #8BC34A lime */
+  --accent-foreground: 125 55% 14%;
+
+  --destructive: 0 72% 45%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 120 12% 88%;
+  --input: 120 12% 84%;
+  --ring: 123 46% 34%;
+
+  --radius: 0.625rem;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: "IBM Plex Sans Arabic", "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}

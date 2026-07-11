@@ -1,14 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 
-import {
-  provisionTenant,
-  syncPermissionCatalog,
-  type ProvisionedTenant,
-} from "../../src/modules/tenancy/tenant-provisioning";
+import { syncPermissionCatalog } from "../../src/modules/tenancy/tenant-provisioning";
 import { AuditService } from "../../src/shared/audit/audit.service";
 import { PrismaService } from "../../src/shared/prisma/prisma.service";
 import { TenantContextService } from "../../src/shared/tenancy/tenant-context.service";
 import { createAdminClient, createRawAppClient, truncateAll } from "../helpers/db";
+import { provisionTestTenant } from "../helpers/provision";
+
+type ProvisionedTenant = Awaited<ReturnType<typeof provisionTestTenant>>;
 
 describe("audit log", () => {
   let admin: PrismaClient;
@@ -21,10 +20,10 @@ describe("audit log", () => {
     admin = createAdminClient();
     await truncateAll(admin);
     await syncPermissionCatalog(admin);
-    tenant = await provisionTenant(admin, {
+    tenant = await provisionTestTenant(admin, {
       name: "مطعم التدقيق",
       slug: "audit-tenant",
-      owner: { name: "Owner", email: "owner@audit.test", password: "Test-12345" },
+      ownerEmail: "owner@audit.test",
     });
 
     tenantContext = new TenantContextService();

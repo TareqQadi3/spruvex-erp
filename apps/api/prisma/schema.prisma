@@ -35,9 +35,18 @@ model Tenant {
   vatNumber String?      @map("vat_number")
   crNumber  String?      @map("cr_number")
   status    TenantStatus @default(active)
+  /// Business type: restaurant | cafe | cloud_kitchen | food_truck | bakery | other
+  type      String?
+  /// ISO 3166-1 alpha-2
+  country   String       @default("SA")
+  /// ISO 4217
+  currency  String       @default("SAR")
+  /// Default UI language for the tenant: ar | en
+  defaultLocale String   @default("ar") @map("default_locale")
   /// VAT rate percent, configurable (KSA default 15.00)
   vatRate   Decimal      @default(15.00) @map("vat_rate") @db.Decimal(5, 2)
   settings  Json         @default("{}")
+  onboardingCompletedAt DateTime? @map("onboarding_completed_at")
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -61,6 +70,8 @@ model Branch {
   nameEn   String? @map("name_en")
   slug     String
   address  String?
+  phone    String?
+  email    String?
   lat      Decimal? @db.Decimal(9, 6)
   lng      Decimal? @db.Decimal(9, 6)
   /// Weekly working hours, e.g. {"sun": [{"from": "08:00", "to": "23:00"}], ...}
@@ -94,14 +105,68 @@ model User {
   name         String
   isActive     Boolean @default(true) @map("is_active")
 
+  emailVerifiedAt     DateTime? @map("email_verified_at")
+  lastLoginAt         DateTime? @map("last_login_at")
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  /// Account lockout after repeated failed logins.
+  lockedUntil         DateTime? @map("locked_until")
+
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  userRoles UserRole[]
-  posPins   PosPin[]
+  userRoles     UserRole[]
+  posPins       PosPin[]
+  refreshTokens RefreshToken[]
+  otpCodes      OtpCode[]
 
   @@map("users")
+}
+
+/// Refresh-token sessions (global identity table, like users — no tenant_id).
+/// Tokens are opaque random secrets stored hashed. Rotation: each refresh
+/// revokes the old token and issues a new one in the same family; presenting
+/// a revoked token (reuse) revokes the entire family.
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  familyId  String    @map("family_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  ip        String?
+  userAgent String?   @map("user_agent")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+/// One-time codes for email/phone verification and password reset.
+/// OTP-ready architecture: delivery goes through the OtpSender port —
+/// development logs the code; a real SMS/email provider plugs in later.
+model OtpCode {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String?   @map("user_id") @db.Uuid
+  /// email_verification | password_reset | login
+  purpose     String
+  /// email address or phone number the code was sent to
+  destination String
+  codeHash    String    @map("code_hash")
+  expiresAt   DateTime  @map("expires_at")
+  consumedAt  DateTime? @map("consumed_at")
+  attempts    Int       @default(0)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([destination, purpose])
+  @@map("otp_codes")
 }
 
 model Role {

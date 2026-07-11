@@ -10,12 +10,15 @@ import type { PermissionKey } from "@spruvex-r/types";
 
 import { TenantContextService } from "../tenancy/tenant-context.service";
 import { IS_PUBLIC_KEY } from "./public.decorator";
+import { REQUIRE_AUTH_KEY } from "./require-authenticated.decorator";
 import { PERMISSIONS_KEY } from "./require-permission.decorator";
 
 /**
  * Global guard enforcing the "no implicit trust" rule:
  * - @Public() endpoints pass through.
- * - Endpoints without an explicit @RequirePermission() are DENIED.
+ * - @RequireAuthenticated() endpoints need a valid authenticated context
+ *   (pre-tenant onboarding only).
+ * - Endpoints without an explicit declaration are DENIED.
  * - Otherwise the authenticated context must hold every required permission.
  */
 @Injectable()
@@ -30,6 +33,11 @@ export class PermissionsGuard implements CanActivate {
 
     if (this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, targets)) {
       return true;
+    }
+
+    if (this.reflector.getAllAndOverride<boolean>(REQUIRE_AUTH_KEY, targets)) {
+      // Throws UnauthorizedException when the request is unauthenticated.
+      return Boolean(this.tenantContext.contextOrThrow);
     }
 
     const required = this.reflector.getAllAndOverride<PermissionKey[] | undefined>(

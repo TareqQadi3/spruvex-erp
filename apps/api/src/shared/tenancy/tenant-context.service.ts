@@ -5,11 +5,15 @@ import type { PermissionKey } from "@spruvex-r/types";
 
 /**
  * Per-request context, resolved from the JWT (never from client parameters).
- * Populated by the auth layer (Phase 1); tests populate it via `run()`.
+ * Populated by AuthContextMiddleware; tests populate it via `run()`.
+ *
+ * `tenantId` is absent only during onboarding: a freshly registered owner is
+ * authenticated but has no restaurant yet. Everything tenant-scoped throws
+ * until a tenant exists in the token.
  */
 export interface RequestContext {
-  tenantId: string;
-  userId?: string;
+  userId: string;
+  tenantId?: string;
   branchId?: string;
   permissions: ReadonlySet<PermissionKey | string>;
 }
@@ -36,6 +40,10 @@ export class TenantContextService {
   }
 
   get tenantIdOrThrow(): string {
-    return this.contextOrThrow.tenantId;
+    const { tenantId } = this.contextOrThrow;
+    if (!tenantId) {
+      throw new UnauthorizedException("No tenant selected — complete onboarding first");
+    }
+    return tenantId;
   }
 }

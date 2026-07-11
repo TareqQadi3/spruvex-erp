@@ -1,8 +1,9 @@
-import { Module } from "@nestjs/common";
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 
 import { validateEnv } from "./config/env.validation";
 import { HealthModule } from "./health/health.module";
+import { AuthContextMiddleware } from "./modules/identity/auth-context.middleware";
 import { IdentityModule } from "./modules/identity/identity.module";
 import { TenancyModule } from "./modules/tenancy/tenancy.module";
 import { AuditModule } from "./shared/audit/audit.module";
@@ -24,4 +25,8 @@ import { TenantContextModule } from "./shared/tenancy/tenant-context.module";
     TenancyModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(AuthContextMiddleware).forRoutes("*");
+  }
+}

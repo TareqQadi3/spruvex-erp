@@ -5,7 +5,8 @@
   "description": "Shared tsconfig / eslint configuration for SpruVex R",
   "files": [
     "tsconfig.base.json",
-    "eslint.base.mjs"
+    "eslint.base.mjs",
+    "tailwind-preset.cjs"
   ],
   "scripts": {
     "build": "echo skip",

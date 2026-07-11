@@ -16,6 +16,8 @@ export async function truncateAll(admin: PrismaClient): Promise<void> {
     TRUNCATE TABLE
       audit_logs,
       pos_pins,
+      refresh_tokens,
+      otp_codes,
       user_roles,
       role_permissions,
       roles,

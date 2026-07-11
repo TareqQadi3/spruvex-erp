@@ -1,4 +1,4 @@
-const REQUIRED_VARS = ["DATABASE_URL", "ADMIN_DATABASE_URL"] as const;
+const REQUIRED_VARS = ["DATABASE_URL", "ADMIN_DATABASE_URL", "JWT_SECRET"] as const;
 
 /**
  * Fail fast on boot when required environment variables are missing,

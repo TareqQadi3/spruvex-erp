@@ -12,6 +12,12 @@ export interface AuditEntry {
   branchId?: string;
   meta?: Prisma.InputJsonValue;
   ip?: string;
+  /**
+   * Explicit tenant override for the one moment a tenant exists but is not in
+   * the token yet: the provisioning step of onboarding. Everything else uses
+   * the request context's tenant.
+   */
+  tenantId?: string;
 }
 
 /**
@@ -27,9 +33,10 @@ export class AuditService {
 
   async log(entry: AuditEntry): Promise<void> {
     const ctx = this.tenantContext.contextOrThrow;
-    await this.prisma.scoped.auditLog.create({
+    const tenantId = entry.tenantId ?? this.tenantContext.tenantIdOrThrow;
+    await this.prisma.forTenant(tenantId).auditLog.create({
       data: {
-        tenantId: ctx.tenantId,
+        tenantId,
         branchId: entry.branchId ?? ctx.branchId,
         userId: ctx.userId,
         action: entry.action,

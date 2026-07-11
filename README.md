@@ -17,15 +17,17 @@ ordering) · Turborepo + pnpm.
 ```
 apps/
   api/          NestJS API (modular monolith)
+  dashboard/    Restaurant dashboard — React SPA (green theme, ar/en RTL-first)
 packages/
   types/        Shared domain types, permission catalog, role defaults
-  config/       Shared tsconfig / eslint base
+  ui/           Design-system components (shadcn-style, SpruVex R green theme)
+  config/       Shared tsconfig / eslint / tailwind preset
 infra/
   postgres/     Database role bootstrap (RLS roles)
 brand/          Logo assets and palette
 ```
 
-Frontend apps (`dashboard`, `pos`, `kds`, `ordering`, `platform`) are added in
+Remaining frontend apps (`pos`, `kds`, `ordering`, `platform`) are added in
 later phases per the roadmap.
 
 ## Getting started
@@ -41,6 +43,9 @@ pnpm db:migrate:deploy        # apply migrations (runs as spruvex_admin)
 pnpm db:seed                  # permission catalog + demo restaurant
 pnpm --filter @spruvex-r/api dev
 # GET http://localhost:3000/api/v1/health
+
+pnpm --filter @spruvex-r/dashboard dev
+# http://localhost:5173 — proxies /api to the API
 ```
 
 Run everything (build, lint, typecheck, tests):

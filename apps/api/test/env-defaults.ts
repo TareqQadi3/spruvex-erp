@@ -8,4 +8,5 @@ export function applyTestEnvDefaults(): void {
     "postgresql://spruvex_app:spruvex_app@localhost:5432/spruvex_r_test?schema=public";
   process.env.ADMIN_DATABASE_URL ??=
     "postgresql://spruvex_admin:spruvex_admin@localhost:5432/spruvex_r_test?schema=public";
+  process.env.JWT_SECRET ??= "test-secret-not-for-production";
 }

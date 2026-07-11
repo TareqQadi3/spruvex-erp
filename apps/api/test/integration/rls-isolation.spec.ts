@@ -1,13 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 
-import {
-  provisionTenant,
-  syncPermissionCatalog,
-  type ProvisionedTenant,
-} from "../../src/modules/tenancy/tenant-provisioning";
+import { syncPermissionCatalog } from "../../src/modules/tenancy/tenant-provisioning";
 import { PrismaService } from "../../src/shared/prisma/prisma.service";
 import { TenantContextService } from "../../src/shared/tenancy/tenant-context.service";
 import { createAdminClient, createRawAppClient, truncateAll } from "../helpers/db";
+import { provisionTestTenant } from "../helpers/provision";
+
+type ProvisionedTenant = Awaited<ReturnType<typeof provisionTestTenant>>;
 
 /**
  * The Phase 0 gate: proves that Row-Level Security + the tenant-scoped Prisma
@@ -26,15 +25,15 @@ describe("multi-tenant isolation (RLS)", () => {
     await truncateAll(admin);
     await syncPermissionCatalog(admin);
 
-    tenantA = await provisionTenant(admin, {
+    tenantA = await provisionTestTenant(admin, {
       name: "مطعم ألف",
       slug: "tenant-a",
-      owner: { name: "Owner A", email: "owner-a@rls.test", password: "Test-12345" },
+      ownerEmail: "owner-a@rls.test",
     });
-    tenantB = await provisionTenant(admin, {
+    tenantB = await provisionTestTenant(admin, {
       name: "مطعم باء",
       slug: "tenant-b",
-      owner: { name: "Owner B", email: "owner-b@rls.test", password: "Test-12345" },
+      ownerEmail: "owner-b@rls.test",
     });
 
     tenantContext = new TenantContextService();
@@ -57,7 +56,7 @@ describe("multi-tenant isolation (RLS)", () => {
     const scopedToA = prisma.forTenant(tenantA.tenantId);
 
     const branchB = await scopedToA.branch.findUnique({
-      where: { id: tenantB.branchId },
+      where: { id: tenantB.branchId! },
     });
     expect(branchB).toBeNull();
 
@@ -86,7 +85,7 @@ describe("multi-tenant isolation (RLS)", () => {
     const scopedToA = prisma.forTenant(tenantA.tenantId);
 
     const updated = await scopedToA.branch.updateMany({
-      where: { id: tenantB.branchId },
+      where: { id: tenantB.branchId! },
       data: { name: "hijacked" },
     });
     expect(updated.count).toBe(0);
@@ -97,7 +96,7 @@ describe("multi-tenant isolation (RLS)", () => {
     expect(deleted.count).toBe(0);
 
     // Verify tenant B is untouched.
-    const branchB = await admin.branch.findUniqueOrThrow({ where: { id: tenantB.branchId } });
+    const branchB = await admin.branch.findUniqueOrThrow({ where: { id: tenantB.branchId! } });
     expect(branchB.name).not.toBe("hijacked");
   });
 
@@ -124,7 +123,7 @@ describe("multi-tenant isolation (RLS)", () => {
     expect(() => prisma.scoped).toThrow(/tenant context/i);
 
     tenantContext.run(
-      { tenantId: tenantA.tenantId, permissions: new Set() },
+      { userId: tenantA.ownerUserId, tenantId: tenantA.tenantId, permissions: new Set() },
       () => {
         expect(() => prisma.scoped).not.toThrow();
       },

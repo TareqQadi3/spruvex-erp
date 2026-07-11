@@ -1,9 +1,17 @@
 import { Module } from "@nestjs/common";
 
+import { IdentityModule } from "../identity/identity.module";
+import { OnboardingController } from "./onboarding.controller";
+import { OnboardingService } from "./onboarding.service";
+import { TenancyController } from "./tenancy.controller";
+
 /**
- * Tenancy module — tenants, branches, onboarding wizard.
- * Phase 0 ships the data model and provisioning logic (tenant-provisioning.ts);
- * the self-service onboarding API lands in Phase 1.
+ * Tenancy module — tenants, branches, onboarding wizard,
+ * dashboard-shell read endpoints.
  */
-@Module({})
+@Module({
+  imports: [IdentityModule],
+  controllers: [OnboardingController, TenancyController],
+  providers: [OnboardingService],
+})
 export class TenancyModule {}
