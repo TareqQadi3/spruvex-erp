@@ -81,7 +81,74 @@ async function main() {
       },
     });
 
-    console.log(`Demo tenant created: ${provisioned.tenantId}`);
+    // Small demo menu: categories, products, a size modifier group.
+    const tenantId = provisioned.tenantId;
+    const grills = await db.category.create({
+      data: { tenantId, name: "المشويات", nameEn: "Grills", sortOrder: 0, createdBy: owner.id },
+    });
+    const drinks = await db.category.create({
+      data: { tenantId, name: "المشروبات", nameEn: "Drinks", sortOrder: 1, createdBy: owner.id },
+    });
+
+    const sizeGroup = await db.modifierGroup.create({
+      data: {
+        tenantId,
+        name: "الحجم",
+        nameEn: "Size",
+        isRequired: true,
+        minSelect: 1,
+        maxSelect: 1,
+        createdBy: owner.id,
+      },
+    });
+    await db.modifier.createMany({
+      data: [
+        { tenantId, modifierGroupId: sizeGroup.id, name: "عادي", nameEn: "Regular", priceAdjustment: "0", sortOrder: 0 },
+        { tenantId, modifierGroupId: sizeGroup.id, name: "كبير", nameEn: "Large", priceAdjustment: "5.00", sortOrder: 1 },
+      ],
+    });
+
+    const tawook = await db.product.create({
+      data: {
+        tenantId,
+        categoryId: grills.id,
+        name: "شيش طاووق",
+        nameEn: "Shish Tawook",
+        sku: "GRL-001",
+        basePrice: "32.00",
+        sortOrder: 0,
+        createdBy: owner.id,
+      },
+    });
+    await db.product.createMany({
+      data: [
+        {
+          tenantId,
+          categoryId: grills.id,
+          name: "كباب لحم",
+          nameEn: "Beef Kebab",
+          sku: "GRL-002",
+          basePrice: "38.00",
+          sortOrder: 1,
+          createdBy: owner.id,
+        },
+        {
+          tenantId,
+          categoryId: drinks.id,
+          name: "عصير برتقال طازج",
+          nameEn: "Fresh Orange Juice",
+          sku: "DRK-001",
+          basePrice: "12.00",
+          sortOrder: 0,
+          createdBy: owner.id,
+        },
+      ],
+    });
+    await db.productModifierGroup.create({
+      data: { tenantId, productId: tawook.id, modifierGroupId: sizeGroup.id, sortOrder: 0 },
+    });
+
+    console.log(`Demo tenant created with demo menu: ${provisioned.tenantId}`);
   } finally {
     await db.$disconnect();
   }

@@ -16,6 +16,11 @@ import { BranchesPage } from "./pages/dashboard/BranchesPage";
 import { HomePage } from "./pages/dashboard/HomePage";
 import { SettingsPage } from "./pages/dashboard/SettingsPage";
 import { TeamPage } from "./pages/dashboard/TeamPage";
+import { CategoriesPage } from "./pages/menu/CategoriesPage";
+import { MenuLayout } from "./pages/menu/MenuLayout";
+import { ModifiersPage } from "./pages/menu/ModifiersPage";
+import { ProductEditorPage } from "./pages/menu/ProductEditorPage";
+import { ProductsPage } from "./pages/menu/ProductsPage";
 import { OnboardingWizard } from "./pages/onboarding/OnboardingWizard";
 
 function FullScreenSpinner() {
@@ -90,6 +95,18 @@ const router = createBrowserRouter([
       { path: "branches", element: <BranchesPage /> },
       { path: "team", element: <TeamPage /> },
       { path: "settings", element: <SettingsPage /> },
+      {
+        path: "menu",
+        element: <MenuLayout />,
+        children: [
+          { index: true, element: <Navigate to="/menu/categories" replace /> },
+          { path: "categories", element: <CategoriesPage /> },
+          { path: "products", element: <ProductsPage /> },
+          { path: "products/new", element: <ProductEditorPage /> },
+          { path: "products/:id", element: <ProductEditorPage /> },
+          { path: "modifiers", element: <ModifiersPage /> },
+        ],
+      },
       { path: "*", element: <Navigate to="/" replace /> },
     ],
   },

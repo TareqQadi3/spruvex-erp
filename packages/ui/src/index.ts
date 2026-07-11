@@ -12,3 +12,8 @@ export {
 } from "./card";
 export { Alert, type AlertProps } from "./alert";
 export { Spinner } from "./spinner";
+export { Dialog, type DialogProps } from "./dialog";
+export { Switch, type SwitchProps } from "./switch";
+export { Textarea, type TextareaProps } from "./textarea";
+export { Select, type SelectProps } from "./select";
+export { Badge, type BadgeProps } from "./badge";

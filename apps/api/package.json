@@ -25,6 +25,7 @@
     "@nestjs/core": "^11.0.0",
     "@nestjs/event-emitter": "^3.0.0",
     "@nestjs/jwt": "^11.0.2",
+    "@nestjs/mapped-types": "^2.1.1",
     "@nestjs/platform-express": "^11.0.0",
     "@prisma/client": "^6.4.0",
     "@spruvex-r/types": "workspace:*",

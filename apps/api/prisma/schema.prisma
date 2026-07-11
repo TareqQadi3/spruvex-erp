@@ -13,7 +13,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   // Runtime URL (spruvex_app, RLS enforced). Prisma CLI (migrate/seed) uses directUrl.
   url       = env("DATABASE_URL")
   directUrl = env("ADMIN_DATABASE_URL")
@@ -27,26 +27,26 @@ enum TenantStatus {
 }
 
 model Tenant {
-  id        String       @id @default(uuid()) @db.Uuid
-  name      String
-  nameEn    String?      @map("name_en")
-  slug      String       @unique
-  logoUrl   String?      @map("logo_url")
-  vatNumber String?      @map("vat_number")
-  crNumber  String?      @map("cr_number")
-  status    TenantStatus @default(active)
+  id                    String       @id @default(uuid()) @db.Uuid
+  name                  String
+  nameEn                String?      @map("name_en")
+  slug                  String       @unique
+  logoUrl               String?      @map("logo_url")
+  vatNumber             String?      @map("vat_number")
+  crNumber              String?      @map("cr_number")
+  status                TenantStatus @default(active)
   /// Business type: restaurant | cafe | cloud_kitchen | food_truck | bakery | other
-  type      String?
+  type                  String?
   /// ISO 3166-1 alpha-2
-  country   String       @default("SA")
+  country               String       @default("SA")
   /// ISO 4217
-  currency  String       @default("SAR")
+  currency              String       @default("SAR")
   /// Default UI language for the tenant: ar | en
-  defaultLocale String   @default("ar") @map("default_locale")
+  defaultLocale         String       @default("ar") @map("default_locale")
   /// VAT rate percent, configurable (KSA default 15.00)
-  vatRate   Decimal      @default(15.00) @map("vat_rate") @db.Decimal(5, 2)
-  settings  Json         @default("{}")
-  onboardingCompletedAt DateTime? @map("onboarding_completed_at")
+  vatRate               Decimal      @default(15.00) @map("vat_rate") @db.Decimal(5, 2)
+  settings              Json         @default("{}")
+  onboardingCompletedAt DateTime?    @map("onboarding_completed_at")
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -54,31 +54,37 @@ model Tenant {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at")
 
-  branches  Branch[]
-  roles     Role[]
-  userRoles UserRole[]
-  posPins   PosPin[]
-  auditLogs AuditLog[]
+  branches              Branch[]
+  roles                 Role[]
+  userRoles             UserRole[]
+  posPins               PosPin[]
+  auditLogs             AuditLog[]
+  categories            Category[]
+  products              Product[]
+  productBranchSettings ProductBranchSetting[]
+  modifierGroups        ModifierGroup[]
+  modifiers             Modifier[]
+  productModifierGroups ProductModifierGroup[]
 
   @@map("tenants")
 }
 
 model Branch {
-  id       String  @id @default(uuid()) @db.Uuid
-  tenantId String  @map("tenant_id") @db.Uuid
-  name     String
-  nameEn   String? @map("name_en")
-  slug     String
-  address  String?
-  phone    String?
-  email    String?
-  lat      Decimal? @db.Decimal(9, 6)
-  lng      Decimal? @db.Decimal(9, 6)
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  name             String
+  nameEn           String?  @map("name_en")
+  slug             String
+  address          String?
+  phone            String?
+  email            String?
+  lat              Decimal? @db.Decimal(9, 6)
+  lng              Decimal? @db.Decimal(9, 6)
   /// Weekly working hours, e.g. {"sun": [{"from": "08:00", "to": "23:00"}], ...}
-  workingHours Json @default("{}") @map("working_hours")
+  workingHours     Json     @default("{}") @map("working_hours")
   /// Self-ordering settings, e.g. {"qrOrderingEnabled": true, "requireCashierConfirmation": false}
-  orderingSettings Json @default("{}") @map("ordering_settings")
-  isActive Boolean @default(true) @map("is_active")
+  orderingSettings Json     @default("{}") @map("ordering_settings")
+  isActive         Boolean  @default(true) @map("is_active")
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -86,9 +92,10 @@ model Branch {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at")
 
-  tenant    Tenant     @relation(fields: [tenantId], references: [id])
-  userRoles UserRole[]
-  posPins   PosPin[]
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id])
+  userRoles             UserRole[]
+  posPins               PosPin[]
+  productBranchSettings ProductBranchSetting[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -270,16 +277,16 @@ model PosPin {
 /// drawer open without sale, permission changes, stock adjustments, ...).
 /// UPDATE/DELETE are revoked from the app role at the database level.
 model AuditLog {
-  id       String  @id @default(uuid()) @db.Uuid
-  tenantId String  @map("tenant_id") @db.Uuid
-  branchId String? @map("branch_id") @db.Uuid
-  userId   String? @map("user_id") @db.Uuid
-  action   String
+  id         String  @id @default(uuid()) @db.Uuid
+  tenantId   String  @map("tenant_id") @db.Uuid
+  branchId   String? @map("branch_id") @db.Uuid
+  userId     String? @map("user_id") @db.Uuid
+  action     String
   entityType String? @map("entity_type")
   entityId   String? @map("entity_id") @db.Uuid
   /// Structured context: reason, before/after values, amounts...
-  meta     Json    @default("{}")
-  ip       String?
+  meta       Json    @default("{}")
+  ip         String?
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -288,4 +295,181 @@ model AuditLog {
   @@index([tenantId, createdAt])
   @@index([tenantId, action])
   @@map("audit_logs")
+}
+
+// ============================================================================
+// Catalog domain (Phase 2) — the single source of truth for every ordering
+// channel (POS, QR menu, future channels).
+// Menu structure: Category -> Product -> ModifierGroup -> Modifier.
+// ============================================================================
+
+model Category {
+  id            String  @id @default(uuid()) @db.Uuid
+  tenantId      String  @map("tenant_id") @db.Uuid
+  /// Arabic name (primary)
+  name          String
+  nameEn        String? @map("name_en")
+  description   String?
+  descriptionEn String? @map("description_en")
+  imageUrl      String? @map("image_url")
+  sortOrder     Int     @default(0) @map("sort_order")
+  isActive      Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  products Product[]
+
+  @@index([tenantId, sortOrder])
+  @@map("categories")
+}
+
+model Product {
+  id         String @id @default(uuid()) @db.Uuid
+  tenantId   String @map("tenant_id") @db.Uuid
+  categoryId String @map("category_id") @db.Uuid
+
+  /// Arabic name (primary)
+  name          String
+  nameEn        String? @map("name_en")
+  description   String?
+  descriptionEn String? @map("description_en")
+  imageUrl      String? @map("image_url")
+  /// Internal code / SKU — unique per tenant when set
+  sku           String?
+
+  /// Base price in SAR (NUMERIC — never float). Branches may override.
+  basePrice Decimal  @map("base_price") @db.Decimal(12, 2)
+  /// VAT rate percent override; null = tenant default (15%). Tax-config readiness.
+  taxRate   Decimal? @map("tax_rate") @db.Decimal(5, 2)
+
+  sortOrder            Int     @default(0) @map("sort_order")
+  isActive             Boolean @default(true) @map("is_active")
+  /// Availability windows (e.g. breakfast-only) — schema readiness, enforced in a later phase.
+  availabilitySchedule Json    @default("{}") @map("availability_schedule")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant         Tenant                 @relation(fields: [tenantId], references: [id])
+  category       Category               @relation(fields: [categoryId], references: [id])
+  branchSettings ProductBranchSetting[]
+  modifierGroups ProductModifierGroup[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId, categoryId])
+  @@map("products")
+}
+
+/// Per-branch availability and price override for a product.
+model ProductBranchSetting {
+  id        String @id @default(uuid()) @db.Uuid
+  tenantId  String @map("tenant_id") @db.Uuid
+  productId String @map("product_id") @db.Uuid
+  branchId  String @map("branch_id") @db.Uuid
+
+  /// null = product base price applies
+  priceOverride Decimal? @map("price_override") @db.Decimal(12, 2)
+  isAvailable   Boolean  @default(true) @map("is_available")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.Uuid
+  updatedBy String?  @map("updated_by") @db.Uuid
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+  branch  Branch  @relation(fields: [branchId], references: [id])
+
+  @@unique([productId, branchId])
+  @@index([tenantId, branchId])
+  @@map("product_branch_settings")
+}
+
+/// e.g. "الحجم / Size", "إضافات / Extras", "الصوصات / Sauces"
+model ModifierGroup {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  /// Arabic name (primary)
+  name   String
+  nameEn String? @map("name_en")
+
+  /// Required groups need at least minSelect choices at order time.
+  isRequired Boolean @default(false) @map("is_required")
+  minSelect  Int     @default(0) @map("min_select")
+  /// null = unlimited
+  maxSelect  Int?    @map("max_select")
+
+  sortOrder Int     @default(0) @map("sort_order")
+  isActive  Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant    Tenant                 @relation(fields: [tenantId], references: [id])
+  modifiers Modifier[]
+  products  ProductModifierGroup[]
+
+  @@index([tenantId])
+  @@map("modifier_groups")
+}
+
+/// e.g. "كبير +5", "جبنة إضافية +3"
+model Modifier {
+  id              String @id @default(uuid()) @db.Uuid
+  tenantId        String @map("tenant_id") @db.Uuid
+  modifierGroupId String @map("modifier_group_id") @db.Uuid
+
+  /// Arabic name (primary)
+  name   String
+  nameEn String? @map("name_en")
+
+  /// Price delta in SAR (NUMERIC — never float). Can be negative.
+  priceAdjustment Decimal @default(0) @map("price_adjustment") @db.Decimal(12, 2)
+
+  sortOrder Int     @default(0) @map("sort_order")
+  isActive  Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id])
+  group  ModifierGroup @relation(fields: [modifierGroupId], references: [id])
+
+  @@index([tenantId, modifierGroupId])
+  @@map("modifiers")
+}
+
+/// Attaches modifier groups to products (ordered).
+model ProductModifierGroup {
+  id              String @id @default(uuid()) @db.Uuid
+  tenantId        String @map("tenant_id") @db.Uuid
+  productId       String @map("product_id") @db.Uuid
+  modifierGroupId String @map("modifier_group_id") @db.Uuid
+  sortOrder       Int    @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String?  @map("created_by") @db.Uuid
+
+  tenant  Tenant        @relation(fields: [tenantId], references: [id])
+  product Product       @relation(fields: [productId], references: [id])
+  group   ModifierGroup @relation(fields: [modifierGroupId], references: [id])
+
+  @@unique([productId, modifierGroupId])
+  @@index([tenantId])
+  @@map("product_modifier_groups")
 }
