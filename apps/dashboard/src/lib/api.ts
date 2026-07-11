@@ -99,3 +99,23 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 
 export const post = <T>(path: string, body: unknown) =>
   api<T>(path, { method: "POST", body: JSON.stringify(body) });
+
+/** Downloads a binary endpoint (QR PNG / PDF sheet) and saves it via the browser. */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  let res = await rawRequest(path);
+  if (res.status === 401 && (await tryRefresh())) {
+    res = await rawRequest(path);
+  }
+  if (!res.ok) {
+    throw new ApiError(res.status, res.statusText);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}

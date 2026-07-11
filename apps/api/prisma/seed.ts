@@ -148,7 +148,30 @@ async function main() {
       data: { tenantId, productId: tawook.id, modifierGroupId: sizeGroup.id, sortOrder: 0 },
     });
 
-    console.log(`Demo tenant created with demo menu: ${provisioned.tenantId}`);
+    // Demo floor + tables with QR tokens.
+    const { randomBytes } = await import("node:crypto");
+    const mainHall = await db.floor.create({
+      data: {
+        tenantId,
+        branchId: provisioned.branchId!,
+        name: "الصالة الرئيسية",
+        nameEn: "Main Hall",
+        createdBy: owner.id,
+      },
+    });
+    await db.table.createMany({
+      data: ["1", "2", "3", "4"].map((number) => ({
+        tenantId,
+        branchId: provisioned.branchId!,
+        floorId: mainHall.id,
+        number,
+        capacity: 4,
+        qrToken: randomBytes(12).toString("base64url"),
+        createdBy: owner.id,
+      })),
+    });
+
+    console.log(`Demo tenant created with demo menu & tables: ${provisioned.tenantId}`);
   } finally {
     await db.$disconnect();
   }

@@ -166,6 +166,42 @@
       "noModifiers": "لا توجد خيارات في هذه المجموعة"
     }
   },
+  "tables": {
+    "tabs": { "tables": "الطاولات", "floors": "الطوابق والمناطق" },
+    "floors": {
+      "title": "الطوابق والمناطق",
+      "add": "إضافة طابق/منطقة",
+      "editTitle": "تعديل الطابق",
+      "empty": "لا توجد طوابق بعد — مثل: الصالة الرئيسية، الجلسات الخارجية، VIP",
+      "branch": "الفرع",
+      "tablesCount": "{{count}} طاولة"
+    },
+    "list": {
+      "title": "الطاولات",
+      "add": "إضافة طاولة",
+      "editTitle": "تعديل الطاولة",
+      "empty": "لا توجد طاولات — أنشئ طابقاً أولاً ثم أضف الطاولات",
+      "number": "رقم/اسم الطاولة",
+      "capacity": "السعة",
+      "floor": "الطابق",
+      "seats": "{{count}} مقاعد",
+      "status": {
+        "available": "متاحة",
+        "occupied": "مشغولة",
+        "reserved": "محجوزة",
+        "disabled": "موقوفة"
+      },
+      "openSession": "فتح جلسة",
+      "closeSession": "إغلاق الجلسة"
+    },
+    "qr": {
+      "download": "تحميل QR",
+      "regenerate": "إعادة توليد QR",
+      "regenerateConfirm": "سيتم تعطيل رمز QR المطبوع الحالي لهذه الطاولة. هل أنت متأكد؟",
+      "printSheet": "طباعة أوراق QR",
+      "generatedAt": "أُنشئ: {{date}}"
+    }
+  },
   "settings": {
     "title": "الإعدادات",
     "restaurantInfo": "بيانات المطعم",

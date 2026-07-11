@@ -22,6 +22,9 @@ import { ModifiersPage } from "./pages/menu/ModifiersPage";
 import { ProductEditorPage } from "./pages/menu/ProductEditorPage";
 import { ProductsPage } from "./pages/menu/ProductsPage";
 import { OnboardingWizard } from "./pages/onboarding/OnboardingWizard";
+import { FloorsPage } from "./pages/tables/FloorsPage";
+import { TablesLayout } from "./pages/tables/TablesLayout";
+import { TablesPage } from "./pages/tables/TablesPage";
 
 function FullScreenSpinner() {
   return (
@@ -105,6 +108,14 @@ const router = createBrowserRouter([
           { path: "products/new", element: <ProductEditorPage /> },
           { path: "products/:id", element: <ProductEditorPage /> },
           { path: "modifiers", element: <ModifiersPage /> },
+        ],
+      },
+      {
+        path: "tables",
+        element: <TablesLayout />,
+        children: [
+          { index: true, element: <TablesPage /> },
+          { path: "floors", element: <FloorsPage /> },
         ],
       },
       { path: "*", element: <Navigate to="/" replace /> },

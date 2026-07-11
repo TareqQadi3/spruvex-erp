@@ -65,6 +65,9 @@ model Tenant {
   modifierGroups        ModifierGroup[]
   modifiers             Modifier[]
   productModifierGroups ProductModifierGroup[]
+  floors                Floor[]
+  tables                Table[]
+  tableSessions         TableSession[]
 
   @@map("tenants")
 }
@@ -96,6 +99,8 @@ model Branch {
   userRoles             UserRole[]
   posPins               PosPin[]
   productBranchSettings ProductBranchSetting[]
+  floors                Floor[]
+  tables                Table[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -472,4 +477,101 @@ model ProductModifierGroup {
   @@unique([productId, modifierGroupId])
   @@index([tenantId])
   @@map("product_modifier_groups")
+}
+
+// ============================================================================
+// Tables domain (Phase 3) — floors/areas, tables with permanent QR tokens,
+// and table sessions (the anchor future orders attach to).
+// ============================================================================
+
+/// Floor / area inside a branch: Main Hall, Outdoor, VIP...
+model Floor {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  branchId String @map("branch_id") @db.Uuid
+
+  /// Arabic name (primary)
+  name      String
+  nameEn    String? @map("name_en")
+  sortOrder Int     @default(0) @map("sort_order")
+  isActive  Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id])
+  branch Branch  @relation(fields: [branchId], references: [id])
+  tables Table[]
+
+  @@index([tenantId, branchId])
+  @@map("floors")
+}
+
+enum TableStatus {
+  available
+  occupied
+  reserved
+  disabled
+
+  @@map("table_status")
+}
+
+model Table {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  branchId String @map("branch_id") @db.Uuid
+  floorId  String @map("floor_id") @db.Uuid
+
+  /// Custom table number/name, e.g. "12" or "A1" — unique per branch (partial index in migration)
+  number   String
+  capacity Int         @default(4)
+  status   TableStatus @default(available)
+
+  /// Permanent, non-guessable QR token — the public identifier used in QR URLs.
+  /// Database IDs are never exposed. Regeneration replaces the token, which
+  /// disables the old QR (lookups by the old token fail).
+  qrToken       String   @unique @map("qr_token")
+  qrGeneratedAt DateTime @default(now()) @map("qr_generated_at")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id])
+  branch   Branch         @relation(fields: [branchId], references: [id])
+  floor    Floor          @relation(fields: [floorId], references: [id])
+  sessions TableSession[]
+
+  @@index([tenantId, branchId])
+  @@map("tables")
+}
+
+/// A dining session: customers seated at a table. Future orders (Phase 4)
+/// attach to the open session so the whole visit closes as one bill.
+model TableSession {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  branchId String @map("branch_id") @db.Uuid
+  tableId  String @map("table_id") @db.Uuid
+
+  openedAt DateTime  @default(now()) @map("opened_at")
+  closedAt DateTime? @map("closed_at")
+  openedBy String?   @map("opened_by") @db.Uuid
+  closedBy String?   @map("closed_by") @db.Uuid
+  notes    String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  table  Table  @relation(fields: [tableId], references: [id])
+
+  @@index([tableId, closedAt])
+  @@index([tenantId, branchId])
+  @@map("table_sessions")
 }

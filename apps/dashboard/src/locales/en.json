@@ -166,6 +166,42 @@
       "noModifiers": "No options in this group yet"
     }
   },
+  "tables": {
+    "tabs": { "tables": "Tables", "floors": "Floors & Areas" },
+    "floors": {
+      "title": "Floors & areas",
+      "add": "Add floor/area",
+      "editTitle": "Edit floor",
+      "empty": "No floors yet — e.g. Main Hall, Outdoor, VIP",
+      "branch": "Branch",
+      "tablesCount": "{{count}} tables"
+    },
+    "list": {
+      "title": "Tables",
+      "add": "Add table",
+      "editTitle": "Edit table",
+      "empty": "No tables — create a floor first, then add tables",
+      "number": "Table number/name",
+      "capacity": "Capacity",
+      "floor": "Floor",
+      "seats": "{{count}} seats",
+      "status": {
+        "available": "Available",
+        "occupied": "Occupied",
+        "reserved": "Reserved",
+        "disabled": "Disabled"
+      },
+      "openSession": "Open session",
+      "closeSession": "Close session"
+    },
+    "qr": {
+      "download": "Download QR",
+      "regenerate": "Regenerate QR",
+      "regenerateConfirm": "The currently printed QR for this table will stop working. Are you sure?",
+      "printSheet": "Print QR sheet",
+      "generatedAt": "Generated: {{date}}"
+    }
+  },
   "settings": {
     "title": "Settings",
     "restaurantInfo": "Restaurant info",
