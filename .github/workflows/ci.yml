@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://spruvex_app:spruvex_app@localhost:5432/spruvex_r_test?schema=public
+      ADMIN_DATABASE_URL: postgresql://spruvex_admin:spruvex_admin@localhost:5432/spruvex_r_test?schema=public
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create database roles
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -f infra/postgres/init/01-roles.sql
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE spruvex_r_test OWNER spruvex_admin"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d spruvex_r_test -c "
+            GRANT CONNECT ON DATABASE spruvex_r_test TO spruvex_app;
+            GRANT USAGE ON SCHEMA public TO spruvex_app;
+            GRANT ALL ON SCHEMA public TO spruvex_admin;
+            ALTER DEFAULT PRIVILEGES FOR ROLE spruvex_admin IN SCHEMA public
+              GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO spruvex_app;
+            ALTER DEFAULT PRIVILEGES FOR ROLE spruvex_admin IN SCHEMA public
+              GRANT USAGE, SELECT ON SEQUENCES TO spruvex_app;"
+
+      - name: Generate Prisma client
+        run: pnpm --filter @spruvex-r/api prisma:generate
+
+      - name: Build
+        run: pnpm build
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test

@@ -1,0 +1,50 @@
+/**
+ * Money utilities. Amounts are handled as integer halalas (1 SAR = 100 halalas)
+ * to avoid floating point errors — floats are forbidden for money (plan §9.2).
+ */
+
+/** Converts a SAR amount expressed as string/number into integer halalas. */
+export function sarToHalalas(sar: string | number): number {
+  const normalized = typeof sar === "number" ? sar.toFixed(2) : sar.trim();
+  if (!/^-?\d+(\.\d{1,2})?$/.test(normalized)) {
+    throw new Error(`Invalid SAR amount: ${sar}`);
+  }
+  const [whole, fraction = ""] = normalized.split(".");
+  const sign = whole.startsWith("-") ? -1 : 1;
+  const halalas =
+    Math.abs(Number(whole)) * 100 + Number(fraction.padEnd(2, "0") || "0");
+  return sign * halalas;
+}
+
+/** Formats integer halalas as a SAR decimal string, e.g. 1550 -> "15.50". */
+export function halalasToSar(halalas: number): string {
+  if (!Number.isInteger(halalas)) {
+    throw new Error(`Halalas must be an integer: ${halalas}`);
+  }
+  const sign = halalas < 0 ? "-" : "";
+  const abs = Math.abs(halalas);
+  return `${sign}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, "0")}`;
+}
+
+/** Half-up rounding used for all VAT arithmetic. */
+function roundHalfUp(value: number): number {
+  return Math.floor(value + 0.5);
+}
+
+/** VAT portion contained in a gross (VAT-inclusive) amount. */
+export function vatFromGross(grossHalalas: number, ratePercent: number): number {
+  assertRate(ratePercent);
+  return roundHalfUp((grossHalalas * ratePercent) / (100 + ratePercent));
+}
+
+/** VAT to add on top of a net (VAT-exclusive) amount. */
+export function vatFromNet(netHalalas: number, ratePercent: number): number {
+  assertRate(ratePercent);
+  return roundHalfUp((netHalalas * ratePercent) / 100);
+}
+
+function assertRate(ratePercent: number) {
+  if (!Number.isFinite(ratePercent) || ratePercent < 0 || ratePercent > 100) {
+    throw new Error(`Invalid VAT rate: ${ratePercent}`);
+  }
+}

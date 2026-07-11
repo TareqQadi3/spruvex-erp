@@ -1,0 +1,226 @@
+// SpruVex R — Prisma schema
+// Phase 0: Identity & Tenancy domain + audit log.
+//
+// Conventions (see architecture plan §9.2):
+// - UUID primary keys.
+// - tenant_id on every tenant-owned table (enforced twice: Prisma tenant client + Postgres RLS).
+// - created_at / updated_at / created_by / updated_by on business tables.
+// - Soft delete via deleted_at (invoices, added in Phase 7, are append-only instead).
+// - Money is NUMERIC / integer halalas — never float.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Runtime URL (spruvex_app, RLS enforced). Prisma CLI (migrate/seed) uses directUrl.
+  url       = env("DATABASE_URL")
+  directUrl = env("ADMIN_DATABASE_URL")
+}
+
+enum TenantStatus {
+  active
+  suspended
+
+  @@map("tenant_status")
+}
+
+model Tenant {
+  id        String       @id @default(uuid()) @db.Uuid
+  name      String
+  nameEn    String?      @map("name_en")
+  slug      String       @unique
+  logoUrl   String?      @map("logo_url")
+  vatNumber String?      @map("vat_number")
+  crNumber  String?      @map("cr_number")
+  status    TenantStatus @default(active)
+  /// VAT rate percent, configurable (KSA default 15.00)
+  vatRate   Decimal      @default(15.00) @map("vat_rate") @db.Decimal(5, 2)
+  settings  Json         @default("{}")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  branches  Branch[]
+  roles     Role[]
+  userRoles UserRole[]
+  posPins   PosPin[]
+  auditLogs AuditLog[]
+
+  @@map("tenants")
+}
+
+model Branch {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @map("tenant_id") @db.Uuid
+  name     String
+  nameEn   String? @map("name_en")
+  slug     String
+  address  String?
+  lat      Decimal? @db.Decimal(9, 6)
+  lng      Decimal? @db.Decimal(9, 6)
+  /// Weekly working hours, e.g. {"sun": [{"from": "08:00", "to": "23:00"}], ...}
+  workingHours Json @default("{}") @map("working_hours")
+  /// Self-ordering settings, e.g. {"qrOrderingEnabled": true, "requireCashierConfirmation": false}
+  orderingSettings Json @default("{}") @map("ordering_settings")
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  userRoles UserRole[]
+  posPins   PosPin[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@map("branches")
+}
+
+/// Users are a global identity (email/phone unique across the platform);
+/// tenant membership and scope are expressed through user_roles.
+model User {
+  id           String  @id @default(uuid()) @db.Uuid
+  email        String  @unique
+  phone        String? @unique
+  passwordHash String  @map("password_hash")
+  name         String
+  isActive     Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  userRoles UserRole[]
+  posPins   PosPin[]
+
+  @@map("users")
+}
+
+model Role {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @map("tenant_id") @db.Uuid
+  /// Machine key, e.g. "owner", "manager" — unique per tenant.
+  key      String
+  nameAr   String  @map("name_ar")
+  nameEn   String  @map("name_en")
+  /// Built-in roles cannot be deleted (their permissions can still be edited).
+  isSystem Boolean @default(false) @map("is_system")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+  @@map("roles")
+}
+
+/// Global permission catalog (seeded from @spruvex-r/types PERMISSIONS).
+model Permission {
+  id          String @id @default(uuid()) @db.Uuid
+  /// e.g. "orders.void"
+  key         String @unique
+  description String
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String @id @default(uuid()) @db.Uuid
+  tenantId     String @map("tenant_id") @db.Uuid
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String?  @map("created_by") @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@unique([roleId, permissionId])
+  @@index([tenantId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @map("tenant_id") @db.Uuid
+  userId   String  @map("user_id") @db.Uuid
+  roleId   String  @map("role_id") @db.Uuid
+  /// null = role applies tenant-wide (all branches)
+  branchId String? @map("branch_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String?  @map("created_by") @db.Uuid
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id])
+  user   User    @relation(fields: [userId], references: [id])
+  role   Role    @relation(fields: [roleId], references: [id])
+  branch Branch? @relation(fields: [branchId], references: [id])
+
+  @@unique([userId, roleId, tenantId, branchId])
+  @@index([tenantId])
+  @@index([userId])
+  @@map("user_roles")
+}
+
+/// Hashed PIN per user per branch for fast cashier switching on the POS.
+model PosPin {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  branchId String @map("branch_id") @db.Uuid
+  userId   String @map("user_id") @db.Uuid
+  pinHash  String @map("pin_hash")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  branch Branch @relation(fields: [branchId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([branchId, userId])
+  @@index([tenantId])
+  @@map("pos_pins")
+}
+
+/// Append-only audit trail for sensitive actions (void, discount over limit,
+/// drawer open without sale, permission changes, stock adjustments, ...).
+/// UPDATE/DELETE are revoked from the app role at the database level.
+model AuditLog {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @map("tenant_id") @db.Uuid
+  branchId String? @map("branch_id") @db.Uuid
+  userId   String? @map("user_id") @db.Uuid
+  action   String
+  entityType String? @map("entity_type")
+  entityId   String? @map("entity_id") @db.Uuid
+  /// Structured context: reason, before/after values, amounts...
+  meta     Json    @default("{}")
+  ip       String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, action])
+  @@map("audit_logs")
+}
