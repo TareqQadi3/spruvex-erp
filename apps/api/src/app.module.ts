@@ -7,6 +7,8 @@ import { AuthContextMiddleware } from "./modules/identity/auth-context.middlewar
 import { CatalogModule } from "./modules/catalog/catalog.module";
 import { IdentityModule } from "./modules/identity/identity.module";
 import { OrderingModule } from "./modules/ordering/ordering.module";
+import { PaymentsModule } from "./modules/payments/payments.module";
+import { ShiftsModule } from "./modules/shifts/shifts.module";
 import { TablesModule } from "./modules/tables/tables.module";
 import { TenancyModule } from "./modules/tenancy/tenancy.module";
 import { AuditModule } from "./shared/audit/audit.module";
@@ -31,6 +33,8 @@ import { TenantContextModule } from "./shared/tenancy/tenant-context.module";
     CatalogModule,
     TablesModule,
     OrderingModule,
+    ShiftsModule,
+    PaymentsModule,
   ],
 })
 export class AppModule implements NestModule {

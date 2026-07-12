@@ -16,12 +16,17 @@ export type OrderStatus = (typeof ORDER_STATUSES)[number];
  * transitions (plan §10: central status machine).
  * new -> confirmed -> preparing -> ready -> served -> completed;
  * cancellation only from new/confirmed/preparing.
+ *
+ * Checkout (Phase 5): `completed` is also reachable from confirmed/ready
+ * (counter orders paid before/without table service). Every transition to
+ * `completed` is guarded by FULL PAYMENT at the service level, and
+ * cancellation is blocked once payments exist.
  */
 export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   new: ["confirmed", "cancelled"],
-  confirmed: ["preparing", "cancelled"],
+  confirmed: ["preparing", "completed", "cancelled"],
   preparing: ["ready", "cancelled"],
-  ready: ["served"],
+  ready: ["served", "completed"],
   served: ["completed"],
   completed: [],
   cancelled: [],

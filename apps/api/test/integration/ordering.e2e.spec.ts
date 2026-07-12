@@ -277,7 +277,23 @@ describe("ordering (e2e)", () => {
 
     it("ready -> served -> completed, with full audited history", async () => {
       await transition(ownerA, orderId, "served", 200);
-      await transition(ownerA, orderId, "completed", 200);
+
+      // Phase 5 guard: completion requires full payment.
+      await transition(ownerA, orderId, "completed", 409);
+      await request(http)
+        .post("/shifts/open")
+        .set("Authorization", `Bearer ${ownerA}`)
+        .send({ branchId: branchA, openingCash: "0" })
+        .expect(201);
+      await request(http)
+        .post(`/orders/${orderId}/payments`)
+        .set("Authorization", `Bearer ${ownerA}`)
+        .set("Idempotency-Key", key())
+        .send({ method: "cash", amount: "12.00" })
+        .expect(201);
+
+      const row = await admin.order.findUniqueOrThrow({ where: { id: orderId } });
+      expect(row.status).toBe("completed"); // auto-completed on full payment
 
       const history = await admin.orderStatusHistory.findMany({
         where: { orderId },

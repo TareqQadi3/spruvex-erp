@@ -93,6 +93,15 @@ export class TransitionOrderDto {
   reason?: string;
 }
 
+export class EditOrderItemsDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => OrderItemInputDto)
+  items!: OrderItemInputDto[];
+}
+
 export class GuestCreateOrderDto {
   @IsArray()
   @ArrayMinSize(1)

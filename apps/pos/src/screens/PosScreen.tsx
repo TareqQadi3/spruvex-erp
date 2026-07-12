@@ -27,6 +27,11 @@ import {
   type MenuModifier,
   type MenuProduct,
 } from "../lib/cart";
+import { isNetworkError, offlineQueue, type SyncState } from "../lib/offline-queue";
+import type { Shift } from "../lib/pos-api";
+import { PaymentDialog } from "../components/PaymentDialog";
+import { ShiftBar } from "../components/ShiftBar";
+import { OrdersScreen } from "./OrdersScreen";
 
 interface Category {
   id: string;
@@ -71,6 +76,20 @@ export function PosScreen({
   const [orderNotes, setOrderNotes] = useState("");
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+
+  const [tab, setTab] = useState<"menu" | "orders">("menu");
+  const [shift, setShift] = useState<Shift | null>(null);
+  const [sync, setSync] = useState<SyncState>({ pending: 0, syncing: false });
+  const [payFor, setPayFor] = useState<{ id: string; orderNumber: number } | null>(null);
+
+  useEffect(() => {
+    offlineQueue.start();
+    const unsubscribe = offlineQueue.subscribe(setSync);
+    return () => {
+      unsubscribe();
+      offlineQueue.stop();
+    };
+  }, []);
 
   // Modifier picker state
   const [picking, setPicking] = useState<MenuProduct | null>(null);
@@ -158,33 +177,43 @@ export function PosScreen({
     }
     setSending(true);
     setFeedback(null);
+    const idempotencyKey = crypto.randomUUID();
+    const body = {
+      type: orderType,
+      ...(orderType === "dine_in" ? { tableId } : { branchId }),
+      confirm: true,
+      ...(orderNotes ? { notes: orderNotes } : {}),
+      items: cart.map((line) => ({
+        productId: line.product.id,
+        quantity: line.quantity,
+        ...(line.modifiers.length > 0 ? { modifierIds: line.modifiers.map((m) => m.id) } : {}),
+        ...(line.notes ? { notes: line.notes } : {}),
+      })),
+    };
     try {
-      const order = await post<{ orderNumber: number }>(
-        "/orders",
-        {
-          type: orderType,
-          ...(orderType === "dine_in" ? { tableId } : { branchId }),
-          confirm: true,
-          ...(orderNotes ? { notes: orderNotes } : {}),
-          items: cart.map((line) => ({
-            productId: line.product.id,
-            quantity: line.quantity,
-            ...(line.modifiers.length > 0
-              ? { modifierIds: line.modifiers.map((m) => m.id) }
-              : {}),
-            ...(line.notes ? { notes: line.notes } : {}),
-          })),
-        },
-        { "Idempotency-Key": crypto.randomUUID() },
-      );
+      const order = await post<{ id: string; orderNumber: number }>("/orders", body, {
+        "Idempotency-Key": idempotencyKey,
+      });
       setCart([]);
       setOrderNotes("");
       setFeedback({ kind: "ok", text: t("pos.sent", { number: order.orderNumber }) });
+      // Walk-in counter orders go straight to the payment screen.
+      if (orderType === "walkin" && shift) {
+        setPayFor({ id: order.id, orderNumber: order.orderNumber });
+      }
     } catch (e) {
-      setFeedback({
-        kind: "error",
-        text: e instanceof ApiError ? e.message : t("auth.error"),
-      });
+      if (isNetworkError(e)) {
+        // Degraded mode: queue for automatic retry with the same key.
+        offlineQueue.enqueue(idempotencyKey, body);
+        setCart([]);
+        setOrderNotes("");
+        setFeedback({ kind: "ok", text: t("pos.queued") });
+      } else {
+        setFeedback({
+          kind: "error",
+          text: e instanceof ApiError ? e.message : t("auth.error"),
+        });
+      }
     } finally {
       setSending(false);
     }
@@ -202,10 +231,30 @@ export function PosScreen({
 
   return (
     <div className="flex h-screen flex-col">
-      <header className="flex items-center justify-between border-b bg-card px-4 py-2">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b bg-card px-4 py-2">
         <div className="flex items-center gap-3">
           <img src="/logo-horizontal.png" alt="SpruVex R" className="h-8 object-contain" />
-          <h1 className="text-lg font-bold">{t("app.title")}</h1>
+          <div className="flex gap-1 rounded-lg bg-muted p-1">
+            {(["menu", "orders"] as const).map((key) => (
+              <button
+                key={key}
+                type="button"
+                className={cn(
+                  "rounded-md px-3 py-1 text-sm font-medium",
+                  tab === key ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+                )}
+                onClick={() => setTab(key)}
+              >
+                {t(`tabs.${key}`)}
+              </button>
+            ))}
+          </div>
+          <ShiftBar branchId={branchId} shift={shift} onShiftChange={setShift} />
+          {sync.pending > 0 && (
+            <Badge variant="destructive">
+              {sync.syncing ? t("sync.syncing") : t("sync.pending", { count: sync.pending })}
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -224,6 +273,20 @@ export function PosScreen({
         </div>
       </header>
 
+      {payFor && (
+        <PaymentDialog
+          orderId={payFor.id}
+          orderNumber={payFor.orderNumber}
+          onClose={() => setPayFor(null)}
+          onCompleted={() => undefined}
+        />
+      )}
+
+      {tab === "orders" ? (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <OrdersScreen branchId={branchId} />
+        </div>
+      ) : (
       <div className="flex min-h-0 flex-1">
         {/* Menu side */}
         <main className="flex min-w-0 flex-1 flex-col p-3">
@@ -385,6 +448,7 @@ export function PosScreen({
           </div>
         </aside>
       </div>
+      )}
 
       {/* Modifier picker */}
       <Dialog

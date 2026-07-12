@@ -29,7 +29,11 @@ export const ORDER_INCLUDE = {
   items: { include: { modifiers: true }, orderBy: { createdAt: "asc" } },
   table: { select: { id: true, number: true } },
   statusHistory: { orderBy: { createdAt: "asc" } },
+  payments: { where: { status: "completed" }, orderBy: { createdAt: "asc" } },
 } satisfies Prisma.OrderInclude;
+
+/** Default cap for discounts; overridable per tenant via settings.maxDiscountPercent. */
+const DEFAULT_MAX_DISCOUNT_PERCENT = 20;
 
 interface CreateOrderContext {
   source: OrderSource;
@@ -165,6 +169,22 @@ export class OrderingService {
         );
       }
 
+      // Checkout guards (Phase 5): completion requires full payment;
+      // cancellation is blocked once money has been taken.
+      const paid = await tx.payment.aggregate({
+        where: { orderId: id, status: "completed" },
+        _sum: { amount: true },
+      });
+      const paidHalalas = sarToHalalas((paid._sum.amount ?? 0).toString());
+      if (to === "completed" && paidHalalas < sarToHalalas(current.total.toString())) {
+        throw new ConflictException("Cannot complete an order without full payment");
+      }
+      if (to === "cancelled" && paidHalalas > 0) {
+        throw new ConflictException(
+          "Order has recorded payments — it cannot be cancelled (refund via credit note later)",
+        );
+      }
+
       const updated = await tx.order.update({
         where: { id },
         data: {
@@ -199,6 +219,238 @@ export class OrderingService {
       to === "cancelled" ? DOMAIN_EVENTS.ORDER_CANCELLED : DOMAIN_EVENTS.ORDER_STATUS_CHANGED,
       { tenantId, branchId: order.branchId, order },
     );
+    return order;
+  }
+
+  /**
+   * Applies (or replaces) a discount. Requires orders.discount (guard) and:
+   * - the order is open and has NO recorded payments,
+   * - the discount does not exceed the tenant's configurable cap
+   *   (settings.maxDiscountPercent, default 20%).
+   * Totals + VAT are recomputed; who/why is stored and audited.
+   */
+  async applyDiscount(
+    id: string,
+    dto: { type: "percentage" | "fixed"; value: string; reason: string },
+  ) {
+    const ctx = this.tenantContext.contextOrThrow;
+    const tenantId = this.tenantContext.tenantIdOrThrow;
+    const actor = actorOrNull(ctx.userId);
+
+    const order = await this.prisma.scopedTransaction(async (tx) => {
+      const current = await tx.order.findFirst({ where: { id, deletedAt: null } });
+      if (!current) {
+        throw new NotFoundException("Order not found");
+      }
+      if (["completed", "cancelled"].includes(current.status)) {
+        throw new ConflictException("Order is closed — discount not possible");
+      }
+      const paid = await tx.payment.count({
+        where: { orderId: id, status: "completed" },
+      });
+      if (paid > 0) {
+        throw new ConflictException("Order already has payments — discount not possible");
+      }
+
+      const tenant = await tx.tenant.findFirst({ where: { id: tenantId } });
+      const settings = (tenant?.settings ?? {}) as { maxDiscountPercent?: number };
+      const maxPercent = settings.maxDiscountPercent ?? DEFAULT_MAX_DISCOUNT_PERCENT;
+
+      const subtotalHalalas = sarToHalalas(current.subtotal.toString());
+      const valueHalalas = sarToHalalas(dto.value);
+      let discountHalalas: number;
+      if (dto.type === "percentage") {
+        const pct = Number(dto.value);
+        if (pct <= 0 || pct > maxPercent) {
+          throw new BadRequestException(
+            `Discount must be between 0 and ${maxPercent}% (restaurant limit)`,
+          );
+        }
+        discountHalalas = Math.floor((subtotalHalalas * pct) / 100 + 0.5);
+      } else {
+        if (valueHalalas <= 0 || valueHalalas > subtotalHalalas) {
+          throw new BadRequestException("Fixed discount must be positive and below the subtotal");
+        }
+        const pctEquivalent = (valueHalalas / subtotalHalalas) * 100;
+        if (pctEquivalent > maxPercent) {
+          throw new BadRequestException(
+            `Discount exceeds the restaurant limit (${maxPercent}%)`,
+          );
+        }
+        discountHalalas = valueHalalas;
+      }
+
+      const totalHalalas = subtotalHalalas - discountHalalas;
+      const vatRate = Number(current.vatRate);
+      return tx.order.update({
+        where: { id },
+        data: {
+          discount: halalasToSar(discountHalalas),
+          discountType: dto.type,
+          discountValue: dto.value,
+          discountReason: dto.reason,
+          discountBy: actor,
+          vatAmount: halalasToSar(vatFromGross(totalHalalas, vatRate)),
+          total: halalasToSar(totalHalalas),
+          updatedBy: actor,
+        },
+        include: ORDER_INCLUDE,
+      });
+    });
+
+    await this.audit.log({
+      action: "order.discount_applied",
+      entityType: "order",
+      entityId: id,
+      branchId: order.branchId,
+      meta: {
+        type: dto.type,
+        value: dto.value,
+        discount: order.discount.toString(),
+        reason: dto.reason,
+      },
+    });
+    this.events.emit(DOMAIN_EVENTS.ORDER_STATUS_CHANGED, {
+      tenantId,
+      branchId: order.branchId,
+      order,
+    });
+    return order;
+  }
+
+  /** Removes the discount (same rules as applying). */
+  async removeDiscount(id: string) {
+    const ctx = this.tenantContext.contextOrThrow;
+    const tenantId = this.tenantContext.tenantIdOrThrow;
+    const actor = actorOrNull(ctx.userId);
+
+    const order = await this.prisma.scopedTransaction(async (tx) => {
+      const current = await tx.order.findFirst({ where: { id, deletedAt: null } });
+      if (!current) {
+        throw new NotFoundException("Order not found");
+      }
+      if (["completed", "cancelled"].includes(current.status)) {
+        throw new ConflictException("Order is closed");
+      }
+      const paid = await tx.payment.count({ where: { orderId: id, status: "completed" } });
+      if (paid > 0) {
+        throw new ConflictException("Order already has payments");
+      }
+
+      const subtotalHalalas = sarToHalalas(current.subtotal.toString());
+      return tx.order.update({
+        where: { id },
+        data: {
+          discount: "0",
+          discountType: null,
+          discountValue: null,
+          discountReason: null,
+          discountBy: null,
+          vatAmount: halalasToSar(vatFromGross(subtotalHalalas, Number(current.vatRate))),
+          total: halalasToSar(subtotalHalalas),
+          updatedBy: actor,
+        },
+        include: ORDER_INCLUDE,
+      });
+    });
+
+    await this.audit.log({
+      action: "order.discount_removed",
+      entityType: "order",
+      entityId: id,
+      branchId: order.branchId,
+    });
+    this.events.emit(DOMAIN_EVENTS.ORDER_STATUS_CHANGED, {
+      tenantId,
+      branchId: order.branchId,
+      order,
+    });
+    return order;
+  }
+
+  /**
+   * Replaces the item list of a NOT-YET-CONFIRMED order (status = new).
+   * Items are re-validated and re-priced against the catalog; totals and
+   * any existing percentage discount are recomputed.
+   */
+  async editItems(id: string, items: OrderItemInputDto[]) {
+    const ctx = this.tenantContext.contextOrThrow;
+    const tenantId = this.tenantContext.tenantIdOrThrow;
+    const actor = actorOrNull(ctx.userId);
+
+    const order = await this.prisma.scopedTransaction(async (tx) => {
+      const current = await tx.order.findFirst({ where: { id, deletedAt: null } });
+      if (!current) {
+        throw new NotFoundException("Order not found");
+      }
+      if (current.status !== "new") {
+        throw new ConflictException(
+          "Items can only be changed before the order is confirmed",
+        );
+      }
+
+      const priced = await this.priceItems(tx, items, current.branchId);
+      const subtotalHalalas = priced.reduce((sum, item) => sum + item.lineTotalHalalas, 0);
+
+      let discountHalalas = 0;
+      if (current.discountType === "percentage" && current.discountValue) {
+        discountHalalas = Math.floor(
+          (subtotalHalalas * Number(current.discountValue)) / 100 + 0.5,
+        );
+      } else if (current.discountType === "fixed" && current.discountValue) {
+        discountHalalas = sarToHalalas(current.discountValue.toString());
+        if (discountHalalas > subtotalHalalas) {
+          throw new ConflictException("Existing fixed discount exceeds the new subtotal — remove it first");
+        }
+      }
+      const totalHalalas = subtotalHalalas - discountHalalas;
+
+      await tx.orderItemModifier.deleteMany({ where: { orderItem: { orderId: id } } });
+      await tx.orderItem.deleteMany({ where: { orderId: id } });
+      return tx.order.update({
+        where: { id },
+        data: {
+          subtotal: halalasToSar(subtotalHalalas),
+          discount: halalasToSar(discountHalalas),
+          vatAmount: halalasToSar(vatFromGross(totalHalalas, Number(current.vatRate))),
+          total: halalasToSar(totalHalalas),
+          updatedBy: actor,
+          items: {
+            create: priced.map((item) => ({
+              tenantId,
+              productId: item.productId,
+              productSnapshot: item.productSnapshot,
+              quantity: item.quantity,
+              unitPrice: halalasToSar(item.unitPriceHalalas),
+              lineTotal: halalasToSar(item.lineTotalHalalas),
+              notes: item.notes,
+              modifiers: {
+                create: item.modifiers.map((modifier) => ({
+                  tenantId,
+                  modifierId: modifier.modifierId,
+                  modifierSnapshot: modifier.snapshot,
+                  priceAdjustment: halalasToSar(modifier.adjustmentHalalas),
+                })),
+              },
+            })),
+          },
+        },
+        include: ORDER_INCLUDE,
+      });
+    });
+
+    await this.audit.log({
+      action: "order.items_updated",
+      entityType: "order",
+      entityId: id,
+      branchId: order.branchId,
+      meta: { itemCount: items.length, total: order.total.toString() },
+    });
+    this.events.emit(DOMAIN_EVENTS.ORDER_STATUS_CHANGED, {
+      tenantId,
+      branchId: order.branchId,
+      order,
+    });
     return order;
   }
 

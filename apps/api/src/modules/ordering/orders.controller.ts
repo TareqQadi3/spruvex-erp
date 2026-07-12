@@ -1,19 +1,22 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   HttpCode,
   Param,
   ParseUUIDPipe,
   Post,
+  Put,
   Query,
 } from "@nestjs/common";
 
 import { ORDER_STATUSES, type OrderStatus } from "@spruvex-r/types";
 
+import { ApplyDiscountDto } from "../payments/dto/payments.dto";
 import { RequirePermission } from "../../shared/rbac/require-permission.decorator";
-import { CreateOrderDto, TransitionOrderDto } from "./dto/order.dto";
+import { CreateOrderDto, EditOrderItemsDto, TransitionOrderDto } from "./dto/order.dto";
 import { OrderingService } from "./ordering.service";
 
 function parseStatuses(raw?: string): OrderStatus[] | undefined {
@@ -63,5 +66,25 @@ export class OrdersController {
   @Post(":id/status")
   transition(@Param("id", ParseUUIDPipe) id: string, @Body() dto: TransitionOrderDto) {
     return this.ordering.transition(id, dto.status, { reason: dto.reason });
+  }
+
+  /** Replace items while the order is still `new` (before confirmation). */
+  @RequirePermission("orders.create")
+  @Put(":id/items")
+  editItems(@Param("id", ParseUUIDPipe) id: string, @Body() dto: EditOrderItemsDto) {
+    return this.ordering.editItems(id, dto.items);
+  }
+
+  @RequirePermission("orders.discount")
+  @HttpCode(200)
+  @Post(":id/discount")
+  applyDiscount(@Param("id", ParseUUIDPipe) id: string, @Body() dto: ApplyDiscountDto) {
+    return this.ordering.applyDiscount(id, dto);
+  }
+
+  @RequirePermission("orders.discount")
+  @Delete(":id/discount")
+  removeDiscount(@Param("id", ParseUUIDPipe) id: string) {
+    return this.ordering.removeDiscount(id);
   }
 }
