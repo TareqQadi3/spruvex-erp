@@ -3,9 +3,14 @@ import { NestFactory } from "@nestjs/core";
 import helmet from "helmet";
 
 import { AppModule } from "./app.module";
+import { RedisIoAdapter } from "./shared/realtime/redis-io.adapter";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  const ioAdapter = new RedisIoAdapter(app);
+  await ioAdapter.connectToRedis();
+  app.useWebSocketAdapter(ioAdapter);
 
   app.use(helmet());
   app.enableCors({

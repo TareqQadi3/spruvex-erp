@@ -1,0 +1,32 @@
+{
+  "app": { "title": "Point of Sale" },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "login": "Sign in",
+    "logout": "Sign out",
+    "error": "Sign-in failed"
+  },
+  "branch": { "select": "Select branch" },
+  "pos": {
+    "all": "All",
+    "cart": "Current order",
+    "empty": "Cart is empty — pick products from the menu",
+    "walkin": "Walk-in",
+    "dineIn": "Table",
+    "chooseTable": "Choose table",
+    "table": "Table {{number}}",
+    "notes": "Order notes",
+    "itemNotes": "Item note",
+    "total": "Total",
+    "vatIncluded": "VAT {{rate}}% included",
+    "send": "Send order",
+    "sent": "Order #{{number}} sent",
+    "add": "Add",
+    "cancel": "Cancel",
+    "required": "Required",
+    "chooseMin": "Choose at least {{count}}",
+    "sar": "SAR"
+  },
+  "common": { "language": "العربية", "loading": "Loading..." }
+}

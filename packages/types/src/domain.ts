@@ -1,19 +1,43 @@
 /** Shared domain enums/types used across API and frontend apps. */
 
 export const ORDER_STATUSES = [
-  "pending",
+  "new",
   "confirmed",
   "preparing",
   "ready",
+  "served",
   "completed",
   "cancelled",
 ] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
-export const ORDER_TYPES = ["dine_in", "takeaway_link", "pos_walkin"] as const;
+/**
+ * The order status state machine — the single definition of allowed
+ * transitions (plan §10: central status machine).
+ * new -> confirmed -> preparing -> ready -> served -> completed;
+ * cancellation only from new/confirmed/preparing.
+ */
+export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
+  new: ["confirmed", "cancelled"],
+  confirmed: ["preparing", "cancelled"],
+  preparing: ["ready", "cancelled"],
+  ready: ["served"],
+  served: ["completed"],
+  completed: [],
+  cancelled: [],
+};
+
+export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
+  return (ORDER_STATUS_TRANSITIONS[from] ?? []).includes(to);
+}
+
+/** Statuses that appear on the KDS / active-orders boards. */
+export const ACTIVE_ORDER_STATUSES = ["new", "confirmed", "preparing", "ready"] as const;
+
+export const ORDER_TYPES = ["dine_in", "takeaway", "walkin", "delivery"] as const;
 export type OrderType = (typeof ORDER_TYPES)[number];
 
-export const ORDER_SOURCES = ["qr", "external_link", "pos"] as const;
+export const ORDER_SOURCES = ["pos", "qr", "external_link", "delivery"] as const;
 export type OrderSource = (typeof ORDER_SOURCES)[number];
 
 export const TENANT_STATUSES = ["active", "suspended"] as const;

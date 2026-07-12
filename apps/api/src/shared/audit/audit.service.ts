@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../prisma/prisma.service";
-import { TenantContextService } from "../tenancy/tenant-context.service";
+import { actorOrNull, TenantContextService } from "../tenancy/tenant-context.service";
 
 export interface AuditEntry {
   /** e.g. "order.voided", "role.permissions_changed", "shift.cash_out" */
@@ -38,7 +38,7 @@ export class AuditService {
       data: {
         tenantId,
         branchId: entry.branchId ?? ctx.branchId,
-        userId: ctx.userId,
+        userId: actorOrNull(ctx.userId),
         action: entry.action,
         entityType: entry.entityType,
         entityId: entry.entityId,

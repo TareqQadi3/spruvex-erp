@@ -1,0 +1,32 @@
+{
+  "app": { "title": "شاشة المطبخ" },
+  "auth": {
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "login": "دخول",
+    "logout": "خروج",
+    "error": "تعذر تسجيل الدخول"
+  },
+  "branch": { "select": "اختر الفرع" },
+  "board": {
+    "new": "جديد",
+    "preparing": "قيد التحضير",
+    "ready": "جاهز",
+    "empty": "لا توجد طلبات",
+    "table": "طاولة {{number}}",
+    "walkin": "كاشير",
+    "takeaway": "استلام",
+    "qr": "طلب QR",
+    "notes": "ملاحظات",
+    "connected": "متصل",
+    "disconnected": "غير متصل",
+    "actions": {
+      "confirmed": "قبول",
+      "preparing": "بدء التحضير",
+      "ready": "جاهز",
+      "served": "تم التسليم"
+    },
+    "minutes": "{{count}} د"
+  },
+  "common": { "language": "English", "loading": "جارٍ التحميل..." }
+}

@@ -6,12 +6,14 @@ import { HealthModule } from "./health/health.module";
 import { AuthContextMiddleware } from "./modules/identity/auth-context.middleware";
 import { CatalogModule } from "./modules/catalog/catalog.module";
 import { IdentityModule } from "./modules/identity/identity.module";
+import { OrderingModule } from "./modules/ordering/ordering.module";
 import { TablesModule } from "./modules/tables/tables.module";
 import { TenancyModule } from "./modules/tenancy/tenancy.module";
 import { AuditModule } from "./shared/audit/audit.module";
 import { EventsModule } from "./shared/events/events.module";
 import { PrismaModule } from "./shared/prisma/prisma.module";
 import { RbacModule } from "./shared/rbac/rbac.module";
+import { RealtimeModule } from "./shared/realtime/realtime.module";
 import { TenantContextModule } from "./shared/tenancy/tenant-context.module";
 
 @Module({
@@ -24,9 +26,11 @@ import { TenantContextModule } from "./shared/tenancy/tenant-context.module";
     AuditModule,
     HealthModule,
     IdentityModule,
+    RealtimeModule,
     TenancyModule,
     CatalogModule,
     TablesModule,
+    OrderingModule,
   ],
 })
 export class AppModule implements NestModule {

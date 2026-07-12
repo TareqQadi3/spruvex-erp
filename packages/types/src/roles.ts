@@ -31,7 +31,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<SystemRole, readonly PermissionKey
     "orders.view",
     "orders.update_status",
   ],
-  kitchen: ["kitchen.view", "kitchen.update_status", "orders.view"],
+  kitchen: ["kitchen.view", "kitchen.update_status", "orders.view", "orders.update_status"],
 };
 
 export const ROLE_LABELS: Record<SystemRole, { ar: string; en: string }> = {

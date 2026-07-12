@@ -18,6 +18,17 @@ export interface RequestContext {
   permissions: ReadonlySet<PermissionKey | string>;
 }
 
+/**
+ * Sentinel user id for guest (QR) requests: they run inside a tenant context
+ * but have no user account. Persisted actor columns store null instead.
+ */
+export const GUEST_ACTOR = "00000000-0000-0000-0000-000000000000";
+
+/** Maps the guest sentinel to null for created_by/changed_by columns. */
+export function actorOrNull(userId: string | undefined): string | null {
+  return !userId || userId === GUEST_ACTOR ? null : userId;
+}
+
 @Injectable()
 export class TenantContextService {
   private readonly als = new AsyncLocalStorage<RequestContext>();

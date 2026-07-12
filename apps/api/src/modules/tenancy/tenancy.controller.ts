@@ -1,5 +1,6 @@
 import { Controller, Get } from "@nestjs/common";
 
+import { RequireAuthenticated } from "../../shared/rbac/require-authenticated.decorator";
 import { RequirePermission } from "../../shared/rbac/require-permission.decorator";
 import { PrismaService } from "../../shared/prisma/prisma.service";
 import { TenantContextService } from "../../shared/tenancy/tenant-context.service";
@@ -52,6 +53,32 @@ export class TenancyController {
         isActive: true,
         createdAt: true,
       },
+    });
+  }
+
+  /**
+   * Branches the signed-in member can work in (KDS/POS branch picker).
+   * Membership with branchId=null means tenant-wide access.
+   */
+  @RequireAuthenticated()
+  @Get("my-branches")
+  async myBranches() {
+    const ctx = this.tenantContext.contextOrThrow;
+    const memberships = await this.prisma.scoped.userRole.findMany({
+      where: { userId: ctx.userId },
+      select: { branchId: true },
+    });
+    const tenantWide = memberships.some((m) => m.branchId === null);
+    const branchIds = memberships.map((m) => m.branchId).filter((id): id is string => !!id);
+
+    return this.prisma.scoped.branch.findMany({
+      where: {
+        deletedAt: null,
+        isActive: true,
+        ...(tenantWide ? {} : { id: { in: branchIds } }),
+      },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, nameEn: true, slug: true },
     });
   }
 
