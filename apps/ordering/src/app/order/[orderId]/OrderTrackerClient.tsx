@@ -25,9 +25,11 @@ interface GuestStatusEvent {
 export function OrderTrackerClient({
   orderId,
   initialOrder,
+  publicApiOrigin,
 }: {
   orderId: string;
   initialOrder: TrackedOrder;
+  publicApiOrigin: string;
 }) {
   const { t, locale } = useLocale();
   const name = useLocalizedField();
@@ -35,8 +37,7 @@ export function OrderTrackerClient({
   const [live, setLive] = useState(false);
 
   useEffect(() => {
-    const socketUrl = process.env.NEXT_PUBLIC_API_ORIGIN ?? "http://localhost:3000";
-    const socket: Socket = io(socketUrl, { transports: ["websocket"] });
+    const socket: Socket = io(publicApiOrigin, { transports: ["websocket"] });
 
     socket.on("connect", async () => {
       const res = await socket.emitWithAck("subscribe", { channel: "order", orderId });
@@ -51,7 +52,7 @@ export function OrderTrackerClient({
     return () => {
       socket.disconnect();
     };
-  }, [orderId]);
+  }, [orderId, publicApiOrigin]);
 
   const cancelled = order.status === "cancelled";
   const completed = order.status === "completed";

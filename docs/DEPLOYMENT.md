@@ -29,8 +29,9 @@ container, which also reverse-proxies `/api/*` and `/socket.io/*` to the
 `api` service — see `infra/docker/spa.nginx.conf`. This keeps every
 frontend's existing relative `/api/v1` base URL working unchanged in
 production. `ordering` is Next.js SSR and talks to the API directly
-server-side (`API_ORIGIN`) plus client-side for realtime order tracking
-(`NEXT_PUBLIC_API_ORIGIN`).
+server-side (`API_ORIGIN`), and hands the API's public origin
+(`PUBLIC_API_ORIGIN`) to the client as a prop for realtime order tracking —
+both are plain runtime environment variables, no Docker build arg needed.
 
 ## One-time setup
 

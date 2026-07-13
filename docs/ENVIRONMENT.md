@@ -51,16 +51,20 @@ Full reference lives in `.env.example` at the repo root (dev defaults) and
 | `NODE_ENV` | no | `production` in deployed environments |
 | `PLATFORM_ADMIN_EMAIL` / `PLATFORM_ADMIN_PASSWORD` | no | if both set, `pnpm db:seed` bootstraps this platform admin account when none exists yet — the only way to get the first `/platform` login. Safe to unset after first use. |
 
-`apps/ordering` also reads `API_ORIGIN` (server-side SSR fetches) and
-`NEXT_PUBLIC_API_ORIGIN` (client-side Socket.io connection for order
-tracking) — see `.env.example` for local dev. In production
-(`docker-compose.prod.yml`) these come from `PUBLIC_API_ORIGIN` in
-`.env.production.example`: `API_ORIGIN` is hardcoded to the internal
-`http://api:3000` (the compose network address), and
-`NEXT_PUBLIC_API_ORIGIN` must be the API's real public HTTPS domain — it's
-a Next.js build-time value (baked into the client bundle via a Docker build
-arg), not something you can just change at container-runtime by editing
-`.env.production` after the image is already built.
+`apps/ordering` also reads two server-side variables — see `.env.example`
+for local dev, `.env.production.example` for production:
+- `API_ORIGIN`: where SSR pages fetch the API from. In
+  `docker-compose.prod.yml` this is hardcoded to the internal
+  `http://api:3000` (the compose network address).
+- `PUBLIC_API_ORIGIN`: the API's real public HTTPS origin. Read at request
+  time server-side and handed to the client as a prop for the
+  order-tracking realtime socket (`app/order/[orderId]/page.tsx`) — **not**
+  a `NEXT_PUBLIC_*` build-time variable, deliberately: those get inlined
+  into the client bundle at build time, which most container platforms
+  (including plain `docker compose build`, and hosts like Render that don't
+  support custom Docker build args at all) can't easily pass in without a
+  registry round-trip. This way the same built image is configured purely
+  by its runtime environment, on any platform.
 
 ## Secrets management
 

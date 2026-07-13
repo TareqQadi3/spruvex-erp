@@ -25,9 +25,18 @@ export default async function OrderTrackingPage({
     throw error;
   }
 
+  // Read at request time (not build time) — this is the API's public
+  // origin, reachable from the customer's own browser for the realtime
+  // order-tracking socket. Deliberately not a NEXT_PUBLIC_* var: those get
+  // inlined into the client bundle at build time, which most container
+  // platforms (this repo's docker-compose.prod.yml included) can't easily
+  // pass in without a registry round-trip. Passing it down as a prop keeps
+  // the same Docker image deployable anywhere, configured purely at runtime.
+  const publicApiOrigin = process.env.PUBLIC_API_ORIGIN ?? "http://localhost:3000";
+
   return (
     <LocaleProvider initialLocale={order.restaurant.defaultLocale as Locale}>
-      <OrderTrackerClient orderId={orderId} initialOrder={order} />
+      <OrderTrackerClient orderId={orderId} initialOrder={order} publicApiOrigin={publicApiOrigin} />
     </LocaleProvider>
   );
 }
