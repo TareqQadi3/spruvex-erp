@@ -1,6 +1,6 @@
 # SpruVex ERP — Current Status
 
-> آخر تحديث: 2026-07-10 (قرارات البنية التشغيلية جاهزة — انظر `INFRASTRUCTURE_DECISIONS.md` ثم `PILOT_LAUNCH_PLAN.md`)
+> آخر تحديث: 2026-07-10 (دليل التنفيذ جاهز — `GO_LIVE_RUNBOOK.md`؛ النطاق `spruvex.com` متاح ومُتحقَّق، بانتظار اعتماد الشراء)
 
 ## نظرة عامة | Overview
 
