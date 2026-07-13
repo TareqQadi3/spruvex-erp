@@ -6,7 +6,10 @@
  * in next.config.mjs, kept same-origin for the client-side order tracker).
  */
 
-const API_ORIGIN = process.env.API_ORIGIN ?? "http://localhost:3000";
+// Some platforms (e.g. Render's `fromService` blueprint wiring) can only
+// hand us a bare `host:port`, not a full URL with scheme — accept both.
+const rawApiOrigin = process.env.API_ORIGIN ?? "http://localhost:3000";
+const API_ORIGIN = rawApiOrigin.includes("://") ? rawApiOrigin : `http://${rawApiOrigin}`;
 
 export class ApiError extends Error {
   constructor(

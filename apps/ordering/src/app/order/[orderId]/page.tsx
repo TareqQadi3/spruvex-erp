@@ -32,7 +32,10 @@ export default async function OrderTrackingPage({
   // platforms (this repo's docker-compose.prod.yml included) can't easily
   // pass in without a registry round-trip. Passing it down as a prop keeps
   // the same Docker image deployable anywhere, configured purely at runtime.
-  const publicApiOrigin = process.env.PUBLIC_API_ORIGIN ?? "http://localhost:3000";
+  const rawPublicApiOrigin = process.env.PUBLIC_API_ORIGIN ?? "http://localhost:3000";
+  const publicApiOrigin = rawPublicApiOrigin.includes("://")
+    ? rawPublicApiOrigin
+    : `https://${rawPublicApiOrigin}`;
 
   return (
     <LocaleProvider initialLocale={order.restaurant.defaultLocale as Locale}>
