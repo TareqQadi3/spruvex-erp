@@ -134,14 +134,57 @@ describe("realtime (e2e)", () => {
     await admin.$disconnect();
   });
 
-  it("disconnects sockets without a valid token", async () => {
-    const socket = connect(); // no token
-    await waitFor(socket, "disconnect");
-    expect(socket.connected).toBe(false);
+  it("treats tokenless/invalid-token sockets as guests: staff channels denied", async () => {
+    const guest = connect(); // no token
+    await waitFor(guest, "connect");
+    expect((await subscribe(guest, { channel: "orders" })).error).toBe("unauthorized");
+    expect(
+      (await subscribe(guest, { channel: "kitchen", branchId: branchA })).error,
+    ).toBe("unauthorized");
 
     const bad = connect("not-a-jwt");
-    await waitFor(bad, "disconnect");
-    expect(bad.connected).toBe(false);
+    await waitFor(bad, "connect");
+    expect((await subscribe(bad, { channel: "orders" })).error).toBe("unauthorized");
+  });
+
+  it("guest sockets follow one order via its UUID and receive status updates", async () => {
+    const created = await createOrder(ownerA, {
+      type: "walkin",
+      branchId: branchA,
+      confirm: true,
+      items: [{ productId: fx.simple.id, quantity: 1 }],
+    }).expect(201);
+
+    const guest = connect(); // customer app: no JWT
+    await waitFor(guest, "connect");
+
+    const sub = await subscribe(guest, { channel: "order", orderId: created.body.id });
+    expect(sub.ok).toBe(true);
+    expect(sub.room).toBe(`order:${created.body.id}`);
+
+    const statusEvent = waitFor<{ id: string; status: string; orderNumber: number }>(
+      guest,
+      "order.status",
+    );
+    await request(http)
+      .post(`/orders/${created.body.id}/status`)
+      .set("Authorization", `Bearer ${ownerA}`)
+      .send({ status: "preparing" })
+      .expect(200);
+
+    const event = await statusEvent;
+    expect(event.id).toBe(created.body.id);
+    expect(event.status).toBe("preparing");
+    // Trimmed payload: no staff/actor internals.
+    expect(event).not.toHaveProperty("placedBy");
+    expect(event).not.toHaveProperty("statusHistory");
+
+    // Unknown order id -> rejected.
+    const bogus = await subscribe(guest, {
+      channel: "order",
+      orderId: "00000000-0000-4000-8000-000000000000",
+    });
+    expect(bogus.ok).toBe(false);
   });
 
   it("authorizes subscriptions by permission", async () => {

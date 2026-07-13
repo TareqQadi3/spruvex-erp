@@ -94,7 +94,9 @@
     "address": "Address",
     "phone": "Phone",
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "qrOrdering": "QR ordering",
+    "copyLink": "Copy link"
   },
   "team": {
     "title": "Team",
@@ -209,6 +211,14 @@
     "crNumber": "CR number",
     "vatRate": "VAT rate",
     "currency": "Currency",
-    "notSet": "Not set"
+    "notSet": "Not set",
+    "zatca": "Establishment data (e-invoicing)",
+    "zatcaHint": "Shown on tax invoices and their QR code",
+    "legalName": "Registered legal name",
+    "address": "Address",
+    "saved": "Saved successfully",
+    "publicLinks": "Public ordering links",
+    "publicLinksHint": "Public restaurant link for branch pickup orders",
+    "qrLinksHint": "Per-table QR codes are managed from the Tables page"
   }
 }

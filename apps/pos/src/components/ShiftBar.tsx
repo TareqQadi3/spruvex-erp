@@ -26,7 +26,6 @@ export function ShiftBar({
 
   useEffect(() => {
     void posApi.currentShift(branchId).then(onShiftChange);
-    // eslint-disable-next-line -- load once per branch
   }, [branchId]);
 
   async function submitOpen(event: FormEvent) {

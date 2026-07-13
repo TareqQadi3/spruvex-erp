@@ -11,18 +11,23 @@ import {
 import type { Server, Socket } from "socket.io";
 
 import type { AccessTokenPayload } from "../../modules/identity/token.service";
+import { PlatformPrismaService } from "../prisma/platform-prisma.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { rtRooms } from "./rooms";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 interface SocketContext {
-  userId: string;
+  /** undefined = guest connection (customer ordering app). */
+  userId?: string;
   tenantId?: string;
   permissions: Set<string>;
 }
 
 interface SubscribePayload {
-  channel: "orders" | "kitchen";
+  channel: "orders" | "kitchen" | "order";
   branchId?: string;
+  orderId?: string;
 }
 
 /**
@@ -30,12 +35,12 @@ interface SubscribePayload {
  * REDIS_URL is configured).
  *
  * Security model:
- * - The connection must present a valid access JWT (handshake.auth.token);
- *   otherwise it is disconnected immediately.
- * - Rooms are derived from the token's tenant — never from client input.
- * - Subscriptions are permission-checked: `orders` needs orders.view,
- *   `kitchen` needs kitchen.view, and the branch must belong to the tenant
- *   (verified through the RLS-scoped client).
+ * - A valid access JWT (handshake.auth.token) yields a staff context.
+ *   Connections WITHOUT a token are guests: they may only join per-order
+ *   rooms (the order UUID is the capability) — every staff channel is denied.
+ * - Staff rooms are derived from the token's tenant — never from client input.
+ * - `orders` needs orders.view; `kitchen` needs kitchen.view and the branch
+ *   must belong to the tenant (verified through the RLS-scoped client).
  */
 @WebSocketGateway({
   cors: { origin: (process.env.CORS_ORIGINS ?? "").split(",").filter(Boolean) },
@@ -49,28 +54,30 @@ export class RealtimeGateway implements OnGatewayConnection {
   constructor(
     private readonly jwt: JwtService,
     private readonly prisma: PrismaService,
+    private readonly platformDb: PlatformPrismaService,
   ) {}
 
   handleConnection(socket: Socket): void {
     const token = socket.handshake.auth?.token as string | undefined;
+    const guest: SocketContext = { permissions: new Set() };
     if (!token) {
-      socket.disconnect(true);
+      socket.data.ctx = guest;
       return;
     }
     try {
       const payload = this.jwt.verify<AccessTokenPayload>(token);
       if (payload.type !== "access" || !payload.sub) {
-        socket.disconnect(true);
+        socket.data.ctx = guest;
         return;
       }
-      const ctx: SocketContext = {
+      socket.data.ctx = {
         userId: payload.sub,
         tenantId: payload.tenant_id,
         permissions: new Set(payload.permissions ?? []),
-      };
-      socket.data.ctx = ctx;
+      } satisfies SocketContext;
     } catch {
-      socket.disconnect(true);
+      // Invalid/expired token -> guest privileges only.
+      socket.data.ctx = guest;
     }
   }
 
@@ -80,7 +87,26 @@ export class RealtimeGateway implements OnGatewayConnection {
     @MessageBody() body: SubscribePayload,
   ): Promise<{ ok: boolean; room?: string; error?: string }> {
     const ctx = socket.data.ctx as SocketContext | undefined;
-    if (!ctx?.tenantId) {
+
+    // Guest channel: follow one order by its UUID capability.
+    if (body?.channel === "order") {
+      if (!body.orderId || !UUID_RE.test(body.orderId)) {
+        return { ok: false, error: "orderId required" };
+      }
+      const order = await this.platformDb.order.findFirst({
+        where: { id: body.orderId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!order) {
+        return { ok: false, error: "order not found" };
+      }
+      const room = rtRooms.order(order.id);
+      await socket.join(room);
+      return { ok: true, room };
+    }
+
+    // Staff channels require an authenticated tenant context.
+    if (!ctx?.userId || !ctx.tenantId) {
       return { ok: false, error: "unauthorized" };
     }
 
@@ -100,7 +126,6 @@ export class RealtimeGateway implements OnGatewayConnection {
       if (!body.branchId) {
         return { ok: false, error: "branchId required" };
       }
-      // Tenant check: the branch must be visible inside this tenant's RLS scope.
       const branch = await this.prisma
         .forTenant(ctx.tenantId)
         .branch.findFirst({ where: { id: body.branchId, deletedAt: null } });

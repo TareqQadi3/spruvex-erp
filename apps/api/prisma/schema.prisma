@@ -32,8 +32,12 @@ model Tenant {
   nameEn                String?      @map("name_en")
   slug                  String       @unique
   logoUrl               String?      @map("logo_url")
+  /// ZATCA: registered legal entity name (falls back to `name` on invoices).
+  legalName             String?      @map("legal_name")
   vatNumber             String?      @map("vat_number")
   crNumber              String?      @map("cr_number")
+  /// ZATCA: registered address of the establishment.
+  address               String?
   status                TenantStatus @default(active)
   /// Business type: restaurant | cafe | cloud_kitchen | food_truck | bakery | other
   type                  String?
@@ -855,6 +859,17 @@ model Receipt {
   vatRate   Decimal @map("vat_rate") @db.Decimal(5, 2)
   vatAmount Decimal @map("vat_amount") @db.Decimal(12, 2)
   total     Decimal @db.Decimal(12, 2)
+
+  /// ZATCA Phase 1: simplified-invoice QR content (TLV, Base64) —
+  /// seller name, VAT number, timestamp, total incl. VAT, VAT amount.
+  qrPayload String? @map("qr_payload")
+
+  /// ZATCA Phase 2 readiness (plan §9.3): per-branch hash chain computed at
+  /// issuance; reporting status/response filled when the integration lands.
+  invoiceHash         String? @map("invoice_hash")
+  previousInvoiceHash String? @map("previous_invoice_hash")
+  zatcaStatus         String  @default("not_submitted") @map("zatca_status")
+  zatcaResponse       Json?   @map("zatca_response")
 
   issuedAt DateTime @default(now()) @map("issued_at")
   issuedBy String?  @map("issued_by") @db.Uuid

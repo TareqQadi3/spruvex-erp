@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 
 import { PlatformPrismaService } from "../../shared/prisma/platform-prisma.service";
 import { PrismaService } from "../../shared/prisma/prisma.service";
@@ -29,7 +29,14 @@ export class GuestOrderingService {
       where: { qrToken, deletedAt: null },
       include: {
         branch: {
-          select: { id: true, name: true, nameEn: true, isActive: true, deletedAt: true },
+          select: {
+            id: true,
+            name: true,
+            nameEn: true,
+            isActive: true,
+            deletedAt: true,
+            orderingSettings: true,
+          },
         },
         tenant: {
           select: {
@@ -53,6 +60,10 @@ export class GuestOrderingService {
     ) {
       throw new NotFoundException("QR code is not valid");
     }
+    const settings = (table.branch.orderingSettings ?? {}) as { qrOrderingEnabled?: boolean };
+    if (settings.qrOrderingEnabled === false) {
+      throw new ConflictException("QR ordering is currently disabled for this branch");
+    }
     return table;
   }
 
@@ -75,7 +86,142 @@ export class GuestOrderingService {
   /** Active menu for the table's branch (branch availability + price overrides applied). */
   async menu(qrToken: string) {
     const table = await this.resolveToken(qrToken);
-    const scoped = this.prisma.forTenant(table.tenantId);
+    return this.buildMenu(table.tenantId, table.branchId);
+  }
+
+  // --- External ordering link (/restaurant/{slug}) --------------------- //
+
+  private async resolveRestaurant(slug: string) {
+    const tenant = await this.platformDb.tenant.findFirst({
+      where: { slug, status: "active", deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        nameEn: true,
+        slug: true,
+        logoUrl: true,
+        currency: true,
+        defaultLocale: true,
+      },
+    });
+    if (!tenant) {
+      throw new NotFoundException("Restaurant not found");
+    }
+    return tenant;
+  }
+
+  private async resolveBranch(slug: string, branchSlug: string) {
+    const tenant = await this.resolveRestaurant(slug);
+    const branch = await this.prisma.forTenant(tenant.id).branch.findFirst({
+      where: { slug: branchSlug, deletedAt: null, isActive: true },
+      select: { id: true, name: true, nameEn: true, slug: true, address: true, phone: true },
+    });
+    if (!branch) {
+      throw new NotFoundException("Branch not found");
+    }
+    return { tenant, branch };
+  }
+
+  /** Public restaurant page: info + active branches (pickup entry points). */
+  async restaurantInfo(slug: string) {
+    const tenant = await this.resolveRestaurant(slug);
+    const branches = await this.prisma.forTenant(tenant.id).branch.findMany({
+      where: { deletedAt: null, isActive: true },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, nameEn: true, slug: true, address: true, phone: true },
+    });
+    const { id: _id, ...restaurant } = tenant;
+    return { restaurant, branches };
+  }
+
+  async branchMenu(slug: string, branchSlug: string) {
+    const { tenant, branch } = await this.resolveBranch(slug, branchSlug);
+    const menu = await this.buildMenu(tenant.id, branch.id);
+    return { branch: { name: branch.name, nameEn: branch.nameEn, slug: branch.slug }, ...menu };
+  }
+
+  /** Pickup (takeaway) order through the external link — phone required. */
+  async createTakeawayOrder(
+    slug: string,
+    branchSlug: string,
+    dto: GuestCreateOrderDto & { customerPhone: string },
+    idempotencyKey: string,
+  ) {
+    const { tenant, branch } = await this.resolveBranch(slug, branchSlug);
+
+    const order = await this.tenantContext.run(
+      { userId: GUEST_ACTOR, tenantId: tenant.id, permissions: new Set() },
+      () =>
+        this.ordering.create(
+          {
+            type: "takeaway",
+            branchId: branch.id,
+            items: dto.items,
+            notes: dto.notes,
+            customerName: dto.customerName,
+            customerPhone: dto.customerPhone,
+          },
+          { source: "external_link", tenantId: tenant.id },
+          idempotencyKey,
+        ),
+    );
+    return {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      total: order.total.toString(),
+    };
+  }
+
+  /**
+   * Guest order tracking. The order UUID is the capability: it is returned
+   * only to whoever placed the order. Response is trimmed to customer-safe
+   * fields — no actors, no staff data.
+   */
+  async track(orderId: string) {
+    const order = await this.platformDb.order.findFirst({
+      where: { id: orderId, deletedAt: null },
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        type: true,
+        total: true,
+        createdAt: true,
+        table: { select: { number: true } },
+        tenant: {
+          select: { name: true, nameEn: true, logoUrl: true, currency: true, defaultLocale: true },
+        },
+        items: {
+          select: { quantity: true, productSnapshot: true },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+    if (!order) {
+      throw new NotFoundException("Order not found");
+    }
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      type: order.type,
+      total: order.total.toString(),
+      createdAt: order.createdAt,
+      table: order.table?.number ?? null,
+      restaurant: order.tenant,
+      items: order.items.map((item) => ({
+        quantity: item.quantity,
+        name: (item.productSnapshot as { name: string }).name,
+        nameEn: (item.productSnapshot as { nameEn: string | null }).nameEn,
+      })),
+    };
+  }
+
+  // ---------------------------------------------------------------------- //
+
+  private async buildMenu(tenantId: string, branchId: string) {
+    const scoped = this.prisma.forTenant(tenantId);
 
     const categories = await scoped.category.findMany({
       where: { deletedAt: null, isActive: true },
@@ -86,7 +232,7 @@ export class GuestOrderingService {
       where: { deletedAt: null, isActive: true },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       include: {
-        branchSettings: { where: { branchId: table.branchId } },
+        branchSettings: { where: { branchId } },
         modifierGroups: {
           orderBy: { sortOrder: "asc" },
           include: {

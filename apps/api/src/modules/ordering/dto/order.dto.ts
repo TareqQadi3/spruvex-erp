@@ -120,3 +120,10 @@ export class GuestCreateOrderDto {
   @MaxLength(1000)
   notes?: string;
 }
+
+/** Pickup order through the external link — the phone number is mandatory. */
+export class GuestTakeawayOrderDto extends GuestCreateOrderDto {
+  @IsString()
+  @Matches(/^\+?[0-9]{8,15}$/, { message: "Phone must be 8-15 digits (optionally with +)" })
+  customerPhone!: string;
+}

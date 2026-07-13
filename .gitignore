@@ -9,3 +9,5 @@ coverage/
 .env.*.local
 .DS_Store
 generated/
+.next/
+next-env.d.ts

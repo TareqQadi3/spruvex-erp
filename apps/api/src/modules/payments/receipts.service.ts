@@ -4,13 +4,16 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import { createHash } from "node:crypto";
 
 import { AuditService } from "../../shared/audit/audit.service";
+import { halalasToSar, sarToHalalas } from "../../shared/common/money";
 import { PrismaService } from "../../shared/prisma/prisma.service";
 import {
   actorOrNull,
   TenantContextService,
 } from "../../shared/tenancy/tenant-context.service";
+import { buildZatcaQrPayload } from "./zatca/tlv";
 
 const NUMBER_CONFLICT_RETRIES = 3;
 
@@ -78,25 +81,68 @@ export class ReceiptsService {
           const last = await tx.receipt.findFirst({
             where: { branchId: order.branchId },
             orderBy: { receiptNumber: "desc" },
-            select: { receiptNumber: true },
+            select: { receiptNumber: true, invoiceHash: true },
           });
+
+          const issuedAt = new Date();
+          const receiptNumber = (last?.receiptNumber ?? 0) + 1;
+          const sellerName = tenant?.legalName ?? tenant?.name ?? "";
+          const totalBeforeVat = halalasToSar(
+            sarToHalalas(order.total.toString()) - sarToHalalas(order.vatAmount.toString()),
+          );
+
+          // ZATCA Phase 1 simplified-invoice QR (TLV/Base64). Only issued
+          // when the establishment has a VAT registration number.
+          const qrPayload = tenant?.vatNumber
+            ? buildZatcaQrPayload({
+                sellerName,
+                vatNumber: tenant.vatNumber,
+                timestamp: issuedAt.toISOString(),
+                total: order.total.toString(),
+                vatAmount: order.vatAmount.toString(),
+              })
+            : null;
+
+          // ZATCA Phase 2 readiness: per-branch hash chain over the
+          // invoice's canonical fields, linked to the previous invoice.
+          const previousInvoiceHash = last?.invoiceHash ?? null;
+          const invoiceHash = createHash("sha256")
+            .update(
+              JSON.stringify({
+                tenantId,
+                branchId: order.branchId,
+                receiptNumber,
+                orderId,
+                issuedAt: issuedAt.toISOString(),
+                total: order.total.toString(),
+                vatAmount: order.vatAmount.toString(),
+                previousInvoiceHash,
+              }),
+            )
+            .digest("hex");
 
           return tx.receipt.create({
             data: {
               tenantId,
               branchId: order.branchId,
               orderId,
-              receiptNumber: (last?.receiptNumber ?? 0) + 1,
+              receiptNumber,
               vatRate: order.vatRate,
               vatAmount: order.vatAmount,
               total: order.total,
+              issuedAt,
               issuedBy: actorOrNull(ctx.userId),
+              qrPayload,
+              invoiceHash,
+              previousInvoiceHash,
               payload: {
                 restaurant: {
                   name: tenant?.name,
                   nameEn: tenant?.nameEn,
+                  legalName: sellerName,
                   vatNumber: tenant?.vatNumber,
                   crNumber: tenant?.crNumber,
+                  address: tenant?.address,
                   logoUrl: tenant?.logoUrl,
                   currency: tenant?.currency,
                 },
@@ -126,6 +172,7 @@ export class ReceiptsService {
                 totals: {
                   subtotal: order.subtotal.toString(),
                   discount: order.discount.toString(),
+                  totalBeforeVat,
                   vatRate: order.vatRate.toString(),
                   vatAmount: order.vatAmount.toString(),
                   total: order.total.toString(),

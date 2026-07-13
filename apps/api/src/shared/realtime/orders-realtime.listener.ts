@@ -10,41 +10,60 @@ import { RT_EVENTS, rtRooms } from "./rooms";
 export interface OrderEventPayload {
   tenantId: string;
   branchId: string;
-  order: unknown; // serialized order (Decimals as strings)
+  order: {
+    id: string;
+    orderNumber: number;
+    status: string;
+    total: unknown;
+    createdAt: Date | string;
+  } & Record<string, unknown>;
+}
+
+/** Guest-facing trim: status only — no staff, actor or catalog internals. */
+function guestPayload(order: OrderEventPayload["order"]) {
+  return {
+    id: order.id,
+    orderNumber: order.orderNumber,
+    status: order.status,
+    total: String(order.total),
+    createdAt: order.createdAt,
+  };
 }
 
 /**
  * Bridges order domain events to the realtime layer:
- * every event fans out to the restaurant orders room and the branch kitchen room.
+ * staff rooms (restaurant orders + branch kitchen) get the full order;
+ * the per-order guest room gets a trimmed status event.
  */
 @Injectable()
 export class OrdersRealtimeListener {
   constructor(private readonly gateway: RealtimeGateway) {}
 
-  @OnEvent(DOMAIN_EVENTS.ORDER_CREATED)
-  onCreated(payload: OrderEventPayload): void {
+  private fanOut(event: string, payload: OrderEventPayload): void {
     this.gateway.emitToRooms(
       [rtRooms.tenantOrders(payload.tenantId), rtRooms.branchKitchen(payload.branchId)],
-      RT_EVENTS.ORDER_CREATED,
+      event,
       payload.order,
     );
+    this.gateway.emitToRooms(
+      [rtRooms.order(payload.order.id)],
+      RT_EVENTS.GUEST_ORDER_STATUS,
+      guestPayload(payload.order),
+    );
+  }
+
+  @OnEvent(DOMAIN_EVENTS.ORDER_CREATED)
+  onCreated(payload: OrderEventPayload): void {
+    this.fanOut(RT_EVENTS.ORDER_CREATED, payload);
   }
 
   @OnEvent(DOMAIN_EVENTS.ORDER_STATUS_CHANGED)
   onStatusChanged(payload: OrderEventPayload): void {
-    this.gateway.emitToRooms(
-      [rtRooms.tenantOrders(payload.tenantId), rtRooms.branchKitchen(payload.branchId)],
-      RT_EVENTS.ORDER_UPDATED,
-      payload.order,
-    );
+    this.fanOut(RT_EVENTS.ORDER_UPDATED, payload);
   }
 
   @OnEvent(DOMAIN_EVENTS.ORDER_CANCELLED)
   onCancelled(payload: OrderEventPayload): void {
-    this.gateway.emitToRooms(
-      [rtRooms.tenantOrders(payload.tenantId), rtRooms.branchKitchen(payload.branchId)],
-      RT_EVENTS.ORDER_UPDATED,
-      payload.order,
-    );
+    this.fanOut(RT_EVENTS.ORDER_UPDATED, payload);
   }
 }
