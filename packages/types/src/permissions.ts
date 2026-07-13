@@ -56,6 +56,10 @@ export const PERMISSIONS = {
 
   // Audit
   "audit.view": "View the audit log",
+
+  // Billing (SaaS subscription)
+  "billing.view": "View the subscription plan, trial status and usage",
+  "billing.manage": "Change plan and manage the subscription",
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;

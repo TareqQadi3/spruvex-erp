@@ -1,0 +1,65 @@
+{
+  "app": { "name": "SpruVex R — لوحة المنصة" },
+  "common": {
+    "loading": "جارٍ التحميل...",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "logout": "تسجيل الخروج",
+    "language": "English",
+    "error": "حدث خطأ غير متوقع",
+    "search": "بحث",
+    "all": "الكل"
+  },
+  "auth": {
+    "title": "لوحة تحكم منصة SpruVex R",
+    "subtitle": "لفريق التشغيل الداخلي فقط",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "login": "تسجيل الدخول"
+  },
+  "nav": {
+    "tenants": "المطاعم",
+    "subscriptions": "الاشتراكات",
+    "system": "حالة النظام"
+  },
+  "tenants": {
+    "title": "المطاعم المسجّلة",
+    "status": "الحالة",
+    "active": "نشط",
+    "suspended": "موقوف",
+    "branches": "{{count}} فرع",
+    "plan": "الباقة",
+    "trial": "تجربة",
+    "suspend": "إيقاف",
+    "reactivate": "إعادة تفعيل",
+    "confirmSuspend": "سيتم منع هذا المطعم من إجراء أي عملية كتابة (طلبات، فروع، مستخدمين) حتى إعادة التفعيل. متابعة؟",
+    "detail": "تفاصيل المطعم",
+    "users": "{{count}} مستخدم",
+    "createdAt": "تاريخ التسجيل",
+    "empty": "لا توجد نتائج"
+  },
+  "subscriptions": {
+    "title": "الاشتراكات",
+    "tenant": "المطعم",
+    "status": "الحالة",
+    "plan": "الباقة",
+    "trialEndsAt": "نهاية التجربة",
+    "changePlan": "تغيير الباقة",
+    "changeStatus": "تغيير الحالة",
+    "statuses": {
+      "trialing": "تجربة",
+      "active": "نشط",
+      "past_due": "متأخر السداد",
+      "suspended": "موقوف",
+      "cancelled": "ملغى"
+    }
+  },
+  "system": {
+    "title": "حالة النظام",
+    "database": "قاعدة البيانات",
+    "totalTenants": "إجمالي المطاعم",
+    "activeTenants": "المطاعم النشطة",
+    "suspendedTenants": "المطاعم الموقوفة",
+    "subscriptionsByStatus": "الاشتراكات حسب الحالة"
+  }
+}

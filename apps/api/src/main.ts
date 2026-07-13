@@ -4,6 +4,7 @@ import helmet from "helmet";
 
 import { AppModule } from "./app.module";
 import { RedisIoAdapter } from "./shared/realtime/redis-io.adapter";
+import { AllExceptionsFilter } from "./shared/errors/all-exceptions.filter";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -25,6 +26,7 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  app.useGlobalFilters(new AllExceptionsFilter());
   app.enableShutdownHooks();
 
   const port = Number(process.env.PORT ?? 3000);

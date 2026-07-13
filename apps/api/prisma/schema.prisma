@@ -84,6 +84,8 @@ model Tenant {
   stockLevels           StockLevel[]
   stockMovements        StockMovement[]
   recipeItems           RecipeItem[]
+  subscription          Subscription?
+  subscriptionInvoices  SubscriptionInvoice[]
 
   @@map("tenants")
 }
@@ -1101,4 +1103,140 @@ model RecipeItem {
   @@unique([productId, ingredientId])
   @@index([tenantId, productId])
   @@map("recipe_items")
+}
+
+// ---------------------------------------------------------------------------
+// Billing (Phase 8) — plans, subscriptions, subscription invoices.
+// No payment gateway is wired yet: activation is manual (bank transfer/
+// invoice), matching the plan doc's MVP decision. The shape is ready for a
+// gateway integration later (external customer/subscription id columns).
+// ---------------------------------------------------------------------------
+
+/// Global plan catalog — not tenant-owned, no RLS (same pattern as
+/// UnitOfMeasure/Permission). Seeded from a fixed catalog, read-only to the app role.
+model Plan {
+  id     String  @id @default(uuid()) @db.Uuid
+  key    String  @unique
+  name   String
+  nameEn String? @map("name_en")
+
+  /// Feature limits (Phase 8 foundation). Null = unlimited.
+  maxBranches       Int  @map("max_branches")
+  maxUsers          Int  @map("max_users")
+  maxOrdersPerMonth Int? @map("max_orders_per_month")
+
+  priceMonthlyHalalas Int  @map("price_monthly_halalas")
+  priceYearlyHalalas  Int? @map("price_yearly_halalas")
+  /// Free-form feature flags (JSONB) — e.g. {"inventory": true, "multiKds": false}.
+  features            Json @default("{}")
+
+  sortOrder Int     @default(0) @map("sort_order")
+  isActive  Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+enum SubscriptionStatus {
+  trialing
+  active
+  past_due
+  suspended
+  cancelled
+
+  @@map("subscription_status")
+}
+
+/// One subscription per tenant. Trial/limits/status are the enforcement
+/// source of truth for TenantAccessGuard and LimitsService.
+model Subscription {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @unique @map("tenant_id") @db.Uuid
+  planId   String @map("plan_id") @db.Uuid
+
+  status             SubscriptionStatus @default(trialing)
+  trialEndsAt        DateTime?          @map("trial_ends_at")
+  currentPeriodStart DateTime?          @map("current_period_start")
+  currentPeriodEnd   DateTime?          @map("current_period_end")
+  cancelledAt        DateTime?          @map("cancelled_at")
+
+  /// Reserved for a future payment gateway integration (e.g. Stripe/Moyasar
+  /// customer + subscription ids) — unused today, kept nullable on purpose.
+  externalCustomerId     String? @map("external_customer_id")
+  externalSubscriptionId String? @map("external_subscription_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.Uuid
+  updatedBy String?  @map("updated_by") @db.Uuid
+
+  tenant   Tenant                @relation(fields: [tenantId], references: [id])
+  plan     Plan                  @relation(fields: [planId], references: [id])
+  invoices SubscriptionInvoice[]
+
+  @@index([status])
+  @@map("subscriptions")
+}
+
+enum SubscriptionInvoiceStatus {
+  pending
+  paid
+  failed
+  void
+
+  @@map("subscription_invoice_status")
+}
+
+/// Append-only billing record for a subscription period. Manually marked
+/// paid today (bank transfer); a gateway webhook would do the same update
+/// later without changing this shape.
+model SubscriptionInvoice {
+  id             String @id @default(uuid()) @db.Uuid
+  tenantId       String @map("tenant_id") @db.Uuid
+  subscriptionId String @map("subscription_id") @db.Uuid
+
+  amountHalalas Int                       @map("amount_halalas")
+  status        SubscriptionInvoiceStatus @default(pending)
+  periodStart   DateTime                  @map("period_start")
+  periodEnd     DateTime                  @map("period_end")
+  paidAt        DateTime?                 @map("paid_at")
+  notes         String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String?  @map("created_by") @db.Uuid
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@map("subscription_invoices")
+}
+
+// ---------------------------------------------------------------------------
+// Platform (Phase 8) — SpruVex operations team, entirely separate from
+// tenant RBAC. No RLS (global, cross-tenant by design); authenticated with
+// its own JWT type ("platform_admin") that tenant guards never accept.
+// ---------------------------------------------------------------------------
+
+model PlatformAdmin {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique
+  name         String
+  passwordHash String    @map("password_hash")
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+
+  /// Same brute-force lockout as User (identity/auth.service.ts) — the
+  /// highest-privilege account in the system deserves the same protection.
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_admins")
 }

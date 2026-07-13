@@ -8,6 +8,7 @@ import { EventEmitter2 } from "@nestjs/event-emitter";
 import { DOMAIN_EVENTS, type SystemRole } from "@spruvex-r/types";
 
 import { AuditService } from "../../shared/audit/audit.service";
+import { LimitsService } from "../../shared/billing/limits.service";
 import { PlatformPrismaService } from "../../shared/prisma/platform-prisma.service";
 import { PrismaService } from "../../shared/prisma/prisma.service";
 import { TenantContextService } from "../../shared/tenancy/tenant-context.service";
@@ -47,6 +48,7 @@ export class OnboardingService {
     private readonly tokens: TokenService,
     private readonly audit: AuditService,
     private readonly events: EventEmitter2,
+    private readonly limits: LimitsService,
   ) {}
 
   /** Step 2 — create the restaurant. Returns fresh tokens carrying the new tenant context. */
@@ -105,6 +107,8 @@ export class OnboardingService {
     const ctx = this.tenantContext.contextOrThrow;
     const tenantId = this.tenantContext.tenantIdOrThrow;
 
+    await this.limits.assertCanAddBranch(tenantId);
+
     const count = await this.prisma.scoped.branch.count({ where: { deletedAt: null } });
     const branch = await this.prisma.scoped.branch.create({
       data: {
@@ -140,6 +144,8 @@ export class OnboardingService {
   ): Promise<{ created: Array<{ userId: string; email: string; role: string }> }> {
     const ctx = this.tenantContext.contextOrThrow;
     const tenantId = this.tenantContext.tenantIdOrThrow;
+
+    await this.limits.assertCanAddUsers(tenantId, users.length);
 
     const roles = await this.prisma.scoped.role.findMany({ where: { deletedAt: null } });
     const roleByKey = new Map(roles.map((r) => [r.key, r]));

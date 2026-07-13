@@ -1,0 +1,65 @@
+{
+  "app": { "name": "SpruVex R — Platform Console" },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "logout": "Sign out",
+    "language": "العربية",
+    "error": "Something went wrong",
+    "search": "Search",
+    "all": "All"
+  },
+  "auth": {
+    "title": "SpruVex R Platform Console",
+    "subtitle": "Internal operations team only",
+    "email": "Email",
+    "password": "Password",
+    "login": "Sign in"
+  },
+  "nav": {
+    "tenants": "Restaurants",
+    "subscriptions": "Subscriptions",
+    "system": "System status"
+  },
+  "tenants": {
+    "title": "Registered restaurants",
+    "status": "Status",
+    "active": "Active",
+    "suspended": "Suspended",
+    "branches": "{{count}} branches",
+    "plan": "Plan",
+    "trial": "Trial",
+    "suspend": "Suspend",
+    "reactivate": "Reactivate",
+    "confirmSuspend": "This will block the tenant from any write operation (orders, branches, users) until reactivated. Continue?",
+    "detail": "Restaurant details",
+    "users": "{{count}} users",
+    "createdAt": "Registered",
+    "empty": "No results"
+  },
+  "subscriptions": {
+    "title": "Subscriptions",
+    "tenant": "Restaurant",
+    "status": "Status",
+    "plan": "Plan",
+    "trialEndsAt": "Trial ends",
+    "changePlan": "Change plan",
+    "changeStatus": "Change status",
+    "statuses": {
+      "trialing": "Trialing",
+      "active": "Active",
+      "past_due": "Past due",
+      "suspended": "Suspended",
+      "cancelled": "Cancelled"
+    }
+  },
+  "system": {
+    "title": "System status",
+    "database": "Database",
+    "totalTenants": "Total restaurants",
+    "activeTenants": "Active restaurants",
+    "suspendedTenants": "Suspended restaurants",
+    "subscriptionsByStatus": "Subscriptions by status"
+  }
+}

@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 
+import { syncPlanCatalog } from "../src/modules/billing/plan-catalog";
 import { hashPassword, hashPin } from "../src/modules/identity/password";
 import { syncUnitCatalog } from "../src/modules/inventory/unit-catalog";
 import {
@@ -27,6 +28,24 @@ async function main() {
     console.log("Permission catalog synced.");
     await syncUnitCatalog(db);
     console.log("Unit-of-measure catalog synced.");
+    await syncPlanCatalog(db);
+    console.log("Plan catalog synced.");
+
+    const platformAdminEmail = process.env.PLATFORM_ADMIN_EMAIL;
+    const platformAdminPassword = process.env.PLATFORM_ADMIN_PASSWORD;
+    if (platformAdminEmail && platformAdminPassword) {
+      const existingAdmin = await db.platformAdmin.findUnique({ where: { email: platformAdminEmail } });
+      if (!existingAdmin) {
+        await db.platformAdmin.create({
+          data: {
+            email: platformAdminEmail,
+            name: "SpruVex Admin",
+            passwordHash: await hashPassword(platformAdminPassword),
+          },
+        });
+        console.log(`Platform admin bootstrapped: ${platformAdminEmail}`);
+      }
+    }
 
     const existing = await db.tenant.findUnique({ where: { slug: "demo" } });
     if (existing) {

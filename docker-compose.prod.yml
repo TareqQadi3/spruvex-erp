@@ -1,0 +1,118 @@
+# Production single-host deployment (Docker Compose, per the architecture
+# plan's "start simple, move to managed Postgres/Cloud later" decision).
+#
+# NOT build-verified in this sandbox (no Docker daemon available here) —
+# validate with a real `docker compose build` before relying on it. See
+# docs/DEPLOYMENT.md for the full runbook, including the required
+# `prisma migrate deploy` step that must run before the api container's
+# first start.
+#
+# Usage:
+#   cp .env.production.example .env.production
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?required}
+      POSTGRES_DB: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://spruvex_app:${SPRUVEX_APP_PASSWORD:?required}@postgres:5432/spruvex_r?schema=public
+      ADMIN_DATABASE_URL: postgresql://spruvex_admin:${SPRUVEX_ADMIN_PASSWORD:?required}@postgres:5432/spruvex_r?schema=public
+      JWT_SECRET: ${JWT_SECRET:?required}
+      JWT_ACCESS_TTL_SECONDS: ${JWT_ACCESS_TTL_SECONDS:-900}
+      REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-30}
+      CORS_ORIGINS: ${CORS_ORIGINS:?required}
+      REDIS_URL: redis://redis:6379
+      ORDERING_BASE_URL: ${ORDERING_BASE_URL:?required}
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: infra/docker/spa.Dockerfile
+      args:
+        APP_DIR: dashboard
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "8081:80"
+
+  pos:
+    build:
+      context: .
+      dockerfile: infra/docker/spa.Dockerfile
+      args:
+        APP_DIR: pos
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "8082:80"
+
+  kds:
+    build:
+      context: .
+      dockerfile: infra/docker/spa.Dockerfile
+      args:
+        APP_DIR: kds
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "8083:80"
+
+  ordering:
+    build:
+      context: .
+      dockerfile: apps/ordering/Dockerfile
+    restart: unless-stopped
+    depends_on: [api]
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${ORDERING_BASE_URL:?required}
+    ports:
+      - "3002:3002"
+
+volumes:
+  pgdata:
+  redisdata:

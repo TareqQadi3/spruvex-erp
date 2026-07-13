@@ -12,6 +12,7 @@ import { AuthProvider, useAuth } from "./lib/auth";
 import { DashboardLayout } from "./layouts/DashboardLayout";
 import { LoginPage } from "./pages/auth/LoginPage";
 import { RegisterPage } from "./pages/auth/RegisterPage";
+import { BillingPage } from "./pages/dashboard/BillingPage";
 import { BranchesPage } from "./pages/dashboard/BranchesPage";
 import { HomePage } from "./pages/dashboard/HomePage";
 import { SettingsPage } from "./pages/dashboard/SettingsPage";
@@ -102,6 +103,7 @@ const router = createBrowserRouter([
       { path: "branches", element: <BranchesPage /> },
       { path: "team", element: <TeamPage /> },
       { path: "settings", element: <SettingsPage /> },
+      { path: "billing", element: <BillingPage /> },
       {
         path: "menu",
         element: <MenuLayout />,

@@ -2,10 +2,12 @@ import { PrismaClient } from "@prisma/client";
 
 import {
   ALL_PERMISSION_KEYS,
+  DEFAULT_PLAN_KEY,
   DEFAULT_ROLE_PERMISSIONS,
   PERMISSIONS,
   ROLE_LABELS,
   SYSTEM_ROLES,
+  TRIAL_PERIOD_DAYS,
 } from "@spruvex-r/types";
 
 /**
@@ -122,6 +124,22 @@ export async function provisionTenant(
         userId: input.ownerUserId,
         roleId: roleIdsByKey.owner,
         branchId: null, // tenant-wide
+        createdBy: input.ownerUserId,
+      },
+    });
+
+    // Every new tenant starts on a 14-day trial of the default plan (plan
+    // doc §5 MVP decision) — no payment gateway call, activation is manual.
+    const defaultPlan = await tx.plan.findUnique({ where: { key: DEFAULT_PLAN_KEY } });
+    if (!defaultPlan) {
+      throw new Error(`Plan catalog out of sync — missing default plan: ${DEFAULT_PLAN_KEY}`);
+    }
+    await tx.subscription.create({
+      data: {
+        tenantId: tenant.id,
+        planId: defaultPlan.id,
+        status: "trialing",
+        trialEndsAt: new Date(Date.now() + TRIAL_PERIOD_DAYS * 24 * 60 * 60 * 1000),
         createdBy: input.ownerUserId,
       },
     });

@@ -79,7 +79,8 @@
     "kds": "Kitchen Display",
     "tables": "Tables",
     "inventory": "Inventory",
-    "reports": "Reports"
+    "reports": "Reports",
+    "billing": "Billing & subscription"
   },
   "home": {
     "welcome": "Welcome, {{name}} 👋",
@@ -287,6 +288,27 @@
       "quantity": "Quantity",
       "revenue": "Revenue",
       "empty": "No data for this period"
+    }
+  },
+  "billing": {
+    "title": "Billing & subscription",
+    "currentPlan": "Current plan",
+    "trialRemaining": "{{count}} day(s) left in your trial",
+    "branches": "Branches",
+    "users": "Users",
+    "ordersThisMonth": "Orders this month",
+    "ordersPerMonth": "Orders / month",
+    "unlimited": "Unlimited",
+    "availablePlans": "Available plans",
+    "current": "Current",
+    "month": "month",
+    "switchToPlan": "Switch to this plan",
+    "statuses": {
+      "trialing": "Trialing",
+      "active": "Active",
+      "past_due": "Past due",
+      "suspended": "Suspended",
+      "cancelled": "Cancelled"
     }
   },
   "settings": {

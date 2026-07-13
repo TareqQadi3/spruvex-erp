@@ -18,17 +18,23 @@ ordering) · Turborepo + pnpm.
 apps/
   api/          NestJS API (modular monolith)
   dashboard/    Restaurant dashboard — React SPA (green theme, ar/en RTL-first)
+  pos/          Cashier POS — React SPA (touch-first)
+  kds/          Kitchen display — React SPA (realtime via Socket.io)
+  ordering/     Customer QR/pickup ordering — Next.js SSR
+  platform/     SpruVex ops console (cross-tenant) — React SPA, separate auth plane
 packages/
-  types/        Shared domain types, permission catalog, role defaults
+  types/        Shared domain types, permission catalog, role defaults, plan catalog
   ui/           Design-system components (shadcn-style, SpruVex R green theme)
   config/       Shared tsconfig / eslint / tailwind preset
 infra/
   postgres/     Database role bootstrap (RLS roles)
+  docker/       Production Dockerfiles/nginx config for the frontend SPAs
 brand/          Logo assets and palette
+docs/           Architecture, database, deployment, environment and admin docs
 ```
 
-Remaining frontend apps (`pos`, `kds`, `ordering`, `platform`) are added in
-later phases per the roadmap.
+See `docs/ARCHITECTURE.md` for the current module map, `docs/DEPLOYMENT.md`
+for production setup, and `docs/ADMIN_GUIDE.md` for the platform console.
 
 ## Getting started
 
@@ -78,3 +84,13 @@ domain events between modules, i18n (ar/en) with RTL default.
 |---------|-----------------------------|---------------|---------|
 | Owner   | owner@demo.spruvex.local    | SpruVex-Demo1 | —       |
 | Cashier | cashier@demo.spruvex.local  | SpruVex-Demo1 | 1234    |
+
+Set `PLATFORM_ADMIN_EMAIL` / `PLATFORM_ADMIN_PASSWORD` before running
+`pnpm db:seed` to also bootstrap a platform admin account (`apps/platform`,
+port 5177 in dev) — there is no self-registration for that role.
+
+## Production deployment
+
+See `docs/DEPLOYMENT.md` for the full runbook (Docker Compose setup,
+environment variables, migration workflow, backup strategy) and
+`docs/ARCHITECTURE.md` / `docs/DATABASE.md` for the system design.

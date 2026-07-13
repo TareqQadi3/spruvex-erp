@@ -2,6 +2,7 @@ import {
   BarChart3,
   BookOpen,
   ChefHat,
+  CreditCard,
   Home,
   Languages,
   LayoutGrid,
@@ -34,6 +35,7 @@ const ICONS: Record<string, LucideIcon> = {
   "chef-hat": ChefHat,
   "bar-chart": BarChart3,
   package: Package,
+  "credit-card": CreditCard,
 };
 
 export function DashboardLayout() {

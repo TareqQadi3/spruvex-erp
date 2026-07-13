@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, Post, Req } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import type { Request } from "express";
 
 import { Public } from "../../shared/rbac/public.decorator";
@@ -25,12 +26,14 @@ export class AuthController {
   ) {}
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post("register")
   register(@Body() dto: RegisterDto) {
     return this.auth.register(dto);
   }
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(200)
   @Post("register/verify")
   verify(@Body() dto: VerifyOtpDto, @Req() req: Request) {
@@ -38,6 +41,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(200)
   @Post("register/resend-otp")
   resendOtp(@Body() dto: ResendOtpDto) {
@@ -45,6 +49,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @HttpCode(200)
   @Post("login")
   login(@Body() dto: LoginDto, @Req() req: Request) {
@@ -52,6 +57,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @HttpCode(200)
   @Post("refresh")
   refresh(@Body() dto: RefreshDto, @Req() req: Request) {

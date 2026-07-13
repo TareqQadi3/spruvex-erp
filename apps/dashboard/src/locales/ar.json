@@ -79,7 +79,8 @@
     "kds": "شاشة المطبخ",
     "tables": "الطاولات",
     "inventory": "المخزون",
-    "reports": "التقارير"
+    "reports": "التقارير",
+    "billing": "الاشتراك والفوترة"
   },
   "home": {
     "welcome": "أهلاً {{name}} 👋",
@@ -287,6 +288,27 @@
       "quantity": "الكمية",
       "revenue": "الإيراد",
       "empty": "لا توجد بيانات لهذه الفترة"
+    }
+  },
+  "billing": {
+    "title": "الاشتراك والفوترة",
+    "currentPlan": "الباقة الحالية",
+    "trialRemaining": "متبقٍ {{count}} يوم على انتهاء الفترة التجريبية",
+    "branches": "الفروع",
+    "users": "المستخدمون",
+    "ordersThisMonth": "طلبات هذا الشهر",
+    "ordersPerMonth": "الطلبات شهرياً",
+    "unlimited": "بلا حد",
+    "availablePlans": "الباقات المتاحة",
+    "current": "الحالية",
+    "month": "شهر",
+    "switchToPlan": "التبديل لهذه الباقة",
+    "statuses": {
+      "trialing": "تجربة",
+      "active": "نشط",
+      "past_due": "متأخر السداد",
+      "suspended": "موقوف",
+      "cancelled": "ملغى"
     }
   },
   "settings": {

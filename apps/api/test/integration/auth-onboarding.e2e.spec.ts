@@ -35,6 +35,8 @@ describe("auth & onboarding (e2e)", () => {
       "../../src/modules/tenancy/tenant-provisioning"
     );
     await syncPermissionCatalog(admin);
+    const { syncPlanCatalog } = await import("../../src/modules/billing/plan-catalog");
+    await syncPlanCatalog(admin);
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();

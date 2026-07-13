@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 
+import { syncPlanCatalog } from "../../src/modules/billing/plan-catalog";
 import { hashPassword } from "../../src/modules/identity/password";
 import {
   provisionTenant,
@@ -11,6 +12,10 @@ export async function provisionTestTenant(
   admin: PrismaClient,
   input: { name: string; slug: string; ownerEmail: string; password?: string },
 ): Promise<ProvisionedTenant & { ownerEmail: string }> {
+  // provisionTenant creates a trial subscription against the default plan —
+  // the plan catalog must exist first (idempotent, cheap to call per-test).
+  await syncPlanCatalog(admin);
+
   const owner = await admin.user.create({
     data: {
       email: input.ownerEmail,

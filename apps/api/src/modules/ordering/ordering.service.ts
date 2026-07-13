@@ -17,6 +17,7 @@ import {
 } from "@spruvex-r/types";
 
 import { AuditService } from "../../shared/audit/audit.service";
+import { LimitsService } from "../../shared/billing/limits.service";
 import { calculateRecipeCostUnits } from "../../shared/common/food-cost";
 import { costUnitsToSar, halalasToSar, sarToHalalas, vatFromGross } from "../../shared/common/money";
 import { PrismaService } from "../../shared/prisma/prisma.service";
@@ -51,6 +52,7 @@ export class OrderingService {
     private readonly tenantContext: TenantContextService,
     private readonly audit: AuditService,
     private readonly events: EventEmitter2,
+    private readonly limits: LimitsService,
   ) {}
 
   list(filter: { branchId?: string; statuses?: OrderStatus[]; limit?: number }) {
@@ -100,6 +102,8 @@ export class OrderingService {
     if (existing) {
       return existing;
     }
+
+    await this.limits.assertCanCreateOrder(tenantId);
 
     for (let attempt = 1; ; attempt++) {
       try {
