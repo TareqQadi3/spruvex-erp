@@ -1,0 +1,30 @@
+import { Module } from "@nestjs/common";
+
+import { FoodCostService } from "./food-cost.service";
+import { IngredientsService } from "./ingredients.service";
+import { InventoryController } from "./inventory.controller";
+import { InventoryService } from "./inventory.service";
+import { RecipesController } from "./recipes.controller";
+import { RecipesService } from "./recipes.service";
+import { StockDeductionListener } from "./stock-deduction.listener";
+import { StockLocationsService } from "./stock-locations.service";
+
+/**
+ * Inventory & Recipe module (Phase 7) — ingredients, stock locations/levels/
+ * movements (purchase/waste/adjustment, append-only ledger), product
+ * recipes, live food-cost/margin calculation, and automatic stock
+ * deduction on order completion (event-driven, non-blocking).
+ */
+@Module({
+  controllers: [InventoryController, RecipesController],
+  providers: [
+    IngredientsService,
+    StockLocationsService,
+    InventoryService,
+    RecipesService,
+    FoodCostService,
+    StockDeductionListener,
+  ],
+  exports: [InventoryService, FoodCostService],
+})
+export class InventoryModule {}

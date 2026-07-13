@@ -1,0 +1,131 @@
+# Render Blueprint — deploys the full SpruVex R stack on Render's free tier.
+#
+# NOT deploy-verified: this sandbox has no way to create a Render account or
+# trigger an actual deploy, so this file is reviewed-but-unproven, same
+# caveat as docker-compose.prod.yml. See docs/RENDER_DEPLOY.md for the full
+# walkthrough, including the one manual step Render's managed Postgres can't
+# do for us (creating the second, RLS-restricted database role).
+#
+# Free-tier notes:
+#   - Free web services spin down after 15 min of inactivity (cold start on
+#     the next request) and free Postgres is deleted after 30 days with no
+#     grace period — fine for "let me try this on a real URL", not for an
+#     actual paying customer. See docs/RENDER_DEPLOY.md for upgrade notes.
+#   - Redis is intentionally not provisioned here: the realtime layer
+#     already degrades gracefully to an in-memory adapter when REDIS_URL is
+#     unset (shared/realtime/redis-io.adapter.ts) — fine for a single
+#     instance, which is all the free tier gives you anyway.
+
+databases:
+  - name: spruvex-r-db
+    databaseName: spruvex_r
+    user: spruvex_admin
+    plan: free
+
+services:
+  - type: web
+    name: spruvex-r-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: ADMIN_DATABASE_URL
+        fromDatabase:
+          name: spruvex-r-db
+          property: connectionString
+      # No `fromDatabase` equivalent for a second, RLS-restricted role —
+      # Render's managed Postgres only provisions the one role above. Create
+      # `spruvex_app` once by hand (docs/RENDER_DEPLOY.md has the exact SQL),
+      # then paste its connection string here.
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_TTL_SECONDS
+        value: "900"
+      - key: REFRESH_TOKEN_TTL_DAYS
+        value: "30"
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGINS
+        value: "https://spruvex-r-dashboard.onrender.com,https://spruvex-r-pos.onrender.com,https://spruvex-r-kds.onrender.com,https://spruvex-r-ordering.onrender.com,https://spruvex-r-platform.onrender.com"
+      - key: ORDERING_BASE_URL
+        value: https://spruvex-r-ordering.onrender.com
+      # Optional — set these two to bootstrap the first platform admin login
+      # on first deploy, then unset them (see docs/RENDER_DEPLOY.md).
+      - key: PLATFORM_ADMIN_EMAIL
+        sync: false
+      - key: PLATFORM_ADMIN_PASSWORD
+        sync: false
+      # Optional error tracking — leave unset, zero behavior change.
+      - key: SENTRY_DSN
+        sync: false
+
+  - type: web
+    name: spruvex-r-dashboard
+    runtime: docker
+    dockerfilePath: ./apps/dashboard/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: API_INTERNAL_ORIGIN
+        fromService:
+          type: web
+          name: spruvex-r-api
+          property: hostport
+
+  - type: web
+    name: spruvex-r-pos
+    runtime: docker
+    dockerfilePath: ./apps/pos/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: API_INTERNAL_ORIGIN
+        fromService:
+          type: web
+          name: spruvex-r-api
+          property: hostport
+
+  - type: web
+    name: spruvex-r-kds
+    runtime: docker
+    dockerfilePath: ./apps/kds/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: API_INTERNAL_ORIGIN
+        fromService:
+          type: web
+          name: spruvex-r-api
+          property: hostport
+
+  - type: web
+    name: spruvex-r-platform
+    runtime: docker
+    dockerfilePath: ./apps/platform/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: API_INTERNAL_ORIGIN
+        fromService:
+          type: web
+          name: spruvex-r-api
+          property: hostport
+
+  - type: web
+    name: spruvex-r-ordering
+    runtime: docker
+    dockerfilePath: ./apps/ordering/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: API_ORIGIN
+        fromService:
+          type: web
+          name: spruvex-r-api
+          property: hostport
+      - key: PUBLIC_API_ORIGIN
+        value: https://spruvex-r-api.onrender.com

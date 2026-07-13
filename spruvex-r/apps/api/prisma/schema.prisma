@@ -1,0 +1,1242 @@
+// SpruVex R — Prisma schema
+// Phase 0: Identity & Tenancy domain + audit log.
+//
+// Conventions (see architecture plan §9.2):
+// - UUID primary keys.
+// - tenant_id on every tenant-owned table (enforced twice: Prisma tenant client + Postgres RLS).
+// - created_at / updated_at / created_by / updated_by on business tables.
+// - Soft delete via deleted_at (invoices, added in Phase 7, are append-only instead).
+// - Money is NUMERIC / integer halalas — never float.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Runtime URL (spruvex_app, RLS enforced). Prisma CLI (migrate/seed) uses directUrl.
+  url       = env("DATABASE_URL")
+  directUrl = env("ADMIN_DATABASE_URL")
+}
+
+enum TenantStatus {
+  active
+  suspended
+
+  @@map("tenant_status")
+}
+
+model Tenant {
+  id                    String       @id @default(uuid()) @db.Uuid
+  name                  String
+  nameEn                String?      @map("name_en")
+  slug                  String       @unique
+  logoUrl               String?      @map("logo_url")
+  /// ZATCA: registered legal entity name (falls back to `name` on invoices).
+  legalName             String?      @map("legal_name")
+  vatNumber             String?      @map("vat_number")
+  crNumber              String?      @map("cr_number")
+  /// ZATCA: registered address of the establishment.
+  address               String?
+  status                TenantStatus @default(active)
+  /// Business type: restaurant | cafe | cloud_kitchen | food_truck | bakery | other
+  type                  String?
+  /// ISO 3166-1 alpha-2
+  country               String       @default("SA")
+  /// ISO 4217
+  currency              String       @default("SAR")
+  /// Default UI language for the tenant: ar | en
+  defaultLocale         String       @default("ar") @map("default_locale")
+  /// VAT rate percent, configurable (KSA default 15.00)
+  vatRate               Decimal      @default(15.00) @map("vat_rate") @db.Decimal(5, 2)
+  settings              Json         @default("{}")
+  onboardingCompletedAt DateTime?    @map("onboarding_completed_at")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  branches              Branch[]
+  roles                 Role[]
+  userRoles             UserRole[]
+  posPins               PosPin[]
+  auditLogs             AuditLog[]
+  categories            Category[]
+  products              Product[]
+  productBranchSettings ProductBranchSetting[]
+  modifierGroups        ModifierGroup[]
+  modifiers             Modifier[]
+  productModifierGroups ProductModifierGroup[]
+  floors                Floor[]
+  tables                Table[]
+  tableSessions         TableSession[]
+  orders                Order[]
+  orderItems            OrderItem[]
+  orderItemModifiers    OrderItemModifier[]
+  orderStatusHistories  OrderStatusHistory[]
+  shifts                Shift[]
+  payments              Payment[]
+  receipts              Receipt[]
+  ingredients           Ingredient[]
+  stockLocations        StockLocation[]
+  stockLevels           StockLevel[]
+  stockMovements        StockMovement[]
+  recipeItems           RecipeItem[]
+  subscription          Subscription?
+  subscriptionInvoices  SubscriptionInvoice[]
+
+  @@map("tenants")
+}
+
+model Branch {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  name             String
+  nameEn           String?  @map("name_en")
+  slug             String
+  address          String?
+  phone            String?
+  email            String?
+  lat              Decimal? @db.Decimal(9, 6)
+  lng              Decimal? @db.Decimal(9, 6)
+  /// Weekly working hours, e.g. {"sun": [{"from": "08:00", "to": "23:00"}], ...}
+  workingHours     Json     @default("{}") @map("working_hours")
+  /// Self-ordering settings, e.g. {"qrOrderingEnabled": true, "requireCashierConfirmation": false}
+  orderingSettings Json     @default("{}") @map("ordering_settings")
+  isActive         Boolean  @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id])
+  userRoles             UserRole[]
+  posPins               PosPin[]
+  productBranchSettings ProductBranchSetting[]
+  floors                Floor[]
+  tables                Table[]
+  orders                Order[]
+  shifts                Shift[]
+  stockLocations        StockLocation[]
+  stockLevels           StockLevel[]
+  stockMovements        StockMovement[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@map("branches")
+}
+
+/// Users are a global identity (email/phone unique across the platform);
+/// tenant membership and scope are expressed through user_roles.
+model User {
+  id           String  @id @default(uuid()) @db.Uuid
+  email        String  @unique
+  phone        String? @unique
+  passwordHash String  @map("password_hash")
+  name         String
+  isActive     Boolean @default(true) @map("is_active")
+
+  emailVerifiedAt     DateTime? @map("email_verified_at")
+  lastLoginAt         DateTime? @map("last_login_at")
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  /// Account lockout after repeated failed logins.
+  lockedUntil         DateTime? @map("locked_until")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  userRoles     UserRole[]
+  posPins       PosPin[]
+  refreshTokens RefreshToken[]
+  otpCodes      OtpCode[]
+
+  @@map("users")
+}
+
+/// Refresh-token sessions (global identity table, like users — no tenant_id).
+/// Tokens are opaque random secrets stored hashed. Rotation: each refresh
+/// revokes the old token and issues a new one in the same family; presenting
+/// a revoked token (reuse) revokes the entire family.
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  familyId  String    @map("family_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  ip        String?
+  userAgent String?   @map("user_agent")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+/// One-time codes for email/phone verification and password reset.
+/// OTP-ready architecture: delivery goes through the OtpSender port —
+/// development logs the code; a real SMS/email provider plugs in later.
+model OtpCode {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String?   @map("user_id") @db.Uuid
+  /// email_verification | password_reset | login
+  purpose     String
+  /// email address or phone number the code was sent to
+  destination String
+  codeHash    String    @map("code_hash")
+  expiresAt   DateTime  @map("expires_at")
+  consumedAt  DateTime? @map("consumed_at")
+  attempts    Int       @default(0)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([destination, purpose])
+  @@map("otp_codes")
+}
+
+model Role {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @map("tenant_id") @db.Uuid
+  /// Machine key, e.g. "owner", "manager" — unique per tenant.
+  key      String
+  nameAr   String  @map("name_ar")
+  nameEn   String  @map("name_en")
+  /// Built-in roles cannot be deleted (their permissions can still be edited).
+  isSystem Boolean @default(false) @map("is_system")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+  @@map("roles")
+}
+
+/// Global permission catalog (seeded from @spruvex-r/types PERMISSIONS).
+model Permission {
+  id          String @id @default(uuid()) @db.Uuid
+  /// e.g. "orders.void"
+  key         String @unique
+  description String
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String @id @default(uuid()) @db.Uuid
+  tenantId     String @map("tenant_id") @db.Uuid
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String?  @map("created_by") @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@unique([roleId, permissionId])
+  @@index([tenantId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @map("tenant_id") @db.Uuid
+  userId   String  @map("user_id") @db.Uuid
+  roleId   String  @map("role_id") @db.Uuid
+  /// null = role applies tenant-wide (all branches)
+  branchId String? @map("branch_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String?  @map("created_by") @db.Uuid
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id])
+  user   User    @relation(fields: [userId], references: [id])
+  role   Role    @relation(fields: [roleId], references: [id])
+  branch Branch? @relation(fields: [branchId], references: [id])
+
+  @@unique([userId, roleId, tenantId, branchId])
+  @@index([tenantId])
+  @@index([userId])
+  @@map("user_roles")
+}
+
+/// Hashed PIN per user per branch for fast cashier switching on the POS.
+model PosPin {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  branchId String @map("branch_id") @db.Uuid
+  userId   String @map("user_id") @db.Uuid
+  pinHash  String @map("pin_hash")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  branch Branch @relation(fields: [branchId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([branchId, userId])
+  @@index([tenantId])
+  @@map("pos_pins")
+}
+
+/// Append-only audit trail for sensitive actions (void, discount over limit,
+/// drawer open without sale, permission changes, stock adjustments, ...).
+/// UPDATE/DELETE are revoked from the app role at the database level.
+model AuditLog {
+  id         String  @id @default(uuid()) @db.Uuid
+  tenantId   String  @map("tenant_id") @db.Uuid
+  branchId   String? @map("branch_id") @db.Uuid
+  userId     String? @map("user_id") @db.Uuid
+  action     String
+  entityType String? @map("entity_type")
+  entityId   String? @map("entity_id") @db.Uuid
+  /// Structured context: reason, before/after values, amounts...
+  meta       Json    @default("{}")
+  ip         String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, action])
+  @@map("audit_logs")
+}
+
+// ============================================================================
+// Catalog domain (Phase 2) — the single source of truth for every ordering
+// channel (POS, QR menu, future channels).
+// Menu structure: Category -> Product -> ModifierGroup -> Modifier.
+// ============================================================================
+
+model Category {
+  id            String  @id @default(uuid()) @db.Uuid
+  tenantId      String  @map("tenant_id") @db.Uuid
+  /// Arabic name (primary)
+  name          String
+  nameEn        String? @map("name_en")
+  description   String?
+  descriptionEn String? @map("description_en")
+  imageUrl      String? @map("image_url")
+  sortOrder     Int     @default(0) @map("sort_order")
+  isActive      Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  products Product[]
+
+  @@index([tenantId, sortOrder])
+  @@map("categories")
+}
+
+model Product {
+  id         String @id @default(uuid()) @db.Uuid
+  tenantId   String @map("tenant_id") @db.Uuid
+  categoryId String @map("category_id") @db.Uuid
+
+  /// Arabic name (primary)
+  name          String
+  nameEn        String? @map("name_en")
+  description   String?
+  descriptionEn String? @map("description_en")
+  imageUrl      String? @map("image_url")
+  /// Internal code / SKU — unique per tenant when set
+  sku           String?
+
+  /// Base price in SAR (NUMERIC — never float). Branches may override.
+  basePrice Decimal  @map("base_price") @db.Decimal(12, 2)
+  /// VAT rate percent override; null = tenant default (15%). Tax-config readiness.
+  taxRate   Decimal? @map("tax_rate") @db.Decimal(5, 2)
+
+  sortOrder            Int     @default(0) @map("sort_order")
+  isActive             Boolean @default(true) @map("is_active")
+  /// Availability windows (e.g. breakfast-only) — schema readiness, enforced in a later phase.
+  availabilitySchedule Json    @default("{}") @map("availability_schedule")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant         Tenant                 @relation(fields: [tenantId], references: [id])
+  category       Category               @relation(fields: [categoryId], references: [id])
+  branchSettings ProductBranchSetting[]
+  modifierGroups ProductModifierGroup[]
+  orderItems     OrderItem[]
+  recipeItems    RecipeItem[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId, categoryId])
+  @@map("products")
+}
+
+/// Per-branch availability and price override for a product.
+model ProductBranchSetting {
+  id        String @id @default(uuid()) @db.Uuid
+  tenantId  String @map("tenant_id") @db.Uuid
+  productId String @map("product_id") @db.Uuid
+  branchId  String @map("branch_id") @db.Uuid
+
+  /// null = product base price applies
+  priceOverride Decimal? @map("price_override") @db.Decimal(12, 2)
+  isAvailable   Boolean  @default(true) @map("is_available")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.Uuid
+  updatedBy String?  @map("updated_by") @db.Uuid
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+  branch  Branch  @relation(fields: [branchId], references: [id])
+
+  @@unique([productId, branchId])
+  @@index([tenantId, branchId])
+  @@map("product_branch_settings")
+}
+
+/// e.g. "الحجم / Size", "إضافات / Extras", "الصوصات / Sauces"
+model ModifierGroup {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  /// Arabic name (primary)
+  name   String
+  nameEn String? @map("name_en")
+
+  /// Required groups need at least minSelect choices at order time.
+  isRequired Boolean @default(false) @map("is_required")
+  minSelect  Int     @default(0) @map("min_select")
+  /// null = unlimited
+  maxSelect  Int?    @map("max_select")
+
+  sortOrder Int     @default(0) @map("sort_order")
+  isActive  Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant    Tenant                 @relation(fields: [tenantId], references: [id])
+  modifiers Modifier[]
+  products  ProductModifierGroup[]
+
+  @@index([tenantId])
+  @@map("modifier_groups")
+}
+
+/// e.g. "كبير +5", "جبنة إضافية +3"
+model Modifier {
+  id              String @id @default(uuid()) @db.Uuid
+  tenantId        String @map("tenant_id") @db.Uuid
+  modifierGroupId String @map("modifier_group_id") @db.Uuid
+
+  /// Arabic name (primary)
+  name   String
+  nameEn String? @map("name_en")
+
+  /// Price delta in SAR (NUMERIC — never float). Can be negative.
+  priceAdjustment Decimal @default(0) @map("price_adjustment") @db.Decimal(12, 2)
+
+  sortOrder Int     @default(0) @map("sort_order")
+  isActive  Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant             Tenant              @relation(fields: [tenantId], references: [id])
+  group              ModifierGroup       @relation(fields: [modifierGroupId], references: [id])
+  orderItemModifiers OrderItemModifier[]
+
+  @@index([tenantId, modifierGroupId])
+  @@map("modifiers")
+}
+
+/// Attaches modifier groups to products (ordered).
+model ProductModifierGroup {
+  id              String @id @default(uuid()) @db.Uuid
+  tenantId        String @map("tenant_id") @db.Uuid
+  productId       String @map("product_id") @db.Uuid
+  modifierGroupId String @map("modifier_group_id") @db.Uuid
+  sortOrder       Int    @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String?  @map("created_by") @db.Uuid
+
+  tenant  Tenant        @relation(fields: [tenantId], references: [id])
+  product Product       @relation(fields: [productId], references: [id])
+  group   ModifierGroup @relation(fields: [modifierGroupId], references: [id])
+
+  @@unique([productId, modifierGroupId])
+  @@index([tenantId])
+  @@map("product_modifier_groups")
+}
+
+// ============================================================================
+// Tables domain (Phase 3) — floors/areas, tables with permanent QR tokens,
+// and table sessions (the anchor future orders attach to).
+// ============================================================================
+
+/// Floor / area inside a branch: Main Hall, Outdoor, VIP...
+model Floor {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  branchId String @map("branch_id") @db.Uuid
+
+  /// Arabic name (primary)
+  name      String
+  nameEn    String? @map("name_en")
+  sortOrder Int     @default(0) @map("sort_order")
+  isActive  Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id])
+  branch Branch  @relation(fields: [branchId], references: [id])
+  tables Table[]
+
+  @@index([tenantId, branchId])
+  @@map("floors")
+}
+
+enum TableStatus {
+  available
+  occupied
+  reserved
+  disabled
+
+  @@map("table_status")
+}
+
+model Table {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  branchId String @map("branch_id") @db.Uuid
+  floorId  String @map("floor_id") @db.Uuid
+
+  /// Custom table number/name, e.g. "12" or "A1" — unique per branch (partial index in migration)
+  number   String
+  capacity Int         @default(4)
+  status   TableStatus @default(available)
+
+  /// Permanent, non-guessable QR token — the public identifier used in QR URLs.
+  /// Database IDs are never exposed. Regeneration replaces the token, which
+  /// disables the old QR (lookups by the old token fail).
+  qrToken       String   @unique @map("qr_token")
+  qrGeneratedAt DateTime @default(now()) @map("qr_generated_at")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id])
+  branch   Branch         @relation(fields: [branchId], references: [id])
+  floor    Floor          @relation(fields: [floorId], references: [id])
+  sessions TableSession[]
+  orders   Order[]
+
+  @@index([tenantId, branchId])
+  @@map("tables")
+}
+
+/// A dining session: customers seated at a table. Future orders (Phase 4)
+/// attach to the open session so the whole visit closes as one bill.
+model TableSession {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  branchId String @map("branch_id") @db.Uuid
+  tableId  String @map("table_id") @db.Uuid
+
+  openedAt DateTime  @default(now()) @map("opened_at")
+  closedAt DateTime? @map("closed_at")
+  openedBy String?   @map("opened_by") @db.Uuid
+  closedBy String?   @map("closed_by") @db.Uuid
+  notes    String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id])
+  table  Table   @relation(fields: [tableId], references: [id])
+  orders Order[]
+
+  @@index([tableId, closedAt])
+  @@index([tenantId, branchId])
+  @@map("table_sessions")
+}
+
+// ============================================================================
+// Ordering domain (Phase 4) — the heart of the system.
+// Orders carry frozen snapshots of products/modifiers so menu changes never
+// alter existing orders. All money is NUMERIC. Status transitions go through
+// the central state machine and are recorded in order_status_history.
+// ============================================================================
+
+enum OrderStatus {
+  new
+  confirmed
+  preparing
+  ready
+  served
+  completed
+  cancelled
+
+  @@map("order_status")
+}
+
+enum OrderType {
+  dine_in
+  takeaway
+  walkin
+  delivery
+
+  @@map("order_type")
+}
+
+enum OrderSource {
+  pos
+  qr
+  external_link
+  delivery
+
+  @@map("order_source")
+}
+
+model Order {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  branchId String @map("branch_id") @db.Uuid
+
+  /// Daily sequential number per branch (resets each day).
+  orderNumber Int      @map("order_number")
+  orderDate   DateTime @map("order_date") @db.Date
+
+  type   OrderType
+  source OrderSource
+  status OrderStatus @default(new)
+
+  /// Dine-in linkage: the table and its open session at order time.
+  tableId        String? @map("table_id") @db.Uuid
+  tableSessionId String? @map("table_session_id") @db.Uuid
+
+  customerName  String? @map("customer_name")
+  customerPhone String? @map("customer_phone")
+  notes         String?
+
+  /// VAT-inclusive amounts (SAR, NUMERIC — never float).
+  subtotal  Decimal @db.Decimal(12, 2)
+  discount  Decimal @default(0) @db.Decimal(12, 2)
+  vatRate   Decimal @map("vat_rate") @db.Decimal(5, 2)
+  vatAmount Decimal @map("vat_amount") @db.Decimal(12, 2)
+  total     Decimal @db.Decimal(12, 2)
+
+  /// Idempotency: retried create requests return the original order.
+  idempotencyKey String? @map("idempotency_key")
+
+  /// Discount audit trail: percentage|fixed, raw value, reason, who.
+  discountType   String?  @map("discount_type")
+  discountValue  Decimal? @map("discount_value") @db.Decimal(12, 2)
+  discountReason String?  @map("discount_reason")
+  discountBy     String?  @map("discount_by") @db.Uuid
+
+  /// null = guest (QR) order
+  placedBy        String? @map("placed_by") @db.Uuid
+  cancelledReason String? @map("cancelled_reason")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant        Tenant               @relation(fields: [tenantId], references: [id])
+  branch        Branch               @relation(fields: [branchId], references: [id])
+  table         Table?               @relation(fields: [tableId], references: [id])
+  tableSession  TableSession?        @relation(fields: [tableSessionId], references: [id])
+  items         OrderItem[]
+  statusHistory OrderStatusHistory[]
+  payments      Payment[]
+  receipt       Receipt?
+
+  @@unique([branchId, orderDate, orderNumber])
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, branchId, createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String @id @default(uuid()) @db.Uuid
+  tenantId  String @map("tenant_id") @db.Uuid
+  orderId   String @map("order_id") @db.Uuid
+  productId String @map("product_id") @db.Uuid
+
+  /// Frozen snapshot at order time: {name, nameEn, sku, price} —
+  /// menu changes never alter existing orders.
+  productSnapshot Json @map("product_snapshot")
+
+  quantity  Int
+  /// Unit price at order time (branch override applied), before modifiers.
+  unitPrice Decimal @map("unit_price") @db.Decimal(12, 2)
+  /// (unitPrice + modifier adjustments) * quantity
+  lineTotal Decimal @map("line_total") @db.Decimal(12, 2)
+  notes     String?
+
+  /// Food-cost snapshot (Phase 7) — frozen at order time from the product's
+  /// recipe and each ingredient's average cost, same rationale as the price
+  /// snapshot above: later recipe/cost edits must not change past orders.
+  /// Both null when the product has no recipe defined.
+  unitCost Decimal? @map("unit_cost") @db.Decimal(12, 4)
+  lineCost Decimal? @map("line_cost") @db.Decimal(12, 4)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant    Tenant              @relation(fields: [tenantId], references: [id])
+  order     Order               @relation(fields: [orderId], references: [id])
+  product   Product             @relation(fields: [productId], references: [id])
+  modifiers OrderItemModifier[]
+
+  @@index([tenantId, orderId])
+  @@map("order_items")
+}
+
+model OrderItemModifier {
+  id          String @id @default(uuid()) @db.Uuid
+  tenantId    String @map("tenant_id") @db.Uuid
+  orderItemId String @map("order_item_id") @db.Uuid
+  modifierId  String @map("modifier_id") @db.Uuid
+
+  /// Frozen snapshot: {name, nameEn, groupName, groupNameEn}
+  modifierSnapshot Json    @map("modifier_snapshot")
+  priceAdjustment  Decimal @map("price_adjustment") @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id])
+  modifier  Modifier  @relation(fields: [modifierId], references: [id])
+
+  @@index([tenantId, orderItemId])
+  @@map("order_item_modifiers")
+}
+
+/// Every status transition: from/to/who/when — the basis for prep-time analytics.
+model OrderStatusHistory {
+  id         String       @id @default(uuid()) @db.Uuid
+  tenantId   String       @map("tenant_id") @db.Uuid
+  orderId    String       @map("order_id") @db.Uuid
+  fromStatus OrderStatus? @map("from_status")
+  toStatus   OrderStatus  @map("to_status")
+  /// null = guest or system
+  changedBy  String?      @map("changed_by") @db.Uuid
+  reason     String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  order  Order  @relation(fields: [orderId], references: [id])
+
+  @@index([tenantId, orderId])
+  @@map("order_status_history")
+}
+
+// ============================================================================
+// Shifts & Payments domain (Phase 5) — cashier sessions, multi-payment
+// checkout (cash/card/split), and the receipt foundation (pre-ZATCA).
+// ============================================================================
+
+/// Cashier shift: opening cash float, sales linkage, close foundation.
+/// Full cash reconciliation reporting lands in Phase 8.
+model Shift {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  branchId String @map("branch_id") @db.Uuid
+
+  openedBy String  @map("opened_by") @db.Uuid
+  closedBy String? @map("closed_by") @db.Uuid
+
+  openingCash  Decimal  @map("opening_cash") @db.Decimal(12, 2)
+  /// Computed at close: openingCash + cash payments taken during the shift.
+  expectedCash Decimal? @map("expected_cash") @db.Decimal(12, 2)
+  actualCash   Decimal? @map("actual_cash") @db.Decimal(12, 2)
+  difference   Decimal? @db.Decimal(12, 2)
+
+  openedAt DateTime  @default(now()) @map("opened_at")
+  closedAt DateTime? @map("closed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  branch   Branch    @relation(fields: [branchId], references: [id])
+  payments Payment[]
+
+  @@index([tenantId, branchId, closedAt])
+  @@map("shifts")
+}
+
+enum PaymentMethod {
+  cash
+  card
+
+  @@map("payment_method")
+}
+
+enum PaymentStatus {
+  completed
+  voided
+
+  @@map("payment_status")
+}
+
+/// One payment line. Split payment = multiple rows per order.
+/// Payments are immutable business records (no updates, no soft delete);
+/// corrections happen through voiding/credit notes in later phases.
+model Payment {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  branchId String @map("branch_id") @db.Uuid
+  orderId  String @map("order_id") @db.Uuid
+  shiftId  String @map("shift_id") @db.Uuid
+
+  method    PaymentMethod
+  status    PaymentStatus @default(completed)
+  amount    Decimal       @db.Decimal(12, 2)
+  /// Card approval code / external reference.
+  reference String?
+
+  /// Idempotency: retried payment requests return the original row.
+  idempotencyKey String? @map("idempotency_key")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String   @map("created_by") @db.Uuid
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  order  Order  @relation(fields: [orderId], references: [id])
+  shift  Shift  @relation(fields: [shiftId], references: [id])
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, orderId])
+  @@index([tenantId, shiftId])
+  @@map("payments")
+}
+
+/// Receipt foundation — sequential per-branch numbering, frozen restaurant
+/// info and VAT-ready fields. The ZATCA invoice service (Phase 7) builds on
+/// this structure. Thermal print layout consumes `payload`.
+model Receipt {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  branchId String @map("branch_id") @db.Uuid
+  orderId  String @unique @map("order_id") @db.Uuid
+
+  receiptNumber Int @map("receipt_number")
+
+  /// Frozen snapshot: restaurant {name, vatNumber, cr, address}, branch,
+  /// order lines, totals, payments.
+  payload Json
+
+  vatRate   Decimal @map("vat_rate") @db.Decimal(5, 2)
+  vatAmount Decimal @map("vat_amount") @db.Decimal(12, 2)
+  total     Decimal @db.Decimal(12, 2)
+
+  /// ZATCA Phase 1: simplified-invoice QR content (TLV, Base64) —
+  /// seller name, VAT number, timestamp, total incl. VAT, VAT amount.
+  qrPayload String? @map("qr_payload")
+
+  /// ZATCA Phase 2 readiness (plan §9.3): per-branch hash chain computed at
+  /// issuance; reporting status/response filled when the integration lands.
+  invoiceHash         String? @map("invoice_hash")
+  previousInvoiceHash String? @map("previous_invoice_hash")
+  zatcaStatus         String  @default("not_submitted") @map("zatca_status")
+  zatcaResponse       Json?   @map("zatca_response")
+
+  issuedAt DateTime @default(now()) @map("issued_at")
+  issuedBy String?  @map("issued_by") @db.Uuid
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  order  Order  @relation(fields: [orderId], references: [id])
+
+  @@unique([branchId, receiptNumber])
+  @@index([tenantId, branchId])
+  @@map("receipts")
+}
+
+// ============================================================================
+// Inventory & Recipe domain (Phase 7) — ingredients, stock locations/levels/
+// movements, product recipes, and the food-cost snapshot on order items.
+//
+// Design notes:
+// - Units of measure are a GLOBAL catalog (like `permissions`), seeded from
+//   @spruvex-r/types — not tenant-owned, no RLS needed. Every ingredient
+//   tracks stock in the canonical base unit of its measurement family
+//   (grams for mass, milliliters for volume, pieces for count); recipe
+//   quantities convert via `UnitOfMeasure.toBaseFactor`.
+// - `stock_movements` is the ledger of truth (append-only, like payments/
+//   receipts); `stock_levels` is a materialized running balance kept in
+//   sync with every movement inside the same transaction, so reads stay
+//   O(1) instead of summing the whole ledger.
+// - Waste is a `stock_movements` row with type=waste (reason + performedBy
+//   already on that table) rather than a separate table — avoids duplicating
+//   the same fields in two places.
+// - No separate `Recipe` header: `RecipeItem` rows attach directly to a
+//   Product (the product is the recipe's aggregate root), matching plan
+//   §9.3 "recipes (product ↔ ingredients + كميات)".
+// ============================================================================
+
+enum UnitType {
+  mass
+  volume
+  count
+
+  @@map("unit_type")
+}
+
+/// Global unit-of-measure catalog (seeded, not tenant-owned — see note above).
+model UnitOfMeasure {
+  id           String   @id @default(uuid()) @db.Uuid
+  /// e.g. "g", "kg", "ml", "l", "pc" — stable machine key.
+  code         String   @unique
+  name         String
+  nameEn       String   @map("name_en")
+  type         UnitType
+  /// How many base units (g / ml / pc) equal one of this unit. The base
+  /// unit of each type has factor 1.
+  toBaseFactor Decimal  @map("to_base_factor") @db.Decimal(12, 6)
+
+  recipeItems RecipeItem[]
+
+  @@map("units_of_measure")
+}
+
+model Ingredient {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  /// Arabic name (primary)
+  name         String
+  nameEn       String?  @map("name_en")
+  unitType     UnitType @map("unit_type")
+  /// Moving average cost per BASE unit (SAR, NUMERIC — never float).
+  averageCost  Decimal  @default(0) @map("average_cost") @db.Decimal(12, 4)
+  /// Optional low-stock threshold (base units) for dashboard alerts.
+  reorderLevel Decimal? @map("reorder_level") @db.Decimal(14, 3)
+  isActive     Boolean  @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+  stockLevels    StockLevel[]
+  stockMovements StockMovement[]
+  recipeItems    RecipeItem[]
+
+  @@index([tenantId])
+  @@map("ingredients")
+}
+
+/// Physical stock location within a branch (main store, walk-in fridge, bar...).
+model StockLocation {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  branchId String @map("branch_id") @db.Uuid
+
+  name      String
+  nameEn    String? @map("name_en")
+  /// The location automated stock deduction (order.completed) writes to
+  /// when a branch has more than one. Lazily created on first use.
+  isDefault Boolean @default(false) @map("is_default")
+  isActive  Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant    Tenant          @relation(fields: [tenantId], references: [id])
+  branch    Branch          @relation(fields: [branchId], references: [id])
+  levels    StockLevel[]
+  movements StockMovement[]
+
+  @@index([tenantId, branchId])
+  @@map("stock_locations")
+}
+
+/// Materialized current balance per ingredient per location (base units).
+model StockLevel {
+  id           String @id @default(uuid()) @db.Uuid
+  tenantId     String @map("tenant_id") @db.Uuid
+  branchId     String @map("branch_id") @db.Uuid
+  locationId   String @map("location_id") @db.Uuid
+  ingredientId String @map("ingredient_id") @db.Uuid
+
+  quantity Decimal @default(0) @db.Decimal(14, 3)
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant     Tenant        @relation(fields: [tenantId], references: [id])
+  branch     Branch        @relation(fields: [branchId], references: [id])
+  location   StockLocation @relation(fields: [locationId], references: [id])
+  ingredient Ingredient    @relation(fields: [ingredientId], references: [id])
+
+  @@unique([locationId, ingredientId])
+  @@index([tenantId, branchId])
+  @@map("stock_levels")
+}
+
+enum StockMovementType {
+  purchase
+  sale_deduction
+  waste
+  adjustment
+  transfer_in
+  transfer_out
+
+  @@map("stock_movement_type")
+}
+
+/// Append-only stock ledger — the source of truth `stock_levels` is derived
+/// from. Signed quantity (base units): positive = stock in, negative = out.
+model StockMovement {
+  id           String @id @default(uuid()) @db.Uuid
+  tenantId     String @map("tenant_id") @db.Uuid
+  branchId     String @map("branch_id") @db.Uuid
+  locationId   String @map("location_id") @db.Uuid
+  ingredientId String @map("ingredient_id") @db.Uuid
+
+  type     StockMovementType
+  /// Signed, base units (g / ml / pc).
+  quantity Decimal           @db.Decimal(14, 3)
+  /// Cost per base unit at the time of this movement (purchases only).
+  unitCost Decimal?          @map("unit_cost") @db.Decimal(12, 4)
+
+  /// e.g. referenceType="order" for automatic sale_deduction rows —
+  /// the (type, referenceType, referenceId, ingredientId) tuple makes
+  /// system-triggered deduction idempotent (see InventoryService).
+  referenceType String? @map("reference_type")
+  referenceId   String? @map("reference_id") @db.Uuid
+  /// Required for waste/adjustment at the DTO level.
+  reason        String?
+  /// null = system-triggered (automatic sale deduction on order completion).
+  performedBy   String? @map("performed_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant     Tenant        @relation(fields: [tenantId], references: [id])
+  branch     Branch        @relation(fields: [branchId], references: [id])
+  location   StockLocation @relation(fields: [locationId], references: [id])
+  ingredient Ingredient    @relation(fields: [ingredientId], references: [id])
+
+  @@unique([tenantId, type, referenceType, referenceId, ingredientId])
+  @@index([tenantId, branchId, ingredientId, createdAt])
+  @@index([tenantId, type])
+  @@map("stock_movements")
+}
+
+/// Product ↔ ingredient recipe line. The product is the recipe's aggregate
+/// root (no separate Recipe header table).
+model RecipeItem {
+  id           String @id @default(uuid()) @db.Uuid
+  tenantId     String @map("tenant_id") @db.Uuid
+  productId    String @map("product_id") @db.Uuid
+  ingredientId String @map("ingredient_id") @db.Uuid
+  unitId       String @map("unit_id") @db.Uuid
+
+  /// Quantity expressed in `unit` (converted to base units via toBaseFactor
+  /// at costing/deduction time) — must be the same measurement family as
+  /// the ingredient's unitType.
+  quantity Decimal @db.Decimal(10, 3)
+  notes    String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.Uuid
+  updatedBy String?  @map("updated_by") @db.Uuid
+
+  tenant     Tenant        @relation(fields: [tenantId], references: [id])
+  product    Product       @relation(fields: [productId], references: [id])
+  ingredient Ingredient    @relation(fields: [ingredientId], references: [id])
+  unit       UnitOfMeasure @relation(fields: [unitId], references: [id])
+
+  @@unique([productId, ingredientId])
+  @@index([tenantId, productId])
+  @@map("recipe_items")
+}
+
+// ---------------------------------------------------------------------------
+// Billing (Phase 8) — plans, subscriptions, subscription invoices.
+// No payment gateway is wired yet: activation is manual (bank transfer/
+// invoice), matching the plan doc's MVP decision. The shape is ready for a
+// gateway integration later (external customer/subscription id columns).
+// ---------------------------------------------------------------------------
+
+/// Global plan catalog — not tenant-owned, no RLS (same pattern as
+/// UnitOfMeasure/Permission). Seeded from a fixed catalog, read-only to the app role.
+model Plan {
+  id     String  @id @default(uuid()) @db.Uuid
+  key    String  @unique
+  name   String
+  nameEn String? @map("name_en")
+
+  /// Feature limits (Phase 8 foundation). Null = unlimited.
+  maxBranches       Int  @map("max_branches")
+  maxUsers          Int  @map("max_users")
+  maxOrdersPerMonth Int? @map("max_orders_per_month")
+
+  priceMonthlyHalalas Int  @map("price_monthly_halalas")
+  priceYearlyHalalas  Int? @map("price_yearly_halalas")
+  /// Free-form feature flags (JSONB) — e.g. {"inventory": true, "multiKds": false}.
+  features            Json @default("{}")
+
+  sortOrder Int     @default(0) @map("sort_order")
+  isActive  Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+enum SubscriptionStatus {
+  trialing
+  active
+  past_due
+  suspended
+  cancelled
+
+  @@map("subscription_status")
+}
+
+/// One subscription per tenant. Trial/limits/status are the enforcement
+/// source of truth for TenantAccessGuard and LimitsService.
+model Subscription {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @unique @map("tenant_id") @db.Uuid
+  planId   String @map("plan_id") @db.Uuid
+
+  status             SubscriptionStatus @default(trialing)
+  trialEndsAt        DateTime?          @map("trial_ends_at")
+  currentPeriodStart DateTime?          @map("current_period_start")
+  currentPeriodEnd   DateTime?          @map("current_period_end")
+  cancelledAt        DateTime?          @map("cancelled_at")
+
+  /// Reserved for a future payment gateway integration (e.g. Stripe/Moyasar
+  /// customer + subscription ids) — unused today, kept nullable on purpose.
+  externalCustomerId     String? @map("external_customer_id")
+  externalSubscriptionId String? @map("external_subscription_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.Uuid
+  updatedBy String?  @map("updated_by") @db.Uuid
+
+  tenant   Tenant                @relation(fields: [tenantId], references: [id])
+  plan     Plan                  @relation(fields: [planId], references: [id])
+  invoices SubscriptionInvoice[]
+
+  @@index([status])
+  @@map("subscriptions")
+}
+
+enum SubscriptionInvoiceStatus {
+  pending
+  paid
+  failed
+  void
+
+  @@map("subscription_invoice_status")
+}
+
+/// Append-only billing record for a subscription period. Manually marked
+/// paid today (bank transfer); a gateway webhook would do the same update
+/// later without changing this shape.
+model SubscriptionInvoice {
+  id             String @id @default(uuid()) @db.Uuid
+  tenantId       String @map("tenant_id") @db.Uuid
+  subscriptionId String @map("subscription_id") @db.Uuid
+
+  amountHalalas Int                       @map("amount_halalas")
+  status        SubscriptionInvoiceStatus @default(pending)
+  periodStart   DateTime                  @map("period_start")
+  periodEnd     DateTime                  @map("period_end")
+  paidAt        DateTime?                 @map("paid_at")
+  notes         String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String?  @map("created_by") @db.Uuid
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@map("subscription_invoices")
+}
+
+// ---------------------------------------------------------------------------
+// Platform (Phase 8) — SpruVex operations team, entirely separate from
+// tenant RBAC. No RLS (global, cross-tenant by design); authenticated with
+// its own JWT type ("platform_admin") that tenant guards never accept.
+// ---------------------------------------------------------------------------
+
+model PlatformAdmin {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique
+  name         String
+  passwordHash String    @map("password_hash")
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+
+  /// Same brute-force lockout as User (identity/auth.service.ts) — the
+  /// highest-privilege account in the system deserves the same protection.
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_admins")
+}

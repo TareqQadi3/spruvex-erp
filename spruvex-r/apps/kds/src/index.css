@@ -1,0 +1,33 @@
+@import "@spruvex-r/ui/styles.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* KDS runs dark by default (kitchen screens) — override the theme tokens. */
+:root {
+  --background: 150 15% 8%;
+  --foreground: 120 15% 95%;
+
+  --card: 150 12% 12%;
+  --card-foreground: 120 15% 95%;
+
+  --primary: 122 45% 45%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 150 12% 18%;
+  --secondary-foreground: 120 20% 90%;
+
+  --muted: 150 10% 16%;
+  --muted-foreground: 120 8% 60%;
+
+  --accent: 88 50% 53%;
+  --accent-foreground: 125 55% 10%;
+
+  --destructive: 0 70% 52%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 150 10% 22%;
+  --input: 150 10% 24%;
+  --ring: 122 45% 45%;
+}

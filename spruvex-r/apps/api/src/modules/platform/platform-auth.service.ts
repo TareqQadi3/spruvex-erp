@@ -1,0 +1,50 @@
+import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
+
+import { PlatformPrismaService } from "../../shared/prisma/platform-prisma.service";
+import { verifyPassword } from "../identity/password";
+import { PLATFORM_ADMIN_TOKEN_TTL_SECONDS, type PlatformAdminTokenPayload } from "./platform-admin-token";
+
+const MAX_FAILED_LOGINS = 5;
+const LOCKOUT_MINUTES = 15;
+
+/** Same brute-force lockout policy as the tenant AuthService — same threat, same defense. */
+@Injectable()
+export class PlatformAuthService {
+  constructor(
+    private readonly jwt: JwtService,
+    private readonly db: PlatformPrismaService,
+  ) {}
+
+  async login(email: string, password: string): Promise<{ accessToken: string; expiresInSeconds: number }> {
+    const admin = await this.db.platformAdmin.findUnique({ where: { email: email.toLowerCase() } });
+    if (!admin || !admin.isActive) {
+      throw new UnauthorizedException("Invalid email or password");
+    }
+    if (admin.lockedUntil && admin.lockedUntil > new Date()) {
+      throw new ForbiddenException("Account temporarily locked after repeated failed attempts — try again later");
+    }
+
+    const valid = await verifyPassword(password, admin.passwordHash);
+    if (!valid) {
+      const failed = admin.failedLoginAttempts + 1;
+      await this.db.platformAdmin.update({
+        where: { id: admin.id },
+        data: {
+          failedLoginAttempts: failed,
+          lockedUntil: failed >= MAX_FAILED_LOGINS ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000) : null,
+        },
+      });
+      throw new UnauthorizedException("Invalid email or password");
+    }
+
+    await this.db.platformAdmin.update({
+      where: { id: admin.id },
+      data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },
+    });
+
+    const payload: PlatformAdminTokenPayload = { sub: admin.id, email: admin.email, type: "platform_admin" };
+    const accessToken = this.jwt.sign(payload, { expiresIn: PLATFORM_ADMIN_TOKEN_TTL_SECONDS });
+    return { accessToken, expiresInSeconds: PLATFORM_ADMIN_TOKEN_TTL_SECONDS };
+  }
+}

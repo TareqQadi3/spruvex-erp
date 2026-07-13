@@ -1,0 +1,32 @@
+{
+  "app": { "title": "Kitchen Display" },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "login": "Sign in",
+    "logout": "Sign out",
+    "error": "Sign-in failed"
+  },
+  "branch": { "select": "Select branch" },
+  "board": {
+    "new": "New",
+    "preparing": "Preparing",
+    "ready": "Ready",
+    "empty": "No orders",
+    "table": "Table {{number}}",
+    "walkin": "Counter",
+    "takeaway": "Pickup",
+    "qr": "QR order",
+    "notes": "Notes",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "actions": {
+      "confirmed": "Accept",
+      "preparing": "Start",
+      "ready": "Ready",
+      "served": "Served"
+    },
+    "minutes": "{{count}}m"
+  },
+  "common": { "language": "العربية", "loading": "Loading..." }
+}

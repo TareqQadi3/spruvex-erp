@@ -1,0 +1,109 @@
+{
+  "app": { "title": "Point of Sale" },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "login": "Sign in",
+    "logout": "Sign out",
+    "error": "Sign-in failed"
+  },
+  "branch": { "select": "Select branch" },
+  "tabs": { "menu": "New order", "orders": "Active orders" },
+  "pos": {
+    "all": "All",
+    "cart": "Current order",
+    "empty": "Cart is empty — pick products from the menu",
+    "walkin": "Walk-in",
+    "dineIn": "Table",
+    "chooseTable": "Choose table",
+    "table": "Table {{number}}",
+    "notes": "Order notes",
+    "itemNotes": "Item note",
+    "total": "Total",
+    "vatIncluded": "VAT {{rate}}% included",
+    "send": "Send order",
+    "sent": "Order #{{number}} sent",
+    "queued": "Offline — order saved and will sync automatically",
+    "add": "Add",
+    "cancel": "Cancel",
+    "required": "Required",
+    "chooseMin": "Choose at least {{count}}",
+    "sar": "SAR"
+  },
+  "shift": {
+    "open": "Open shift",
+    "close": "Close shift",
+    "openTitle": "Open a new shift",
+    "openingCash": "Opening cash float",
+    "noShift": "No open shift — open one to take payments",
+    "active": "Shift open",
+    "closeTitle": "Close shift",
+    "actualCash": "Actual cash in drawer",
+    "expected": "Expected",
+    "difference": "Difference",
+    "closed": "Shift closed",
+    "confirm": "Confirm"
+  },
+  "orders": {
+    "title": "Active orders",
+    "empty": "No active orders",
+    "status": {
+      "new": "New",
+      "confirmed": "Confirmed",
+      "preparing": "Preparing",
+      "ready": "Ready",
+      "served": "Served",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "pay": "Pay",
+    "discount": "Discount",
+    "cancelOrder": "Cancel order",
+    "cancelReason": "Cancellation reason",
+    "confirmOrder": "Confirm order",
+    "prepTicket": "Prep ticket",
+    "receipt": "Receipt"
+  },
+  "payment": {
+    "title": "Payment — order #{{number}}",
+    "total": "Total",
+    "paid": "Paid",
+    "remaining": "Remaining",
+    "cash": "Cash",
+    "card": "Card",
+    "amount": "Amount",
+    "tendered": "Cash received",
+    "change": "Change due",
+    "reference": "Reference (optional)",
+    "pay": "Record payment",
+    "exact": "Exact amount",
+    "completed": "Fully paid ✔",
+    "showReceipt": "Show receipt"
+  },
+  "discount": {
+    "title": "Apply discount",
+    "percentage": "Percent %",
+    "fixed": "Fixed amount",
+    "value": "Value",
+    "reason": "Reason (required)",
+    "apply": "Apply",
+    "remove": "Remove discount"
+  },
+  "receipt": {
+    "title": "Receipt #{{number}}",
+    "print": "Print",
+    "vatNumber": "VAT No.",
+    "subtotal": "Subtotal",
+    "discount": "Discount",
+    "vat": "VAT {{rate}}%",
+    "total": "Total",
+    "payments": "Payments",
+    "thanks": "Thank you for visiting",
+    "newOrder": "New order"
+  },
+  "sync": {
+    "pending": "{{count}} order(s) waiting to sync",
+    "syncing": "Syncing..."
+  },
+  "common": { "language": "العربية", "loading": "Loading...", "error": "Something went wrong" }
+}

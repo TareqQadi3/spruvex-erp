@@ -1,0 +1,109 @@
+{
+  "app": { "title": "نقطة البيع" },
+  "auth": {
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "login": "دخول",
+    "logout": "خروج",
+    "error": "تعذر تسجيل الدخول"
+  },
+  "branch": { "select": "اختر الفرع" },
+  "tabs": { "menu": "طلب جديد", "orders": "الطلبات النشطة" },
+  "pos": {
+    "all": "الكل",
+    "cart": "الطلب الحالي",
+    "empty": "السلة فارغة — اختر منتجات من القائمة",
+    "walkin": "محلي",
+    "dineIn": "طاولة",
+    "chooseTable": "اختر الطاولة",
+    "table": "طاولة {{number}}",
+    "notes": "ملاحظات الطلب",
+    "itemNotes": "ملاحظة الصنف",
+    "total": "الإجمالي",
+    "vatIncluded": "شامل الضريبة {{rate}}%",
+    "send": "إرسال الطلب",
+    "sent": "تم إرسال الطلب #{{number}}",
+    "queued": "لا يوجد اتصال — حُفظ الطلب وسيُرسل تلقائياً",
+    "add": "إضافة",
+    "cancel": "إلغاء",
+    "required": "إلزامي",
+    "chooseMin": "اختر {{count}} على الأقل",
+    "sar": "ر.س"
+  },
+  "shift": {
+    "open": "فتح وردية",
+    "close": "إغلاق الوردية",
+    "openTitle": "فتح وردية جديدة",
+    "openingCash": "عهدة الدرج الافتتاحية",
+    "noShift": "لا توجد وردية مفتوحة — افتح وردية لاستقبال المدفوعات",
+    "active": "وردية مفتوحة",
+    "closeTitle": "إغلاق الوردية",
+    "actualCash": "النقد الفعلي في الدرج",
+    "expected": "المتوقع",
+    "difference": "الفرق",
+    "closed": "أُغلقت الوردية",
+    "confirm": "تأكيد"
+  },
+  "orders": {
+    "title": "الطلبات النشطة",
+    "empty": "لا توجد طلبات نشطة",
+    "status": {
+      "new": "جديد",
+      "confirmed": "مؤكد",
+      "preparing": "قيد التحضير",
+      "ready": "جاهز",
+      "served": "تم التقديم",
+      "completed": "مكتمل",
+      "cancelled": "ملغي"
+    },
+    "pay": "دفع",
+    "discount": "خصم",
+    "cancelOrder": "إلغاء الطلب",
+    "cancelReason": "سبب الإلغاء",
+    "confirmOrder": "تأكيد الطلب",
+    "prepTicket": "تذكرة التحضير",
+    "receipt": "الإيصال"
+  },
+  "payment": {
+    "title": "الدفع — طلب #{{number}}",
+    "total": "الإجمالي",
+    "paid": "المدفوع",
+    "remaining": "المتبقي",
+    "cash": "كاش",
+    "card": "شبكة",
+    "amount": "المبلغ",
+    "tendered": "المستلم من العميل",
+    "change": "الباقي للعميل",
+    "reference": "رقم العملية (اختياري)",
+    "pay": "تسجيل الدفعة",
+    "exact": "المبلغ كاملاً",
+    "completed": "اكتمل الدفع ✔",
+    "showReceipt": "عرض الإيصال"
+  },
+  "discount": {
+    "title": "تطبيق خصم",
+    "percentage": "نسبة %",
+    "fixed": "مبلغ ثابت",
+    "value": "القيمة",
+    "reason": "السبب (إلزامي)",
+    "apply": "تطبيق",
+    "remove": "إزالة الخصم"
+  },
+  "receipt": {
+    "title": "إيصال #{{number}}",
+    "print": "طباعة",
+    "vatNumber": "الرقم الضريبي",
+    "subtotal": "المجموع",
+    "discount": "الخصم",
+    "vat": "ضريبة القيمة المضافة {{rate}}%",
+    "total": "الإجمالي",
+    "payments": "المدفوعات",
+    "thanks": "شكراً لزيارتكم",
+    "newOrder": "طلب جديد"
+  },
+  "sync": {
+    "pending": "{{count}} طلب بانتظار الإرسال",
+    "syncing": "جارٍ المزامنة..."
+  },
+  "common": { "language": "English", "loading": "جارٍ التحميل...", "error": "حدث خطأ" }
+}
