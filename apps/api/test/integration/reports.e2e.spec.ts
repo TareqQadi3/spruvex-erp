@@ -201,6 +201,32 @@ describe("reports & analytics (e2e)", () => {
         .expect(200);
       expect(res.body.orderCount).toBe(0);
     });
+
+    it("includes today's orders when from/to are both set to today's date (dashboard default range)", async () => {
+      const order = await newOrder(cashierA, [{ productId: fx.simple.id, quantity: 1 }]);
+      await payInFull(cashierA, order.id, order.total);
+
+      const today = new Date().toISOString().slice(0, 10);
+      const best = await request(http)
+        .get(`/reports/sales/best-sellers?branchId=${branchA}&from=${today}&to=${today}`)
+        .set("Authorization", `Bearer ${ownerA}`)
+        .expect(200);
+      const simpleEntry = best.body.find((b: { productId: string }) => b.productId === fx.simple.id);
+      expect(simpleEntry).toBeDefined();
+      expect(simpleEntry.quantitySold).toBeGreaterThanOrEqual(1);
+
+      const ops = await request(http)
+        .get(`/reports/operations?branchId=${branchA}&from=${today}&to=${today}`)
+        .set("Authorization", `Bearer ${ownerA}`)
+        .expect(200);
+      expect(ops.body.orderCount).toBeGreaterThanOrEqual(1);
+
+      const fin = await request(http)
+        .get(`/reports/financial?branchId=${branchA}&from=${today}&to=${today}`)
+        .set("Authorization", `Bearer ${ownerA}`)
+        .expect(200);
+      expect(Number(fin.body.total)).toBeGreaterThan(0);
+    });
   });
 
   describe("operations report", () => {

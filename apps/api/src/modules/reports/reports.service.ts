@@ -11,7 +11,15 @@ function dayRange(dateStr?: string): { start: Date; end: Date } {
 }
 
 function resolveRange(from?: string, to?: string): { start: Date; end: Date } {
-  const end = to ? new Date(to) : new Date();
+  // `to` is a calendar date (e.g. "2026-07-13"); treat it as inclusive through
+  // the end of that day rather than its literal midnight instant, otherwise
+  // every order placed "today" is silently excluded from an end=today range.
+  const end = to
+    ? (() => {
+        const d = new Date(to);
+        return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1) - 1);
+      })()
+    : new Date();
   const start = from ? new Date(from) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
   return { start, end };
 }

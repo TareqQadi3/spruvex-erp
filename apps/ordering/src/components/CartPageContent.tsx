@@ -41,6 +41,10 @@ export function CartPageContent({
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Set right before clearing the cart post-submit so this component doesn't
+  // flash the "cart is empty" fallback while router.push is still navigating
+  // away to the order tracking page.
+  const [submitted, setSubmitted] = useState(false);
 
   async function submit() {
     if (lines.length === 0 || busy) return;
@@ -64,6 +68,7 @@ export function CartPageContent({
           ...(line.notes ? { notes: line.notes } : {}),
         })),
       });
+      setSubmitted(true);
       clear();
       router.push(`/order/${result.orderId}`);
     } catch (e) {
@@ -72,7 +77,7 @@ export function CartPageContent({
     }
   }
 
-  if (lines.length === 0) {
+  if (lines.length === 0 && !submitted) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 p-6 text-center">
         <p className="text-4xl">🛒</p>
