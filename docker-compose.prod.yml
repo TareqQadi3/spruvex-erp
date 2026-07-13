@@ -75,9 +75,7 @@ services:
   dashboard:
     build:
       context: .
-      dockerfile: infra/docker/spa.Dockerfile
-      args:
-        APP_DIR: dashboard
+      dockerfile: apps/dashboard/Dockerfile
     restart: unless-stopped
     depends_on: [api]
     ports:
@@ -86,9 +84,7 @@ services:
   pos:
     build:
       context: .
-      dockerfile: infra/docker/spa.Dockerfile
-      args:
-        APP_DIR: pos
+      dockerfile: apps/pos/Dockerfile
     restart: unless-stopped
     depends_on: [api]
     ports:
@@ -97,9 +93,7 @@ services:
   kds:
     build:
       context: .
-      dockerfile: infra/docker/spa.Dockerfile
-      args:
-        APP_DIR: kds
+      dockerfile: apps/kds/Dockerfile
     restart: unless-stopped
     depends_on: [api]
     ports:
@@ -108,9 +102,7 @@ services:
   platform:
     build:
       context: .
-      dockerfile: infra/docker/spa.Dockerfile
-      args:
-        APP_DIR: platform
+      dockerfile: apps/platform/Dockerfile
     restart: unless-stopped
     depends_on: [api]
     ports:

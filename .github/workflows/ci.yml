@@ -89,32 +89,28 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: infra/docker/spa.Dockerfile
-          build-args: APP_DIR=dashboard
+          file: apps/dashboard/Dockerfile
           push: false
 
       - name: Build pos image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: infra/docker/spa.Dockerfile
-          build-args: APP_DIR=pos
+          file: apps/pos/Dockerfile
           push: false
 
       - name: Build kds image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: infra/docker/spa.Dockerfile
-          build-args: APP_DIR=kds
+          file: apps/kds/Dockerfile
           push: false
 
       - name: Build platform image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: infra/docker/spa.Dockerfile
-          build-args: APP_DIR=platform
+          file: apps/platform/Dockerfile
           push: false
 
       - name: Build ordering image
