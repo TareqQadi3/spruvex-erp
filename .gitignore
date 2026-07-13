@@ -5,8 +5,9 @@ coverage/
 .turbo/
 *.log
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+!.env.*.example
 .DS_Store
 generated/
 .next/
