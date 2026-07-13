@@ -58,6 +58,9 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:?required}
       REDIS_URL: redis://redis:6379
       ORDERING_BASE_URL: ${ORDERING_BASE_URL:?required}
+      PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-}
+      PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
       NODE_ENV: production
       PORT: 3000
     ports:
@@ -101,6 +104,17 @@ services:
     depends_on: [api]
     ports:
       - "8083:80"
+
+  platform:
+    build:
+      context: .
+      dockerfile: infra/docker/spa.Dockerfile
+      args:
+        APP_DIR: platform
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "8084:80"
 
   ordering:
     build:

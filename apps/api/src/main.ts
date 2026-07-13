@@ -5,14 +5,19 @@ import helmet from "helmet";
 import { AppModule } from "./app.module";
 import { RedisIoAdapter } from "./shared/realtime/redis-io.adapter";
 import { AllExceptionsFilter } from "./shared/errors/all-exceptions.filter";
+import { initSentry } from "./shared/monitoring/sentry";
+import { requestLoggingMiddleware } from "./shared/monitoring/request-logging.middleware";
 
 async function bootstrap() {
+  initSentry();
+
   const app = await NestFactory.create(AppModule);
 
   const ioAdapter = new RedisIoAdapter(app);
   await ioAdapter.connectToRedis();
   app.useWebSocketAdapter(ioAdapter);
 
+  app.use(requestLoggingMiddleware);
   app.use(helmet());
   app.enableCors({
     origin: (process.env.CORS_ORIGINS ?? "").split(",").filter(Boolean),

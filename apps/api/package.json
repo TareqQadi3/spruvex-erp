@@ -31,6 +31,7 @@
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/websockets": "^11.1.28",
     "@prisma/client": "^6.4.0",
+    "@sentry/node": "^10.65.0",
     "@socket.io/redis-adapter": "^8.3.0",
     "@spruvex-r/types": "workspace:*",
     "bcryptjs": "^2.4.3",

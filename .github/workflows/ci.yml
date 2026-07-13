@@ -93,6 +93,30 @@ jobs:
           build-args: APP_DIR=dashboard
           push: false
 
+      - name: Build pos image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/spa.Dockerfile
+          build-args: APP_DIR=pos
+          push: false
+
+      - name: Build kds image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/spa.Dockerfile
+          build-args: APP_DIR=kds
+          push: false
+
+      - name: Build platform image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/spa.Dockerfile
+          build-args: APP_DIR=platform
+          push: false
+
       - name: Build ordering image
         uses: docker/build-push-action@v6
         with:

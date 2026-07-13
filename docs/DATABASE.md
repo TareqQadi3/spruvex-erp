@@ -126,23 +126,26 @@ endpoint (rows are created directly, e.g. via the seed's
   catalog syncs (permissions/units/plans) plus one demo tenant if none
   exists. Safe to re-run.
 
-## Backup strategy (documented, not yet automated)
-
-No automated backup job exists in this repository — this is the intended
-approach for a production deployment:
+## Backup strategy
 
 1. **Managed Postgres is preferred** once there's real customer data
    (RDS/Cloud SQL/Supabase-postgres or similar) — automated snapshots +
    point-in-time recovery come for free, matching the architecture plan's
    "start with Docker Compose, move to managed Postgres" decision (§8.2).
-2. **If self-hosting Postgres** (the `docker-compose.prod.yml` path):
-   schedule `pg_dump --format=custom` against `spruvex_r` at least daily,
-   store off the host (S3-compatible bucket), and retain enough history to
-   cover your recovery objective (e.g. 7 daily + 4 weekly). Enable WAL
-   archiving if you need point-in-time recovery rather than daily-granularity
+2. **If self-hosting Postgres** (the `docker-compose.prod.yml` path): run
+   `infra/scripts/backup-db.sh` on a daily cron — it wraps `pg_dump
+   --format=custom`, fails loudly (non-zero exit) on an empty/truncated
+   dump instead of silently keeping a useless file, and prunes local dumps
+   older than `RETENTION_DAYS` (default 14). The `pg_dump`/`pg_restore`
+   round-trip has been verified in this repo (dump → restore into a scratch
+   database → table count matches). The script only writes locally — copy
+   `BACKUP_DIR` off the host (S3 or similar) yourself; a backup that lives
+   only on the machine it protects against isn't one. Enable WAL archiving
+   too if you need point-in-time recovery rather than daily-granularity
    restore.
    ```bash
-   docker exec <postgres-container> pg_dump -U spruvex_admin --format=custom spruvex_r > backup-$(date +%F).dump
+   # cron, run from the directory containing docker-compose.prod.yml:
+   0 3 * * * BACKUP_DIR=/var/backups/spruvex-r infra/scripts/backup-db.sh >> /var/log/spruvex-backup.log 2>&1
    ```
 3. **Test restores periodically** — an untested backup is not a backup.
    Restore into a scratch database and run a smoke query (e.g. tenant/order

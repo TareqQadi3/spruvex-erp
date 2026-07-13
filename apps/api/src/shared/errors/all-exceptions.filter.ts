@@ -8,6 +8,8 @@ import {
 } from "@nestjs/common";
 import type { Request, Response } from "express";
 
+import { captureException } from "../monitoring/sentry";
+
 /**
  * Global error boundary (Phase 8 monitoring foundation): every unhandled
  * exception is logged with request context server-side. Known HttpExceptions
@@ -32,6 +34,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
           `${req.method} ${req.originalUrl} -> ${status}: ${exception.message}`,
           exception.stack,
         );
+        captureException(exception);
       }
       res.status(status).json(exception.getResponse());
       return;
@@ -39,6 +42,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     const error = exception instanceof Error ? exception : new Error(String(exception));
     this.logger.error(`${req.method} ${req.originalUrl} -> 500: ${error.message}`, error.stack);
+    captureException(error);
     res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       message: "Internal server error",

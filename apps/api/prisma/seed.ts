@@ -13,8 +13,16 @@ import {
  * Runs on the admin (BYPASSRLS) connection. Idempotent.
  *
  * Demo credentials (development only):
- *   owner:   owner@demo.spruvex.local  / SpruVex-Demo1
+ *   owner:   owner@demo.spruvex.local   / SpruVex-Demo1
  *   cashier: cashier@demo.spruvex.local / SpruVex-Demo1  (POS PIN: 1234)
+ *   kitchen: kitchen@demo.spruvex.local / SpruVex-Demo1
+ *
+ * The onboarding wizard only creates an owner + a cashier account, so a
+ * dedicated `kitchen`-role account is seeded here too — without it, a
+ * restaurant that staffs its KDS screen with the cashier account gets a
+ * silently degraded (REST-only, no realtime push) kitchen display, since
+ * `cashier` lacks `kitchen.view` (see the Launch Readiness Report's known
+ * issues).
  */
 async function main() {
   const adminUrl = process.env.ADMIN_DATABASE_URL;
@@ -100,6 +108,25 @@ async function main() {
         branchId: provisioned.branchId!,
         userId: cashier.id,
         pinHash: await hashPin("1234"),
+      },
+    });
+
+    // A kitchen-role account so the KDS app has realtime permissions out of
+    // the box (the onboarding wizard itself only creates owner + cashier).
+    const kitchen = await db.user.create({
+      data: {
+        email: "kitchen@demo.spruvex.local",
+        name: "شاشة المطبخ",
+        passwordHash: await hashPassword("SpruVex-Demo1"),
+        emailVerifiedAt: new Date(),
+      },
+    });
+    await db.userRole.create({
+      data: {
+        tenantId: provisioned.tenantId,
+        userId: kitchen.id,
+        roleId: provisioned.roleIdsByKey.kitchen,
+        branchId: provisioned.branchId,
       },
     });
 
