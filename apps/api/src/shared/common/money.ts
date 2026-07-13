@@ -48,3 +48,30 @@ function assertRate(ratePercent: number) {
     throw new Error(`Invalid VAT rate: ${ratePercent}`);
   }
 }
+
+/**
+ * Higher-precision variant for food-cost accounting (4 decimal places —
+ * e.g. a fraction of a halala per gram of an ingredient). Selling prices
+ * stay 2-decimal halalas; only ingredient/recipe cost math uses this.
+ * 1 SAR = 10,000 cost units.
+ */
+export function sarToCostUnits(sar: string | number): number {
+  const normalized = typeof sar === "number" ? sar.toFixed(4) : sar.trim();
+  if (!/^-?\d+(\.\d{1,4})?$/.test(normalized)) {
+    throw new Error(`Invalid SAR amount: ${sar}`);
+  }
+  const [whole, fraction = ""] = normalized.split(".");
+  const sign = whole.startsWith("-") ? -1 : 1;
+  const units = Math.abs(Number(whole)) * 10000 + Number(fraction.padEnd(4, "0") || "0");
+  return sign * units;
+}
+
+/** Formats integer cost units as a SAR decimal string, e.g. 350 -> "0.0350". */
+export function costUnitsToSar(units: number): string {
+  if (!Number.isInteger(units)) {
+    throw new Error(`Cost units must be an integer: ${units}`);
+  }
+  const sign = units < 0 ? "-" : "";
+  const abs = Math.abs(units);
+  return `${sign}${Math.floor(abs / 10000)}.${String(abs % 10000).padStart(4, "0")}`;
+}

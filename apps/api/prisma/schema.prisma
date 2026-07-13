@@ -79,6 +79,11 @@ model Tenant {
   shifts                Shift[]
   payments              Payment[]
   receipts              Receipt[]
+  ingredients           Ingredient[]
+  stockLocations        StockLocation[]
+  stockLevels           StockLevel[]
+  stockMovements        StockMovement[]
+  recipeItems           RecipeItem[]
 
   @@map("tenants")
 }
@@ -114,6 +119,9 @@ model Branch {
   tables                Table[]
   orders                Order[]
   shifts                Shift[]
+  stockLocations        StockLocation[]
+  stockLevels           StockLevel[]
+  stockMovements        StockMovement[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -381,6 +389,7 @@ model Product {
   branchSettings ProductBranchSetting[]
   modifierGroups ProductModifierGroup[]
   orderItems     OrderItem[]
+  recipeItems    RecipeItem[]
 
   @@unique([tenantId, sku])
   @@index([tenantId, categoryId])
@@ -709,6 +718,13 @@ model OrderItem {
   lineTotal Decimal @map("line_total") @db.Decimal(12, 2)
   notes     String?
 
+  /// Food-cost snapshot (Phase 7) — frozen at order time from the product's
+  /// recipe and each ingredient's average cost, same rationale as the price
+  /// snapshot above: later recipe/cost edits must not change past orders.
+  /// Both null when the product has no recipe defined.
+  unitCost Decimal? @map("unit_cost") @db.Decimal(12, 4)
+  lineCost Decimal? @map("line_cost") @db.Decimal(12, 4)
+
   createdAt DateTime @default(now()) @map("created_at")
 
   tenant    Tenant              @relation(fields: [tenantId], references: [id])
@@ -880,4 +896,209 @@ model Receipt {
   @@unique([branchId, receiptNumber])
   @@index([tenantId, branchId])
   @@map("receipts")
+}
+
+// ============================================================================
+// Inventory & Recipe domain (Phase 7) — ingredients, stock locations/levels/
+// movements, product recipes, and the food-cost snapshot on order items.
+//
+// Design notes:
+// - Units of measure are a GLOBAL catalog (like `permissions`), seeded from
+//   @spruvex-r/types — not tenant-owned, no RLS needed. Every ingredient
+//   tracks stock in the canonical base unit of its measurement family
+//   (grams for mass, milliliters for volume, pieces for count); recipe
+//   quantities convert via `UnitOfMeasure.toBaseFactor`.
+// - `stock_movements` is the ledger of truth (append-only, like payments/
+//   receipts); `stock_levels` is a materialized running balance kept in
+//   sync with every movement inside the same transaction, so reads stay
+//   O(1) instead of summing the whole ledger.
+// - Waste is a `stock_movements` row with type=waste (reason + performedBy
+//   already on that table) rather than a separate table — avoids duplicating
+//   the same fields in two places.
+// - No separate `Recipe` header: `RecipeItem` rows attach directly to a
+//   Product (the product is the recipe's aggregate root), matching plan
+//   §9.3 "recipes (product ↔ ingredients + كميات)".
+// ============================================================================
+
+enum UnitType {
+  mass
+  volume
+  count
+
+  @@map("unit_type")
+}
+
+/// Global unit-of-measure catalog (seeded, not tenant-owned — see note above).
+model UnitOfMeasure {
+  id           String   @id @default(uuid()) @db.Uuid
+  /// e.g. "g", "kg", "ml", "l", "pc" — stable machine key.
+  code         String   @unique
+  name         String
+  nameEn       String   @map("name_en")
+  type         UnitType
+  /// How many base units (g / ml / pc) equal one of this unit. The base
+  /// unit of each type has factor 1.
+  toBaseFactor Decimal  @map("to_base_factor") @db.Decimal(12, 6)
+
+  recipeItems RecipeItem[]
+
+  @@map("units_of_measure")
+}
+
+model Ingredient {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  /// Arabic name (primary)
+  name         String
+  nameEn       String?  @map("name_en")
+  unitType     UnitType @map("unit_type")
+  /// Moving average cost per BASE unit (SAR, NUMERIC — never float).
+  averageCost  Decimal  @default(0) @map("average_cost") @db.Decimal(12, 4)
+  /// Optional low-stock threshold (base units) for dashboard alerts.
+  reorderLevel Decimal? @map("reorder_level") @db.Decimal(14, 3)
+  isActive     Boolean  @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+  stockLevels    StockLevel[]
+  stockMovements StockMovement[]
+  recipeItems    RecipeItem[]
+
+  @@index([tenantId])
+  @@map("ingredients")
+}
+
+/// Physical stock location within a branch (main store, walk-in fridge, bar...).
+model StockLocation {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  branchId String @map("branch_id") @db.Uuid
+
+  name      String
+  nameEn    String? @map("name_en")
+  /// The location automated stock deduction (order.completed) writes to
+  /// when a branch has more than one. Lazily created on first use.
+  isDefault Boolean @default(false) @map("is_default")
+  isActive  Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant    Tenant          @relation(fields: [tenantId], references: [id])
+  branch    Branch          @relation(fields: [branchId], references: [id])
+  levels    StockLevel[]
+  movements StockMovement[]
+
+  @@index([tenantId, branchId])
+  @@map("stock_locations")
+}
+
+/// Materialized current balance per ingredient per location (base units).
+model StockLevel {
+  id           String @id @default(uuid()) @db.Uuid
+  tenantId     String @map("tenant_id") @db.Uuid
+  branchId     String @map("branch_id") @db.Uuid
+  locationId   String @map("location_id") @db.Uuid
+  ingredientId String @map("ingredient_id") @db.Uuid
+
+  quantity Decimal @default(0) @db.Decimal(14, 3)
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant     Tenant        @relation(fields: [tenantId], references: [id])
+  branch     Branch        @relation(fields: [branchId], references: [id])
+  location   StockLocation @relation(fields: [locationId], references: [id])
+  ingredient Ingredient    @relation(fields: [ingredientId], references: [id])
+
+  @@unique([locationId, ingredientId])
+  @@index([tenantId, branchId])
+  @@map("stock_levels")
+}
+
+enum StockMovementType {
+  purchase
+  sale_deduction
+  waste
+  adjustment
+  transfer_in
+  transfer_out
+
+  @@map("stock_movement_type")
+}
+
+/// Append-only stock ledger — the source of truth `stock_levels` is derived
+/// from. Signed quantity (base units): positive = stock in, negative = out.
+model StockMovement {
+  id           String @id @default(uuid()) @db.Uuid
+  tenantId     String @map("tenant_id") @db.Uuid
+  branchId     String @map("branch_id") @db.Uuid
+  locationId   String @map("location_id") @db.Uuid
+  ingredientId String @map("ingredient_id") @db.Uuid
+
+  type     StockMovementType
+  /// Signed, base units (g / ml / pc).
+  quantity Decimal           @db.Decimal(14, 3)
+  /// Cost per base unit at the time of this movement (purchases only).
+  unitCost Decimal?          @map("unit_cost") @db.Decimal(12, 4)
+
+  /// e.g. referenceType="order" for automatic sale_deduction rows —
+  /// the (type, referenceType, referenceId, ingredientId) tuple makes
+  /// system-triggered deduction idempotent (see InventoryService).
+  referenceType String? @map("reference_type")
+  referenceId   String? @map("reference_id") @db.Uuid
+  /// Required for waste/adjustment at the DTO level.
+  reason        String?
+  /// null = system-triggered (automatic sale deduction on order completion).
+  performedBy   String? @map("performed_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant     Tenant        @relation(fields: [tenantId], references: [id])
+  branch     Branch        @relation(fields: [branchId], references: [id])
+  location   StockLocation @relation(fields: [locationId], references: [id])
+  ingredient Ingredient    @relation(fields: [ingredientId], references: [id])
+
+  @@unique([tenantId, type, referenceType, referenceId, ingredientId])
+  @@index([tenantId, branchId, ingredientId, createdAt])
+  @@index([tenantId, type])
+  @@map("stock_movements")
+}
+
+/// Product ↔ ingredient recipe line. The product is the recipe's aggregate
+/// root (no separate Recipe header table).
+model RecipeItem {
+  id           String @id @default(uuid()) @db.Uuid
+  tenantId     String @map("tenant_id") @db.Uuid
+  productId    String @map("product_id") @db.Uuid
+  ingredientId String @map("ingredient_id") @db.Uuid
+  unitId       String @map("unit_id") @db.Uuid
+
+  /// Quantity expressed in `unit` (converted to base units via toBaseFactor
+  /// at costing/deduction time) — must be the same measurement family as
+  /// the ingredient's unitType.
+  quantity Decimal @db.Decimal(10, 3)
+  notes    String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.Uuid
+  updatedBy String?  @map("updated_by") @db.Uuid
+
+  tenant     Tenant        @relation(fields: [tenantId], references: [id])
+  product    Product       @relation(fields: [productId], references: [id])
+  ingredient Ingredient    @relation(fields: [ingredientId], references: [id])
+  unit       UnitOfMeasure @relation(fields: [unitId], references: [id])
+
+  @@unique([productId, ingredientId])
+  @@index([tenantId, productId])
+  @@map("recipe_items")
 }

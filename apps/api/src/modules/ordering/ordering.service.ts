@@ -17,7 +17,8 @@ import {
 } from "@spruvex-r/types";
 
 import { AuditService } from "../../shared/audit/audit.service";
-import { halalasToSar, sarToHalalas, vatFromGross } from "../../shared/common/money";
+import { calculateRecipeCostUnits } from "../../shared/common/food-cost";
+import { costUnitsToSar, halalasToSar, sarToHalalas, vatFromGross } from "../../shared/common/money";
 import { PrismaService } from "../../shared/prisma/prisma.service";
 import {
   actorOrNull,
@@ -423,6 +424,8 @@ export class OrderingService {
               quantity: item.quantity,
               unitPrice: halalasToSar(item.unitPriceHalalas),
               lineTotal: halalasToSar(item.lineTotalHalalas),
+              unitCost: item.unitCostUnits !== null ? costUnitsToSar(item.unitCostUnits) : null,
+              lineCost: item.lineCostUnits !== null ? costUnitsToSar(item.lineCostUnits) : null,
               notes: item.notes,
               modifiers: {
                 create: item.modifiers.map((modifier) => ({
@@ -557,6 +560,8 @@ export class OrderingService {
             quantity: item.quantity,
             unitPrice: halalasToSar(item.unitPriceHalalas),
             lineTotal: halalasToSar(item.lineTotalHalalas),
+            unitCost: item.unitCostUnits !== null ? costUnitsToSar(item.unitCostUnits) : null,
+            lineCost: item.lineCostUnits !== null ? costUnitsToSar(item.lineCostUnits) : null,
             notes: item.notes,
             modifiers: {
               create: item.modifiers.map((modifier) => ({
@@ -595,6 +600,9 @@ export class OrderingService {
             },
           },
         },
+        // Food-cost snapshot (Phase 7): products without a recipe simply have
+        // an empty array here, and unitCost/lineCost stay null below.
+        recipeItems: { include: { ingredient: true, unit: true } },
       },
     });
     const productById = new Map(products.map((product) => [product.id, product]));
@@ -667,12 +675,27 @@ export class OrderingService {
       const adjustments = modifiers.reduce((sum, m) => sum + m.adjustmentHalalas, 0);
       const lineTotalHalalas = (unitPriceHalalas + adjustments) * item.quantity;
 
+      // Food-cost snapshot: frozen from the recipe as it stands right now.
+      // null when the product has no recipe defined yet.
+      const unitCostUnits =
+        product.recipeItems.length > 0
+          ? calculateRecipeCostUnits(
+              product.recipeItems.map((recipeItem) => ({
+                quantity: recipeItem.quantity.toString(),
+                unitToBaseFactor: recipeItem.unit.toBaseFactor.toString(),
+                ingredientAverageCost: recipeItem.ingredient.averageCost.toString(),
+              })),
+            )
+          : null;
+
       return {
         productId: product.id,
         quantity: item.quantity,
         notes: item.notes,
         unitPriceHalalas,
         lineTotalHalalas,
+        unitCostUnits,
+        lineCostUnits: unitCostUnits !== null ? unitCostUnits * item.quantity : null,
         productSnapshot: {
           name: product.name,
           nameEn: product.nameEn,

@@ -86,7 +86,11 @@
     "subtitle": "هذه لوحة تحكم مطعمك — الوحدات التشغيلية تصل في المراحل القادمة.",
     "branchesCard": "الفروع",
     "teamCard": "فريق العمل",
-    "nextUp": "قادم قريباً: إدارة المنيو، الطاولات و QR، نقطة البيع، شاشة المطبخ والتقارير."
+    "nextUp": "قادم قريباً: نقطة البيع وشاشة المطبخ.",
+    "todayOrders": "طلبات اليوم",
+    "todaySales": "مبيعات اليوم",
+    "bestSeller": "الأكثر مبيعاً",
+    "inventoryAlerts": "تنبيهات المخزون"
   },
   "branches": {
     "title": "الفروع",
@@ -202,6 +206,87 @@
       "regenerateConfirm": "سيتم تعطيل رمز QR المطبوع الحالي لهذه الطاولة. هل أنت متأكد؟",
       "printSheet": "طباعة أوراق QR",
       "generatedAt": "أُنشئ: {{date}}"
+    }
+  },
+  "inventory": {
+    "tabs": { "ingredients": "المكونات", "stock": "المخزون" },
+    "unitTypes": { "mass": "وزن", "volume": "حجم", "count": "عدد" },
+    "movementTypes": {
+      "purchase": "شراء",
+      "sale_deduction": "خصم بيع",
+      "waste": "هدر",
+      "adjustment": "تسوية جرد",
+      "transfer_in": "تحويل وارد",
+      "transfer_out": "تحويل صادر"
+    },
+    "ingredients": {
+      "title": "المكونات والمواد الخام",
+      "add": "إضافة مكوّن",
+      "editTitle": "تعديل المكوّن",
+      "empty": "لا توجد مكونات بعد",
+      "unitType": "وحدة القياس",
+      "unitTypeLocked": "لا يمكن تغيير وحدة القياس بعد الإنشاء",
+      "reorderLevel": "حد إعادة الطلب",
+      "avgCost": "متوسط التكلفة"
+    },
+    "stock": {
+      "title": "المخزون والحركات",
+      "recordMovement": "تسجيل حركة مخزون",
+      "movementType": "نوع الحركة",
+      "ingredient": "المكوّن",
+      "location": "الموقع",
+      "locations": "مواقع التخزين",
+      "default": "افتراضي",
+      "newLocationName": "اسم موقع جديد",
+      "addLocation": "إضافة موقع",
+      "defaultLocation": "الموقع الافتراضي",
+      "quantity": "الكمية",
+      "countedQuantity": "الكمية المجرودة فعلياً",
+      "unitCost": "تكلفة الوحدة",
+      "reason": "السبب",
+      "lowStock": "مخزون منخفض",
+      "recentMovements": "آخر الحركات",
+      "empty": "لا توجد بيانات بعد"
+    },
+    "recipe": {
+      "title": "وصفة المنتج والتكلفة",
+      "hint": "اربط المنتج بالمكونات لحساب تكلفة الطعام وهامش الربح تلقائياً",
+      "costed": "محسوبة التكلفة",
+      "noRecipe": "بدون وصفة",
+      "cost": "التكلفة",
+      "margin": "هامش الربح",
+      "quantity": "الكمية",
+      "addIngredient": "إضافة مكوّن"
+    }
+  },
+  "reports": {
+    "todayOrders": "طلبات اليوم",
+    "todaySales": "مبيعات اليوم",
+    "avgOrderValue": "متوسط قيمة الطلب",
+    "avgPrepTime": "متوسط وقت التحضير",
+    "minutes": "دقيقة",
+    "from": "من تاريخ",
+    "to": "إلى تاريخ",
+    "financial": {
+      "title": "الملخص المالي",
+      "revenue": "الإيرادات",
+      "discounts": "الخصومات",
+      "vat": "ضريبة القيمة المضافة",
+      "foodCost": "تكلفة الطعام",
+      "grossMargin": "هامش الربح الإجمالي"
+    },
+    "operations": {
+      "title": "التشغيل",
+      "completed": "الطلبات المكتملة",
+      "cancelled": "الطلبات الملغاة",
+      "avgOrderValue": "متوسط قيمة الطلب"
+    },
+    "bestSellers": {
+      "title": "الأكثر مبيعاً",
+      "product": "المنتج",
+      "quantity": "الكمية",
+      "revenue": "الإيراد",
+      "empty": "لا توجد بيانات لهذه الفترة"
     }
   },
   "settings": {

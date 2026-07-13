@@ -49,6 +49,11 @@ export const PERMISSIONS = {
   "reports.view": "View sales, tax and product reports",
   "reports.export": "Export reports",
 
+  // Inventory & recipes
+  "inventory.view": "View ingredients, stock levels and movement history",
+  "inventory.manage": "Record purchases, waste and stock adjustments; manage ingredients and locations",
+  "recipes.manage": "Define and edit product recipes (ingredients and quantities)",
+
   // Audit
   "audit.view": "View the audit log",
 } as const;

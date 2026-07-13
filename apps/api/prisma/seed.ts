@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
 import { hashPassword, hashPin } from "../src/modules/identity/password";
+import { syncUnitCatalog } from "../src/modules/inventory/unit-catalog";
 import {
   provisionTenant,
   syncPermissionCatalog,
@@ -24,6 +25,8 @@ async function main() {
   try {
     await syncPermissionCatalog(db);
     console.log("Permission catalog synced.");
+    await syncUnitCatalog(db);
+    console.log("Unit-of-measure catalog synced.");
 
     const existing = await db.tenant.findUnique({ where: { slug: "demo" } });
     if (existing) {
@@ -171,7 +174,78 @@ async function main() {
       })),
     });
 
-    console.log(`Demo tenant created with demo menu & tables: ${provisioned.tenantId}`);
+    // Demo ingredients + recipe + stock (Phase 7).
+    const gram = await db.unitOfMeasure.findUniqueOrThrow({ where: { code: "g" } });
+    const piece = await db.unitOfMeasure.findUniqueOrThrow({ where: { code: "pc" } });
+
+    const chicken = await db.ingredient.create({
+      data: {
+        tenantId,
+        name: "صدر دجاج",
+        nameEn: "Chicken Breast",
+        unitType: "mass",
+        averageCost: "0.0450", // 45 halalas/kg
+        reorderLevel: "2000", // 2kg
+        createdBy: owner.id,
+      },
+    });
+    const skewer = await db.ingredient.create({
+      data: {
+        tenantId,
+        name: "سيخ خشبي",
+        nameEn: "Wooden Skewer",
+        unitType: "count",
+        averageCost: "0.1000",
+        reorderLevel: "50",
+        createdBy: owner.id,
+      },
+    });
+    await db.recipeItem.createMany({
+      data: [
+        { tenantId, productId: tawook.id, ingredientId: chicken.id, unitId: gram.id, quantity: "200", createdBy: owner.id },
+        { tenantId, productId: tawook.id, ingredientId: skewer.id, unitId: piece.id, quantity: "2", createdBy: owner.id },
+      ],
+    });
+
+    const mainStore = await db.stockLocation.create({
+      data: {
+        tenantId,
+        branchId: provisioned.branchId!,
+        name: "المخزن الرئيسي",
+        nameEn: "Main Store",
+        isDefault: true,
+        createdBy: owner.id,
+      },
+    });
+    for (const [ingredientId, qty] of [
+      [chicken.id, "10000"], // 10kg
+      [skewer.id, "200"],
+    ] as const) {
+      await db.stockMovement.create({
+        data: {
+          tenantId,
+          branchId: provisioned.branchId!,
+          locationId: mainStore.id,
+          ingredientId,
+          type: "purchase",
+          quantity: qty,
+          unitCost: ingredientId === chicken.id ? "0.0450" : "0.1000",
+          reason: "الرصيد الافتتاحي",
+          performedBy: owner.id,
+        },
+      });
+      await db.stockLevel.create({
+        data: {
+          tenantId,
+          branchId: provisioned.branchId!,
+          locationId: mainStore.id,
+          ingredientId,
+          quantity: qty,
+        },
+      });
+    }
+
+    console.log(`Demo tenant created with demo menu, tables & inventory: ${provisioned.tenantId}`);
   } finally {
     await db.$disconnect();
   }

@@ -7,6 +7,7 @@ import {
   LayoutGrid,
   LogOut,
   Monitor,
+  Package,
   Receipt,
   Settings,
   Store,
@@ -32,6 +33,7 @@ const ICONS: Record<string, LucideIcon> = {
   monitor: Monitor,
   "chef-hat": ChefHat,
   "bar-chart": BarChart3,
+  package: Package,
 };
 
 export function DashboardLayout() {

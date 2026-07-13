@@ -86,7 +86,11 @@
     "subtitle": "This is your restaurant dashboard — operational modules arrive in upcoming phases.",
     "branchesCard": "Branches",
     "teamCard": "Team members",
-    "nextUp": "Coming next: menu management, tables & QR, POS, kitchen display and reports."
+    "nextUp": "Coming next: POS and kitchen display.",
+    "todayOrders": "Today's orders",
+    "todaySales": "Today's sales",
+    "bestSeller": "Best seller",
+    "inventoryAlerts": "Inventory alerts"
   },
   "branches": {
     "title": "Branches",
@@ -202,6 +206,87 @@
       "regenerateConfirm": "The currently printed QR for this table will stop working. Are you sure?",
       "printSheet": "Print QR sheet",
       "generatedAt": "Generated: {{date}}"
+    }
+  },
+  "inventory": {
+    "tabs": { "ingredients": "Ingredients", "stock": "Stock" },
+    "unitTypes": { "mass": "Mass", "volume": "Volume", "count": "Count" },
+    "movementTypes": {
+      "purchase": "Purchase",
+      "sale_deduction": "Sale deduction",
+      "waste": "Waste",
+      "adjustment": "Adjustment",
+      "transfer_in": "Transfer in",
+      "transfer_out": "Transfer out"
+    },
+    "ingredients": {
+      "title": "Ingredients & raw materials",
+      "add": "Add ingredient",
+      "editTitle": "Edit ingredient",
+      "empty": "No ingredients yet",
+      "unitType": "Measurement unit",
+      "unitTypeLocked": "The measurement family can't change after creation",
+      "reorderLevel": "Reorder level",
+      "avgCost": "Average cost"
+    },
+    "stock": {
+      "title": "Stock & movements",
+      "recordMovement": "Record stock movement",
+      "movementType": "Movement type",
+      "ingredient": "Ingredient",
+      "location": "Location",
+      "locations": "Stock locations",
+      "default": "Default",
+      "newLocationName": "New location name",
+      "addLocation": "Add location",
+      "defaultLocation": "Default location",
+      "quantity": "Quantity",
+      "countedQuantity": "Physically counted quantity",
+      "unitCost": "Unit cost",
+      "reason": "Reason",
+      "lowStock": "Low stock",
+      "recentMovements": "Recent movements",
+      "empty": "No data yet"
+    },
+    "recipe": {
+      "title": "Product recipe & cost",
+      "hint": "Link the product to ingredients to automatically compute food cost and margin",
+      "costed": "Cost calculated",
+      "noRecipe": "No recipe",
+      "cost": "Cost",
+      "margin": "Gross margin",
+      "quantity": "Quantity",
+      "addIngredient": "Add ingredient"
+    }
+  },
+  "reports": {
+    "todayOrders": "Today's orders",
+    "todaySales": "Today's sales",
+    "avgOrderValue": "Average order value",
+    "avgPrepTime": "Average prep time",
+    "minutes": "min",
+    "from": "From",
+    "to": "To",
+    "financial": {
+      "title": "Financial summary",
+      "revenue": "Revenue",
+      "discounts": "Discounts",
+      "vat": "VAT",
+      "foodCost": "Food cost",
+      "grossMargin": "Gross margin"
+    },
+    "operations": {
+      "title": "Operations",
+      "completed": "Completed orders",
+      "cancelled": "Cancelled orders",
+      "avgOrderValue": "Average order value"
+    },
+    "bestSellers": {
+      "title": "Best sellers",
+      "product": "Product",
+      "quantity": "Quantity",
+      "revenue": "Revenue",
+      "empty": "No data for this period"
     }
   },
   "settings": {

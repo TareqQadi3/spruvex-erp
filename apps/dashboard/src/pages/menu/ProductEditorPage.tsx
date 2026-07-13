@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
   Alert,
+  Badge,
   Button,
   Card,
   CardContent,
@@ -22,6 +24,7 @@ import {
 import { api } from "../../lib/api";
 import { ApiError } from "../../lib/api";
 import { catalogApi, localizedName, type Product } from "../../lib/catalog-api";
+import { inventoryApi, type RecipeItemRow } from "../../lib/inventory-api";
 
 interface BranchRow {
   id: string;
@@ -435,8 +438,170 @@ export function ProductEditorPage() {
               })}
             </CardContent>
           </Card>
+
+          <RecipeEditor productId={id!} />
         </>
       )}
     </div>
+  );
+}
+
+interface RecipeRow {
+  ingredientId: string;
+  unitId: string;
+  quantity: string;
+}
+
+/** Food-cost recipe editor (Phase 7) — full-replace list of ingredient lines + live cost/margin preview. */
+function RecipeEditor({ productId }: { productId: string }) {
+  const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
+
+  const ingredients = useQuery({
+    queryKey: ["inventory", "ingredients"],
+    queryFn: inventoryApi.listIngredients,
+  });
+  const units = useQuery({ queryKey: ["inventory", "units"], queryFn: inventoryApi.listUnits });
+  const recipe = useQuery({
+    queryKey: ["inventory", "recipe", productId],
+    queryFn: () => inventoryApi.getRecipe(productId),
+  });
+  const cost = useQuery({
+    queryKey: ["inventory", "recipe-cost", productId],
+    queryFn: () => inventoryApi.getProductCost(productId),
+  });
+
+  const [rows, setRows] = useState<RecipeRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (recipe.data) {
+      setRows(
+        recipe.data.items.map((item: RecipeItemRow) => ({
+          ingredientId: item.ingredientId,
+          unitId: item.unitId,
+          quantity: item.quantity,
+        })),
+      );
+    }
+  }, [recipe.data]);
+
+  const save = useMutation({
+    mutationFn: () =>
+      inventoryApi.setRecipe(
+        productId,
+        rows.filter((row) => row.ingredientId && row.unitId && row.quantity),
+      ),
+    onSuccess: async () => {
+      setError(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["inventory", "recipe", productId] }),
+        queryClient.invalidateQueries({ queryKey: ["inventory", "recipe-cost", productId] }),
+      ]);
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : t("common.error")),
+  });
+
+  function addRow() {
+    const firstIngredient = ingredients.data?.[0];
+    const firstUnit = units.data?.find((u) => u.type === firstIngredient?.unitType);
+    setRows([...rows, { ingredientId: firstIngredient?.id ?? "", unitId: firstUnit?.id ?? "", quantity: "" }]);
+  }
+
+  function updateRow(index: number, patch: Partial<RecipeRow>) {
+    setRows(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  }
+
+  function removeRow(index: number) {
+    setRows(rows.filter((_, i) => i !== index));
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{t("inventory.recipe.title")}</CardTitle>
+        <CardDescription>{t("inventory.recipe.hint")}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {error && <Alert variant="destructive">{error}</Alert>}
+
+        {cost.data && (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border p-3 text-sm">
+            <Badge variant={cost.data.hasRecipe ? "success" : "muted"}>
+              {cost.data.hasRecipe ? t("inventory.recipe.costed") : t("inventory.recipe.noRecipe")}
+            </Badge>
+            <span dir="ltr">
+              {t("inventory.recipe.cost")}: {cost.data.cost} SAR
+            </span>
+            <span dir="ltr">
+              {t("inventory.recipe.margin")}: {cost.data.grossMargin} SAR ({cost.data.grossMarginPercent}%)
+            </span>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          {rows.map((row, index) => {
+            const selectedIngredient = ingredients.data?.find((i) => i.id === row.ingredientId);
+            const compatibleUnits = units.data?.filter((u) => u.type === selectedIngredient?.unitType) ?? [];
+            return (
+              <div key={index} className="flex flex-wrap items-center gap-2">
+                <Select
+                  className="w-48"
+                  value={row.ingredientId}
+                  onChange={(e) => {
+                    const ingredient = ingredients.data?.find((i) => i.id === e.target.value);
+                    const compatible = units.data?.find((u) => u.type === ingredient?.unitType);
+                    updateRow(index, { ingredientId: e.target.value, unitId: compatible?.id ?? "" });
+                  }}
+                >
+                  <option value="" disabled>
+                    —
+                  </option>
+                  {ingredients.data?.map((ingredient) => (
+                    <option key={ingredient.id} value={ingredient.id}>
+                      {localizedName(ingredient, i18n.language)}
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  className="w-28"
+                  dir="ltr"
+                  inputMode="decimal"
+                  placeholder={t("inventory.recipe.quantity")}
+                  value={row.quantity}
+                  onChange={(e) => updateRow(index, { quantity: e.target.value })}
+                />
+                <Select
+                  className="w-32"
+                  value={row.unitId}
+                  onChange={(e) => updateRow(index, { unitId: e.target.value })}
+                >
+                  <option value="" disabled>
+                    —
+                  </option>
+                  {compatibleUnits.map((unit) => (
+                    <option key={unit.id} value={unit.id}>
+                      {localizedName(unit, i18n.language)}
+                    </option>
+                  ))}
+                </Select>
+                <Button variant="ghost" size="icon" onClick={() => removeRow(index)}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center justify-between">
+          <Button type="button" variant="outline" size="sm" onClick={addRow}>
+            <Plus className="h-4 w-4" /> {t("inventory.recipe.addIngredient")}
+          </Button>
+          <Button type="button" size="sm" disabled={save.isPending} onClick={() => save.mutate()}>
+            {save.isPending ? <Spinner className="border-primary-foreground" /> : t("common.save")}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
