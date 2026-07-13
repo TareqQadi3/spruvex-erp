@@ -19,6 +19,11 @@ COPY packages/config/package.json packages/config/package.json
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
+# Next.js inlines NEXT_PUBLIC_* vars into the client bundle at build time —
+# it must be present here, setting it only at container runtime is too late
+# (the browser-side order-tracking socket needs the API's real public origin).
+ARG NEXT_PUBLIC_API_ORIGIN
+ENV NEXT_PUBLIC_API_ORIGIN=$NEXT_PUBLIC_API_ORIGIN
 COPY packages/ui packages/ui
 COPY packages/types packages/types
 COPY packages/config packages/config

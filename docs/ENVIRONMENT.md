@@ -53,7 +53,14 @@ Full reference lives in `.env.example` at the repo root (dev defaults) and
 
 `apps/ordering` also reads `API_ORIGIN` (server-side SSR fetches) and
 `NEXT_PUBLIC_API_ORIGIN` (client-side Socket.io connection for order
-tracking) — see `.env.example`.
+tracking) — see `.env.example` for local dev. In production
+(`docker-compose.prod.yml`) these come from `PUBLIC_API_ORIGIN` in
+`.env.production.example`: `API_ORIGIN` is hardcoded to the internal
+`http://api:3000` (the compose network address), and
+`NEXT_PUBLIC_API_ORIGIN` must be the API's real public HTTPS domain — it's
+a Next.js build-time value (baked into the client bundle via a Docker build
+arg), not something you can just change at container-runtime by editing
+`.env.production` after the image is already built.
 
 ## Secrets management
 

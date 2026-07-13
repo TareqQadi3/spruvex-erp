@@ -120,10 +120,17 @@ services:
     build:
       context: .
       dockerfile: apps/ordering/Dockerfile
+      args:
+        # Baked into the client bundle at build time — must be the API's real
+        # public HTTPS origin (browsers connect to it directly for realtime
+        # order tracking), not the internal `api` service address below.
+        NEXT_PUBLIC_API_ORIGIN: ${PUBLIC_API_ORIGIN:?required}
     restart: unless-stopped
     depends_on: [api]
     environment:
-      NEXT_PUBLIC_API_BASE_URL: ${ORDERING_BASE_URL:?required}
+      # Server-side SSR fetches + the Next.js API rewrite — internal
+      # docker-network address, always `api:3000` on this compose topology.
+      API_ORIGIN: http://api:3000
     ports:
       - "3002:3002"
 
