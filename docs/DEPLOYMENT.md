@@ -26,9 +26,13 @@
 
 Each frontend SPA (dashboard/pos/kds/platform) is served by its own Nginx
 container, which also reverse-proxies `/api/*` and `/socket.io/*` to the
-`api` service — see `infra/docker/spa.nginx.conf`. This keeps every
+`api` service — see `infra/docker/spa.nginx.conf.template`. This keeps every
 frontend's existing relative `/api/v1` base URL working unchanged in
-production. `ordering` is Next.js SSR and talks to the API directly
+production. The upstream address is `${API_INTERNAL_ORIGIN}`, substituted
+into the config at container startup by nginx's own built-in template
+processing (defaults to the docker-compose service alias `api:3000`;
+override it on platforms without Compose-style service-name DNS). `ordering`
+is Next.js SSR and talks to the API directly
 server-side (`API_ORIGIN`), and hands the API's public origin
 (`PUBLIC_API_ORIGIN`) to the client as a prop for realtime order tracking —
 both are plain runtime environment variables, no Docker build arg needed.
