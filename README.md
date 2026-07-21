@@ -30,6 +30,15 @@ cd spruvex-r
 pnpm install && pnpm dev   # راجع spruvex-r/README.md للتفاصيل الكاملة
 ```
 
+## CI/CD — الوضع الحالي | Current State
+
+- **كل مشروع لديه CI مستقل حالياً بالكامل** — بلا أي ربط أو تداخل بينها:
+  - `.github/workflows/ci.yml` (جذر المستودع) — يغطي `spruvex-app` و`spruvex-site` فقط (typecheck، build، migration-drift check، smoke test حقيقي، فحص أسرار، بناء Docker تجريبي).
+  - `spruvex-r/.github/workflows/ci.yml` — خاص بـ SpruVex R وحده.
+- ⚠️ **ملاحظة تقنية مهمة**: GitHub Actions **لا يتعرف إلا على مسار `.github/workflows/` عند جذر المستودع فقط** — لا يمسح مجلدات `.github` متداخلة داخل مجلدات فرعية. لذلك، **ملف `spruvex-r/.github/workflows/ci.yml` لن يُشغَّل تلقائياً من مستودع `spruvex-erp` الرئيسي بعد الدمج** بصيغته الحالية (كان يعمل عندما كان `spruvex-r` مستودعاً مستقلاً على GitHub، وسيستمر يعمل لو بقي كذلك).
+- **لا يوجد أثر حالي على `spruvex-app`/`spruvex-site`** — الفحوصات الخاصة بهما تعمل كما هي، بلا أي تغيير.
+- **الخطة المستقبلية (لم تُنفَّذ الآن، بقرار صريح)**: عند الحاجة، يُنقَل محتوى `spruvex-r/.github/workflows/ci.yml` إلى ملف جديد ضمن `.github/workflows/` عند الجذر (مثل `spruvex-r-ci.yml`) مع `paths: ["spruvex-r/**"]` كي يعمل فقط عند تغيّر ملفات SpruVex R تحديداً، دون التأثير على فحوصات ERP/الموقع التسويقي أو إبطائها.
+
 ## التوثيق الإضافي | Further Documentation
 
 - `SPRUVEX_CURRENT_STATUS.md` — حالة SpruVex ERP الحالية وتاريخ المراحل.
