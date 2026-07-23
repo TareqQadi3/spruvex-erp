@@ -31,7 +31,14 @@
     "otpResend": "إعادة إرسال الرمز",
     "otpDevHint": "وضع التطوير — الرمز:",
     "verify": "تحقق",
-    "passwordRule": "8 أحرف على الأقل وتتضمن حرفاً ورقماً"
+    "passwordRule": "8 أحرف على الأقل وتتضمن حرفاً ورقماً",
+    "forgotLink": "نسيت كلمة المرور؟",
+    "forgotTitle": "استعادة كلمة المرور",
+    "forgotSubtitle": "أدخل بريدك الإلكتروني وسنرسل لك رمز تحقق",
+    "forgotSend": "إرسال الرمز",
+    "forgotNewPassword": "كلمة المرور الجديدة",
+    "forgotSubmit": "تعيين كلمة المرور",
+    "backToLogin": "العودة لتسجيل الدخول"
   },
   "onboarding": {
     "title": "إعداد مطعمك",

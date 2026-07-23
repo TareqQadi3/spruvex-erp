@@ -18,7 +18,6 @@ FROM base AS deps
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY artifacts/api-server/package.json ./artifacts/api-server/package.json
 COPY lib ./lib
-COPY scripts ./scripts
 # --frozen-lockfile: never silently resolve a different dependency tree than
 # what's committed — a production build must fail loudly on lockfile drift,
 # not paper over it.
@@ -26,6 +25,7 @@ RUN pnpm install --frozen-lockfile
 
 # --- build: bundle to a handful of self-contained .mjs files via esbuild ---
 FROM deps AS build
+COPY tsconfig.base.json ./tsconfig.base.json
 COPY artifacts/api-server ./artifacts/api-server
 RUN pnpm --filter @workspace/api-server run build
 

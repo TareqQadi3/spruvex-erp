@@ -1,0 +1,15 @@
+# Render Blueprint — deploys the SpruVex marketing site as a static Docker
+# build on Render's free tier.
+#
+# The API/app URLs are baked in at build time (Vite convention — see
+# artifacts/spruvex-site/Dockerfile's ARG defaults) and already point at
+# the spruvex-api / spruvex-pos trial services from ../spruvex-app/render.yaml.
+# No env vars needed here; nothing to fill in during Blueprint creation.
+
+services:
+  - type: web
+    name: spruvex-site
+    runtime: docker
+    dockerfilePath: ./artifacts/spruvex-site/Dockerfile
+    dockerContext: .
+    plan: free

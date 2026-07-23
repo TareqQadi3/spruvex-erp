@@ -31,7 +31,14 @@
     "otpResend": "Resend code",
     "otpDevHint": "Development mode — code:",
     "verify": "Verify",
-    "passwordRule": "At least 8 characters including a letter and a digit"
+    "passwordRule": "At least 8 characters including a letter and a digit",
+    "forgotLink": "Forgot password?",
+    "forgotTitle": "Reset your password",
+    "forgotSubtitle": "Enter your email and we'll send you a verification code",
+    "forgotSend": "Send code",
+    "forgotNewPassword": "New password",
+    "forgotSubmit": "Set password",
+    "backToLogin": "Back to sign in"
   },
   "onboarding": {
     "title": "Set up your restaurant",

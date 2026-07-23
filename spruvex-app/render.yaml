@@ -1,0 +1,60 @@
+# Render Blueprint — deploys SpruVex ERP (API + POS frontend) on Render's
+# free tier, for trying the full system on a real URL.
+#
+# Uses your EXISTING Neon database (DATABASE_URL) rather than Render's
+# managed Postgres — paste it as the DATABASE_URL value when Render prompts
+# for `sync: false` secrets during Blueprint creation. Use a Neon branch/
+# project dedicated to this trial, not your local dev database.
+#
+# Free-tier notes:
+#   - Free web services spin down after 15 min of inactivity (cold start on
+#     the next request) — fine for "let me try this on a real URL".
+#   - The background worker (scheduled jobs, e.g. subscription renewals) is
+#     NOT deployed here — it requires Redis, which isn't provisioned on the
+#     free tier. Core ERP/POS flows (sales, inventory, invoicing, ZATCA)
+#     don't depend on it; only scheduled/background jobs are affected.
+#
+# Build-verified locally with `docker build` before this file was written —
+# see deploy/nginx/pos-system.conf.template for how the POS frontend reaches
+# the API (it only ever calls relative /api/... paths, so its own nginx
+# reverse-proxies /api to the API service).
+
+services:
+  - type: web
+    name: spruvex-api
+    runtime: docker
+    dockerfilePath: ./artifacts/api-server/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: "5000"
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "true"
+      - key: ALLOWED_ORIGINS
+        value: "https://spruvex-pos.onrender.com"
+      - key: AI_PROVIDER
+        value: mock
+      # Optional — leave unset; AI features fall back to the mock provider.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+  - type: web
+    name: spruvex-pos
+    runtime: docker
+    dockerfilePath: ./artifacts/pos-system/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: API_INTERNAL_ORIGIN
+        fromService:
+          type: web
+          name: spruvex-api
+          property: hostport

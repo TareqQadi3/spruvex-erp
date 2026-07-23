@@ -22,11 +22,21 @@ COPY artifacts/spruvex-site/package.json ./artifacts/spruvex-site/package.json
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
+COPY tsconfig.base.json ./tsconfig.base.json
+COPY lib ./lib
+COPY attached_assets ./attached_assets
 COPY artifacts/spruvex-site ./artifacts/spruvex-site
 ARG BASE_PATH=/
-ARG VITE_API_URL
-ARG VITE_APP_URL
-ARG VITE_ADMIN_PANEL_PASSWORD
+# Defaults match the SpruVex ERP trial deployment's Render service names
+# (see ../../../spruvex-app/render.yaml) — hosting platforms that build
+# from a Blueprint (Render among them) don't support passing custom Docker
+# build args, so these must be real, working defaults, not placeholders.
+ARG VITE_API_URL=https://spruvex-api.onrender.com
+ARG VITE_APP_URL=https://spruvex-pos.onrender.com
+# Client-bundled (Vite bakes VITE_* into the public JS — view-source can
+# always recover this), so it only gates casual access to the ?admin route,
+# never a real secret. Trial-only default; change before any real use.
+ARG VITE_ADMIN_PANEL_PASSWORD=spruvex-trial-2026
 ENV BASE_PATH=${BASE_PATH} \
     VITE_API_URL=${VITE_API_URL} \
     VITE_APP_URL=${VITE_APP_URL} \

@@ -1,0 +1,28 @@
+server {
+  listen 80;
+  server_name _;
+  root /usr/share/nginx/html;
+
+  # Proxied to the API. ${API_INTERNAL_ORIGIN} is substituted at container
+  # startup by nginx's built-in template processing (this file lives in
+  # /etc/nginx/templates/, which the official nginx image envsubst's into
+  # /etc/nginx/conf.d/ automatically — see docker-entrypoint.d in the base
+  # image). Defaults to the docker-compose service alias `api:5000`; on a
+  # platform without Docker Compose-style service-name DNS (e.g. Render),
+  # override it with that platform's internal address for the API service.
+  location /api/ {
+    proxy_pass http://${API_INTERNAL_ORIGIN}/api/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+
+  gzip on;
+  gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
+}

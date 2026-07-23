@@ -17,6 +17,11 @@ import { TokenService } from "./token.service";
       global: true,
       useFactory: () => ({
         secret: process.env.JWT_SECRET,
+        // Pin the algorithm on both sign and verify — defense-in-depth
+        // against algorithm-confusion attacks even though jsonwebtoken
+        // already rejects "none" by default.
+        signOptions: { algorithm: "HS256" },
+        verifyOptions: { algorithms: ["HS256"] },
       }),
     }),
   ],
