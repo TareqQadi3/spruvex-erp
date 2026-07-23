@@ -105,11 +105,14 @@
   },
   "team": {
     "title": "فريق العمل",
+    "add": "إضافة عضو",
     "role": "الدور",
     "branch": "الفرع",
     "allBranches": "كل الفروع",
     "lastLogin": "آخر دخول",
-    "never": "لم يسجّل بعد"
+    "never": "لم يسجّل بعد",
+    "passwordHint": "8 أحرف على الأقل، بحرف ورقم",
+    "confirmRemove": "إزالة هذا العضو من الفريق؟"
   },
   "catalog": {
     "tabs": { "categories": "الأقسام", "products": "المنتجات", "modifiers": "الإضافات" },
