@@ -10,6 +10,6 @@ services:
   - type: web
     name: spruvex-site
     runtime: docker
-    dockerfilePath: ./artifacts/spruvex-site/Dockerfile
-    dockerContext: .
+    dockerfilePath: ./spruvex-site/artifacts/spruvex-site/Dockerfile
+    dockerContext: ./spruvex-site
     plan: free

@@ -23,8 +23,8 @@ services:
   - type: web
     name: spruvex-api
     runtime: docker
-    dockerfilePath: ./artifacts/api-server/Dockerfile
-    dockerContext: .
+    dockerfilePath: ./spruvex-app/artifacts/api-server/Dockerfile
+    dockerContext: ./spruvex-app
     plan: free
     healthCheckPath: /healthz
     envVars:
@@ -49,8 +49,8 @@ services:
   - type: web
     name: spruvex-pos
     runtime: docker
-    dockerfilePath: ./artifacts/pos-system/Dockerfile
-    dockerContext: .
+    dockerfilePath: ./spruvex-app/artifacts/pos-system/Dockerfile
+    dockerContext: ./spruvex-app
     plan: free
     envVars:
       - key: API_INTERNAL_ORIGIN
