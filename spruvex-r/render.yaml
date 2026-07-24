@@ -129,3 +129,6 @@ services:
           property: hostport
       - key: PUBLIC_API_ORIGIN
         value: https://spruvex-r-api.onrender.com
+
+# Redeploy trigger: force all services to rebuild with the corrected
+# dockerContext/dockerfilePath (the 5 that failed were built before that fix).
