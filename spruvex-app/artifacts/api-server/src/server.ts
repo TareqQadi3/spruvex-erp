@@ -8,7 +8,12 @@ export async function startServer(): Promise<void> {
   await checkDatabaseConnection();
   await ensureGlobalRbacSeeded();
 
-  const server = app.listen(env.port, () => {
+  // Bind to "::" (dual-stack) rather than the default -- some hosts
+  // (Fly.io) route external traffic over IPv4 but internal
+  // machine-to-machine traffic exclusively over IPv6; binding to
+  // IPv4-only leaves that internal path unreachable ("connection
+  // refused" from sibling services) even though the public URL works.
+  const server = app.listen(env.port, "::", () => {
     logger.info({ port: env.port }, "Server listening");
   });
 
