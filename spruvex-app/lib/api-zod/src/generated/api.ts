@@ -93,6 +93,10 @@ export const GetProductsResponseItem = zod.object({
   "categoryId": zod.number().nullable(),
   "categoryName": zod.string().nullish(),
   "includesTax": zod.boolean().optional(),
+  "imageUrl": zod.string().nullish(),
+  "hasAddons": zod.boolean().optional(),
+  "hasRelatedProducts": zod.boolean().optional(),
+  "displayMode": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const GetProductsResponse = zod.array(GetProductsResponseItem)
@@ -146,6 +150,10 @@ export const GetProductResponse = zod.object({
   "categoryId": zod.number().nullable(),
   "categoryName": zod.string().nullish(),
   "includesTax": zod.boolean().optional(),
+  "imageUrl": zod.string().nullish(),
+  "hasAddons": zod.boolean().optional(),
+  "hasRelatedProducts": zod.boolean().optional(),
+  "displayMode": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -194,6 +202,10 @@ export const UpdateProductResponse = zod.object({
   "categoryId": zod.number().nullable(),
   "categoryName": zod.string().nullish(),
   "includesTax": zod.boolean().optional(),
+  "imageUrl": zod.string().nullish(),
+  "hasAddons": zod.boolean().optional(),
+  "hasRelatedProducts": zod.boolean().optional(),
+  "displayMode": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -226,6 +238,10 @@ export const GetProductByBarcodeResponse = zod.object({
   "categoryId": zod.number().nullable(),
   "categoryName": zod.string().nullish(),
   "includesTax": zod.boolean().optional(),
+  "imageUrl": zod.string().nullish(),
+  "hasAddons": zod.boolean().optional(),
+  "hasRelatedProducts": zod.boolean().optional(),
+  "displayMode": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -471,13 +487,22 @@ export const CreateSaleBody = zod.object({
   "productId": zod.number(),
   "quantity": zod.number().min(1),
   "unitPrice": zod.number(),
-  "discount": zod.number().default(createSaleBodyItemsItemDiscountDefault)
+  "discount": zod.number().default(createSaleBodyItemsItemDiscountDefault),
+  "selectedAddons": zod.array(zod.object({
+  "groupName": zod.string().optional(),
+  "optionName": zod.string().optional(),
+  "priceDelta": zod.number().optional()
+})).optional(),
+  "itemNotes": zod.string().optional(),
+  "serialNumber": zod.string().optional()
 })).min(1),
   "discount": zod.number().default(createSaleBodyDiscountDefault),
   "paymentMethod": zod.enum(['cash', 'card', 'mixed']),
   "amountPaid": zod.number(),
   "notes": zod.string().optional(),
-  "cashSessionId": zod.number().optional()
+  "cashSessionId": zod.number().optional(),
+  "orderType": zod.string().optional(),
+  "tableId": zod.number().optional()
 })
 
 

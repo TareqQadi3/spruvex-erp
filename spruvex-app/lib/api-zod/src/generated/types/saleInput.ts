@@ -17,4 +17,6 @@ export interface SaleInput {
   amountPaid: number;
   notes?: string;
   cashSessionId?: number;
+  orderType?: string;
+  tableId?: number;
 }

@@ -9,6 +9,9 @@ export interface SaleItemInput {
   quantity: number;
   unitPrice: number;
   discount?: number;
+  selectedAddons?: Array<{ groupName: string; optionName: string; priceDelta: number }>;
+  itemNotes?: string;
+  serialNumber?: string;
 }
 
 export interface SalePaymentInput {
@@ -27,6 +30,8 @@ export interface CreateSaleInput {
   payments?: SalePaymentInput[];
   notes?: string;
   cashSessionId?: string;
+  orderType?: string;
+  tableId?: string;
 }
 
 class SaleValidationError extends Error {}
@@ -64,7 +69,11 @@ export async function createSale(companyId: string, input: CreateSaleInput, crea
 
   return db.transaction(async (tx) => {
     let subtotal = 0;
-    const resolvedItems: Array<{ productId: string; productName: string; quantity: number; unitPrice: number; discount: number; subtotal: number; costPrice: number }> = [];
+    const resolvedItems: Array<{
+      productId: string; productName: string; quantity: number; unitPrice: number; discount: number;
+      subtotal: number; costPrice: number;
+      selectedAddons?: SaleItemInput["selectedAddons"]; itemNotes?: string; serialNumber?: string;
+    }> = [];
 
     for (const item of input.items) {
       let quantity: number, unitPrice: number, discount: number;
@@ -91,6 +100,9 @@ export async function createSale(companyId: string, input: CreateSaleInput, crea
         discount,
         subtotal: itemSubtotal,
         costPrice: Number(product.costPrice),
+        selectedAddons: item.selectedAddons,
+        itemNotes: item.itemNotes,
+        serialNumber: item.serialNumber,
       });
     }
 
@@ -143,6 +155,8 @@ export async function createSale(companyId: string, input: CreateSaleInput, crea
       status: "completed",
       notes: input.notes,
       createdByUserId,
+      orderType: input.orderType,
+      tableId: input.tableId,
     });
 
     if (isSplit) {
@@ -168,6 +182,9 @@ export async function createSale(companyId: string, input: CreateSaleInput, crea
         unitPrice: item.unitPrice.toString(),
         discount: item.discount.toString(),
         subtotal: item.subtotal.toString(),
+        selectedAddons: item.selectedAddons,
+        itemNotes: item.itemNotes,
+        serialNumber: item.serialNumber,
       });
       await salesRepository.adjustProductStock(tx, companyId, item.productId, -item.quantity);
       cogsTotal += item.costPrice * item.quantity;

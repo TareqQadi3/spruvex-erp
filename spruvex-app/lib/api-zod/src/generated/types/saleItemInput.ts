@@ -5,6 +5,7 @@
  * POS & Repair Management System API
  * OpenAPI spec version: 0.1.0
  */
+import type { SaleItemInputSelectedAddonsItem } from './saleItemInputSelectedAddonsItem';
 
 export interface SaleItemInput {
   productId: number;
@@ -12,4 +13,7 @@ export interface SaleItemInput {
   quantity: number;
   unitPrice: number;
   discount?: number;
+  selectedAddons?: SaleItemInputSelectedAddonsItem[];
+  itemNotes?: string;
+  serialNumber?: string;
 }

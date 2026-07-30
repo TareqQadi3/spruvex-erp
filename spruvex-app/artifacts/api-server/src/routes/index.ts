@@ -22,6 +22,7 @@ import vouchersRouter from "../modules/vouchers/routes/vouchers";
 import accountingRouter from "../modules/accounting";
 import barcodeSearchRouter from "./barcodeSearch";
 import onboardingRouter from "./onboarding";
+import orderTypesRouter from "./orderTypes";
 import { requireAuth, requireActiveSubscription } from "../lib/auth-middleware";
 
 const router: IRouter = Router();
@@ -62,5 +63,6 @@ router.use("/purchases", requireAuth, requireActiveSubscription, purchasesRouter
 router.use("/accounting", requireAuth, requireActiveSubscription, accountingRouter);
 router.use("/barcode-search", requireAuth, requireActiveSubscription, barcodeSearchRouter);
 router.use("/onboarding", requireAuth, requireActiveSubscription, onboardingRouter);
+router.use("/order-types", requireAuth, requireActiveSubscription, orderTypesRouter);
 
 export default router;

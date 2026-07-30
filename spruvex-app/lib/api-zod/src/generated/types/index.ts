@@ -68,6 +68,7 @@ export * from './saleInput';
 export * from './saleInputPaymentMethod';
 export * from './saleItem';
 export * from './saleItemInput';
+export * from './saleItemInputSelectedAddonsItem';
 export * from './salePaymentMethod';
 export * from './salesSummaryItem';
 export * from './saleStatus';

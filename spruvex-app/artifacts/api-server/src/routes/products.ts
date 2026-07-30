@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, productsTable, categoriesTable, suppliersTable } from "@workspace/db";
-import { eq, and, ilike, lte, or, sql } from "drizzle-orm";
+import { db, productsTable, categoriesTable, suppliersTable, productAddonGroupsTable, productAddonOptionsTable } from "@workspace/db";
+import { eq, and, ilike, lte, or, sql, inArray } from "drizzle-orm";
 import type { AuthedRequest } from "../lib/auth-middleware";
 import { ValidationError, parseRequiredNumber, parseOptionalNumber, isUniqueViolation } from "../lib/validation";
 
@@ -25,6 +25,9 @@ const PRODUCT_SELECT = {
   brand: productsTable.brand,
   imageUrl: productsTable.imageUrl,
   includesTax: productsTable.includesTax,
+  displayMode: productsTable.displayMode,
+  hasAddons: productsTable.hasAddons,
+  hasRelatedProducts: productsTable.hasRelatedProducts,
   createdAt: productsTable.createdAt,
 };
 
@@ -217,6 +220,44 @@ router.delete("/:id", async (req: AuthedRequest, res) => {
   await db.delete(productsTable)
     .where(and(eq(productsTable.id, id), eq(productsTable.companyId, req.user!.companyId)));
   res.status(204).send();
+});
+
+// Grid POS template fetches this on demand (only for products flagged
+// hasAddons=true) to render the add-ons sheet before adding a line to the cart.
+router.get("/:id/addon-groups", async (req: AuthedRequest, res) => {
+  const productId = req.params.id as string;
+  const groups = await db.select().from(productAddonGroupsTable)
+    .where(and(eq(productAddonGroupsTable.companyId, req.user!.companyId), eq(productAddonGroupsTable.productId, productId)))
+    .orderBy(productAddonGroupsTable.sortOrder);
+  if (groups.length === 0) {
+    res.json([]);
+    return;
+  }
+  const options = await db.select().from(productAddonOptionsTable)
+    .where(inArray(productAddonOptionsTable.groupId, groups.map(g => g.id)))
+    .orderBy(productAddonOptionsTable.sortOrder);
+  res.json(groups.map(g => ({ ...g, options: options.filter(o => o.groupId === g.id) })));
+});
+
+router.post("/:id/addon-groups", async (req: AuthedRequest, res) => {
+  const productId = req.params.id as string;
+  const { name, nameEn, required, minSelect, maxSelect, options } = req.body;
+  if (!name || !Array.isArray(options) || options.length === 0) {
+    res.status(400).json({ error: "name and at least one option are required" });
+    return;
+  }
+  const [group] = await db.insert(productAddonGroupsTable).values({
+    companyId: req.user!.companyId, productId, name, nameEn,
+    required: required ?? false, minSelect: minSelect ?? 0, maxSelect: maxSelect ?? 1,
+  }).returning();
+  const insertedOptions = await db.insert(productAddonOptionsTable).values(
+    options.map((o: { name: string; nameEn?: string; priceDelta?: number }) => ({
+      groupId: group.id, name: o.name, nameEn: o.nameEn, priceDelta: (o.priceDelta ?? 0).toString(),
+    })),
+  ).returning();
+  await db.update(productsTable).set({ hasAddons: true })
+    .where(and(eq(productsTable.id, productId), eq(productsTable.companyId, req.user!.companyId)));
+  res.status(201).json({ ...group, options: insertedOptions });
 });
 
 export default router;

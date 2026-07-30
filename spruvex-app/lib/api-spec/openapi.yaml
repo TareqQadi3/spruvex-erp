@@ -1023,6 +1023,14 @@ components:
           type: ["string", "null"]
         includesTax:
           type: boolean
+        imageUrl:
+          type: ["string", "null"]
+        hasAddons:
+          type: boolean
+        hasRelatedProducts:
+          type: boolean
+        displayMode:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
@@ -1250,6 +1258,21 @@ components:
         discount:
           type: number
           default: 0
+        selectedAddons:
+          type: array
+          items:
+            type: object
+            properties:
+              groupName:
+                type: string
+              optionName:
+                type: string
+              priceDelta:
+                type: number
+        itemNotes:
+          type: string
+        serialNumber:
+          type: string
 
     SaleInput:
       type: object
@@ -1273,6 +1296,10 @@ components:
         notes:
           type: string
         cashSessionId:
+          type: integer
+        orderType:
+          type: string
+        tableId:
           type: integer
 
     ReturnInput:

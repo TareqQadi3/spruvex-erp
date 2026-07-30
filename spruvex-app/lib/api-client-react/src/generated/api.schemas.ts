@@ -40,6 +40,12 @@ export interface Product {
   /** @nullable */
   categoryName?: string | null;
   includesTax?: boolean;
+  /** @nullable */
+  imageUrl?: string | null;
+  hasAddons?: boolean;
+  hasRelatedProducts?: boolean;
+  /** @nullable */
+  displayMode?: string | null;
   createdAt: string;
 }
 
@@ -239,12 +245,21 @@ export type SaleDetail = Sale & {
   items: SaleItem[];
 };
 
+export type SaleItemInputSelectedAddonsItem = {
+  groupName?: string;
+  optionName?: string;
+  priceDelta?: number;
+};
+
 export interface SaleItemInput {
   productId: number;
   /** @minimum 1 */
   quantity: number;
   unitPrice: number;
   discount?: number;
+  selectedAddons?: SaleItemInputSelectedAddonsItem[];
+  itemNotes?: string;
+  serialNumber?: string;
 }
 
 export type SaleInputPaymentMethod = typeof SaleInputPaymentMethod[keyof typeof SaleInputPaymentMethod];
@@ -265,6 +280,8 @@ export interface SaleInput {
   amountPaid: number;
   notes?: string;
   cashSessionId?: number;
+  orderType?: string;
+  tableId?: number;
 }
 
 export type ReturnInputItemsItem = {

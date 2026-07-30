@@ -2,7 +2,7 @@ import { useGetSettings } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { TOKEN_KEY } from "@/contexts/AuthContext";
 import ListPosTemplate from "./pos-templates/ListPosTemplate";
-import { GridPosTemplate } from "./pos-templates/GridPosTemplate";
+import GridPosTemplate from "./pos-templates/GridPosTemplate";
 import { ImagePosTemplate } from "./pos-templates/ImagePosTemplate";
 import { MobilePosTemplate } from "./pos-templates/MobilePosTemplate";
 
@@ -32,7 +32,7 @@ export default function PosPage() {
 
   switch (settings?.posTemplate) {
     case "grid":
-      return <GridPosTemplate onUseListTemplate={switchToListTemplate} />;
+      return <GridPosTemplate />;
     case "image":
       return <ImagePosTemplate onUseListTemplate={switchToListTemplate} />;
     case "mobile":

@@ -23,5 +23,11 @@ export interface Product {
   /** @nullable */
   categoryName?: string | null;
   includesTax?: boolean;
+  /** @nullable */
+  imageUrl?: string | null;
+  hasAddons?: boolean;
+  hasRelatedProducts?: boolean;
+  /** @nullable */
+  displayMode?: string | null;
   createdAt: Date;
 }
