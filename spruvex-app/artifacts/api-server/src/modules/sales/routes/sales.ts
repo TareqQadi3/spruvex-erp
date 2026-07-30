@@ -1,6 +1,8 @@
 import { Router } from "express";
-import type { AuthedRequest } from "../../../lib/auth-middleware";
+import { PERMISSIONS } from "@workspace/db";
+import { requirePermission, type AuthedRequest } from "../../../lib/auth-middleware";
 import * as salesService from "../services/salesService";
+import { logAudit } from "../../auditLog/auditLogService";
 
 const router = Router();
 
@@ -14,9 +16,13 @@ router.get("/", async (req: AuthedRequest, res) => {
   res.json(sales);
 });
 
-router.post("/", async (req: AuthedRequest, res) => {
+router.post("/", requirePermission(PERMISSIONS.SALES_CREATE), async (req: AuthedRequest, res) => {
   try {
     const sale = await salesService.createSale(req.user!.companyId, req.body, req.user!.id);
+    await logAudit({
+      companyId: req.user!.companyId, userId: req.user!.id, action: "create_sale",
+      entityType: "sale", entityId: sale.id, newValue: { total: sale.total, paymentMethod: sale.paymentMethod },
+    });
     res.status(201).json(sale);
   } catch (err) {
     if (err instanceof salesService.SaleValidationError) {

@@ -4,6 +4,8 @@ import { eq } from "drizzle-orm";
 import { db, usersTable, DEFAULT_ROLES, type Permission } from "@workspace/db";
 import { JWT_SECRET } from "./jwt-secret";
 import { getEffectiveState } from "../modules/subscriptions/services/planLimitsService";
+import { permissionResolver } from "../modules/rbac/services/permissionResolverService";
+import { ensureUserRoleAssigned } from "../modules/rbac/services/userRoleSyncService";
 
 export interface AuthedRequest extends Request {
   user?: { id: string; username: string; role: string; companyId: string };
@@ -83,10 +85,36 @@ export function requireRole(...roles: string[]) {
 // Checks a user's effective permissions live from the DB: a per-user `permissions`
 // override (set by an admin) if present, otherwise the role's default permission set.
 // Admins always pass — they're the ones granting permissions, not bound by them.
-export function requirePermission(permission: Permission) {
+//
+// Dot-namespaced codes (Phase 6, e.g. "products.create") are a distinct
+// branch: those resolve through the real roles/permissions/role_permissions/
+// user_roles tables (the same source the modular routers' requirePermission
+// uses) rather than the older flat users.role/users.permissions JSON — this
+// is the bridge that lets legacy-pipeline routes (req.user, not req.tenant)
+// enforce the new granular catalog without a full router migration. The
+// flat-code branch below is untouched for existing callers.
+export function requirePermission(permission: Permission | string) {
   return async (req: AuthedRequest, res: Response, next: NextFunction): Promise<void> => {
     if (!req.user) {
       res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    if (permission.includes(".")) {
+      if (req.user.role === "admin") {
+        next();
+        return;
+      }
+      try {
+        await ensureUserRoleAssigned(req.user.companyId, req.user.id, req.user.role);
+        const granted = await permissionResolver.resolve(req.user.companyId, req.user.id);
+        if (!granted.includes(permission)) {
+          res.status(403).json({ error: "Forbidden" });
+          return;
+        }
+        next();
+      } catch (err) {
+        next(err);
+      }
       return;
     }
     if (req.user.role === "admin") {

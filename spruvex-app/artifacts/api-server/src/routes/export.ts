@@ -5,13 +5,20 @@ import {
 } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import type { AuthedRequest } from "../lib/auth-middleware";
+import { logAudit } from "../modules/auditLog/auditLogService";
 
 const router = Router();
 
 // Every endpoint just returns a plain JSON array — pos-system's export page
 // turns that into an .xlsx file client-side (same `xlsx` package the import
 // flow uses to parse uploads), so the server never generates or streams a
-// binary file.
+// binary file. One audit entry per export call, entityType taken from the
+// matched route path (e.g. "/products" -> "products").
+router.use((req: AuthedRequest, _res, next) => {
+  logAudit({ companyId: req.user!.companyId, userId: req.user!.id, action: "export", entityType: req.path.replace(/^\//, "") || "unknown" });
+  next();
+});
+
 router.get("/products", async (req: AuthedRequest, res) => {
   const rows = await db.select({
     name: productsTable.name, nameEn: productsTable.nameEn, sku: productsTable.sku,

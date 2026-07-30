@@ -22,6 +22,7 @@ export * from "./purchases";
 export * from "./permissions";
 export * from "./rolePermissions";
 export * from "./userRoles";
+export * from "./auditLog";
 export * from "./stock";
 export * from "./stockMovements";
 export * from "./invoices";

@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { db, salesTable, repairsTable, productsTable, customersTable, expensesTable, saleItemsTable, productBatchesTable, settingsTable } from "@workspace/db";
+import { db, salesTable, repairsTable, productsTable, customersTable, expensesTable, saleItemsTable, productBatchesTable, settingsTable, PERMISSIONS } from "@workspace/db";
 import { eq, sql, and, gte, lte, desc, lt } from "drizzle-orm";
-import type { AuthedRequest } from "../lib/auth-middleware";
+import { requirePermission, type AuthedRequest } from "../lib/auth-middleware";
 
 const router = Router();
 
@@ -150,7 +150,7 @@ router.get("/dashboard", async (req: AuthedRequest, res) => {
   });
 });
 
-router.get("/sales-summary", async (req: AuthedRequest, res) => {
+router.get("/sales-summary", requirePermission(PERMISSIONS.REPORTS_VIEW), async (req: AuthedRequest, res) => {
   const { from, to } = req.query;
   if (!from || !to) {
     res.status(400).json({ error: "from and to are required" });
@@ -174,7 +174,7 @@ router.get("/sales-summary", async (req: AuthedRequest, res) => {
   res.json(rows);
 });
 
-router.get("/top-products", async (req: AuthedRequest, res) => {
+router.get("/top-products", requirePermission(PERMISSIONS.REPORTS_VIEW), async (req: AuthedRequest, res) => {
   const { limit = "10", from, to } = req.query;
   const conditions = [eq(salesTable.status, "completed"), eq(salesTable.companyId, req.user!.companyId)];
   if (from) conditions.push(gte(salesTable.createdAt, new Date(from as string)));
@@ -218,7 +218,7 @@ router.get("/repairs-summary", async (req: AuthedRequest, res) => {
   res.json({ total, byStatus, totalRevenue: revenueData.total, averageRepairTime: null });
 });
 
-router.get("/profit", async (req: AuthedRequest, res) => {
+router.get("/profit", requirePermission(PERMISSIONS.REPORTS_VIEW), async (req: AuthedRequest, res) => {
   const orgId = req.user!.companyId;
   const { from, to } = req.query;
   if (!from || !to) {

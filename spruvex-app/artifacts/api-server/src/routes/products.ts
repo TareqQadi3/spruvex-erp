@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { db, productsTable, categoriesTable, suppliersTable, productAddonGroupsTable, productAddonOptionsTable, productRelatedProductsTable, productUnitsTable, unitsTable, productBatchesTable } from "@workspace/db";
+import { db, productsTable, categoriesTable, suppliersTable, productAddonGroupsTable, productAddonOptionsTable, productRelatedProductsTable, productUnitsTable, unitsTable, productBatchesTable, PERMISSIONS } from "@workspace/db";
 import { eq, and, ilike, lte, or, sql, inArray } from "drizzle-orm";
-import type { AuthedRequest } from "../lib/auth-middleware";
+import { requirePermission, type AuthedRequest } from "../lib/auth-middleware";
 import { ValidationError, parseRequiredNumber, parseOptionalNumber, isUniqueViolation } from "../lib/validation";
+import { logAudit } from "../modules/auditLog/auditLogService";
 
 const router = Router();
 
@@ -73,7 +74,7 @@ router.get("/", async (req: AuthedRequest, res) => {
   res.json(products);
 });
 
-router.post("/", async (req: AuthedRequest, res) => {
+router.post("/", requirePermission(PERMISSIONS.PRODUCTS_CREATE), async (req: AuthedRequest, res) => {
   const { name, sku, barcode, description, costPrice, sellingPrice, stock, lowStockThreshold, categoryId, brand, imageUrl, warehouseId, sectionId, supplierId, includesTax, parentProductId, variantAttributes } = req.body;
   if (!name || !sku) {
     res.status(400).json({ error: "name and sku are required" });
@@ -97,6 +98,10 @@ router.post("/", async (req: AuthedRequest, res) => {
       ...(parentProductId !== undefined ? { parentProductId } : {}),
       ...(variantAttributes !== undefined ? { variantAttributes } : {}),
     }).returning();
+    await logAudit({
+      companyId: req.user!.companyId, userId: req.user!.id, action: "create_product",
+      entityType: "product", entityId: product.id, newValue: { name: product.name, sku: product.sku, sellingPrice: product.sellingPrice },
+    });
     res.status(201).json(product);
   } catch (err) {
     if (err instanceof ValidationError) {
@@ -183,10 +188,13 @@ router.get("/:id", async (req: AuthedRequest, res) => {
   res.json(product);
 });
 
-router.put("/:id", async (req: AuthedRequest, res) => {
+router.put("/:id", requirePermission(PERMISSIONS.PRODUCTS_UPDATE), async (req: AuthedRequest, res) => {
   const id = req.params.id as string;
   const { name, sku, barcode, description, costPrice, sellingPrice, stock, lowStockThreshold, categoryId, brand, imageUrl, warehouseId, sectionId, supplierId, includesTax } = req.body;
   try {
+    const [before] = await db.select({ costPrice: productsTable.costPrice, sellingPrice: productsTable.sellingPrice, stock: productsTable.stock })
+      .from(productsTable).where(and(eq(productsTable.id, id), eq(productsTable.companyId, req.user!.companyId)));
+
     const [updated] = await db.update(productsTable).set({
       name, sku, barcode: barcode || null, description,
       ...(costPrice !== undefined ? { costPrice: parseRequiredNumber(costPrice, "costPrice").toString() } : {}),
@@ -205,6 +213,14 @@ router.put("/:id", async (req: AuthedRequest, res) => {
       res.status(404).json({ error: "Not found" });
       return;
     }
+    const priceChanged = before && (before.costPrice !== updated.costPrice || before.sellingPrice !== updated.sellingPrice);
+    const stockChanged = before && before.stock !== updated.stock;
+    await logAudit({
+      companyId: req.user!.companyId, userId: req.user!.id,
+      action: priceChanged ? "edit_product_price" : stockChanged ? "edit_stock" : "update_product",
+      entityType: "product", entityId: id,
+      oldValue: before, newValue: { costPrice: updated.costPrice, sellingPrice: updated.sellingPrice, stock: updated.stock },
+    });
     res.json(updated);
   } catch (err) {
     if (err instanceof ValidationError) {
@@ -219,10 +235,11 @@ router.put("/:id", async (req: AuthedRequest, res) => {
   }
 });
 
-router.delete("/:id", async (req: AuthedRequest, res) => {
+router.delete("/:id", requirePermission(PERMISSIONS.PRODUCTS_DELETE), async (req: AuthedRequest, res) => {
   const id = req.params.id as string;
   await db.delete(productsTable)
     .where(and(eq(productsTable.id, id), eq(productsTable.companyId, req.user!.companyId)));
+  await logAudit({ companyId: req.user!.companyId, userId: req.user!.id, action: "delete_product", entityType: "product", entityId: id });
   res.status(204).send();
 });
 

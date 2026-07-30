@@ -27,7 +27,9 @@ import productAttributesRouter from "./productAttributes";
 import unitsRouter from "./units";
 import importRouter from "./import";
 import exportRouter from "./export";
-import { requireAuth, requireActiveSubscription } from "../lib/auth-middleware";
+import auditLogRouter from "./auditLog";
+import { requireAuth, requireActiveSubscription, requirePermission } from "../lib/auth-middleware";
+import { PERMISSIONS } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -72,5 +74,6 @@ router.use("/product-attributes", requireAuth, requireActiveSubscription, produc
 router.use("/units", requireAuth, requireActiveSubscription, unitsRouter);
 router.use("/import", requireAuth, requireActiveSubscription, importRouter);
 router.use("/export", requireAuth, requireActiveSubscription, exportRouter);
+router.use("/audit-log", requireAuth, requireActiveSubscription, requirePermission(PERMISSIONS.AUDIT_VIEW), auditLogRouter);
 
 export default router;

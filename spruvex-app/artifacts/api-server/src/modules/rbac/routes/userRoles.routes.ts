@@ -7,6 +7,7 @@ import { uuidParamSchema } from "../../../shared/validators/common.validators";
 import { assignUserRoleSchema } from "../validators/rbac.validators";
 import * as roleService from "../services/roleService";
 import { PERMISSIONS } from "@workspace/db";
+import { logAudit } from "../../auditLog/auditLogService";
 
 const router: IRouter = Router();
 
@@ -27,6 +28,10 @@ router.post("/users/:userId/roles", requirePermission(PERMISSIONS.MANAGE_SETTING
     const userId = uuidParamSchema.parse(req.params.userId);
     const input = assignUserRoleSchema.parse(req.body);
     const assignment = await roleService.assignUserRole(req.tenant!.companyId, userId, input, req.tenant!.userId);
+    await logAudit({
+      companyId: req.tenant!.companyId, userId: req.tenant!.userId, action: "assign_role",
+      entityType: "user", entityId: userId, newValue: { roleId: input.roleId, roleName: assignment.roleName },
+    });
     res.status(201).json(buildSuccess(assignment));
   } catch (err) {
     next(err);

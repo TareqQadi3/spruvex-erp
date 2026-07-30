@@ -1,7 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { db, usersTable, companiesTable, settingsTable, paymentMethodsTable } from "@workspace/db";
+import { db, usersTable, companiesTable, settingsTable, paymentMethodsTable, PERMISSIONS } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { JWT_SECRET } from "../lib/jwt-secret";
 import { requireAuth, requireRole, type AuthedRequest } from "../lib/auth-middleware";
@@ -17,6 +17,9 @@ import { requireAuth as requireAuthModular } from "../core/middleware/auth.middl
 import { requireWithinLimit } from "../core/middleware/subscription.middleware";
 import { countCurrentUsersForCompany } from "../modules/subscriptions/services/planLimitsService";
 import { rateLimitAuth } from "../core/middleware/rateLimit.middleware";
+import { logAudit } from "../modules/auditLog/auditLogService";
+import { syncUserRoleFromLegacy, ensureUserRoleAssigned } from "../modules/rbac/services/userRoleSyncService";
+import { permissionResolver } from "../modules/rbac/services/permissionResolverService";
 
 const router = Router();
 const JWT_EXPIRES = "7d";
@@ -59,6 +62,8 @@ router.post("/register", rateLimitAuth, async (req, res) => {
     isActive: true,
   }).returning();
 
+  await syncUserRoleFromLegacy(org.id, user.id, user.role);
+
   const payload = { id: user.id, username: user.username, role: user.role, companyId: org.id };
   // sub mirrors id so this token is also accepted by the modular routers'
   // auth middleware (core/middleware/auth.middleware.ts), which reads sub.
@@ -95,6 +100,8 @@ router.post("/login", rateLimitAuth, async (req, res) => {
   // auth middleware (core/middleware/auth.middleware.ts), which reads sub.
   const token = jwt.sign({ ...payload, sub: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
 
+  await logAudit({ companyId: user.companyId, userId: user.id, action: "login", entityType: "user", entityId: user.id });
+
   res.json({
     token,
     user: payload,
@@ -103,6 +110,16 @@ router.post("/login", rateLimitAuth, async (req, res) => {
 
 router.get("/me", requireAuth, (req: AuthedRequest, res) => {
   res.json({ user: req.user });
+});
+
+router.get("/me/permissions", requireAuth, async (req: AuthedRequest, res) => {
+  if (req.user!.role === "admin") {
+    res.json({ role: req.user!.role, permissions: Object.values(PERMISSIONS) });
+    return;
+  }
+  await ensureUserRoleAssigned(req.user!.companyId, req.user!.id, req.user!.role);
+  const permissions = await permissionResolver.resolve(req.user!.companyId, req.user!.id);
+  res.json({ role: req.user!.role, permissions });
 });
 
 router.get("/users", requireAuth, requireRole("admin"), async (req: AuthedRequest, res) => {
@@ -151,6 +168,11 @@ router.post(
     id: usersTable.id, username: usersTable.username, role: usersTable.role,
     permissions: usersTable.permissions, isActive: usersTable.isActive, createdAt: usersTable.createdAt,
   });
+  await syncUserRoleFromLegacy(req.user!.companyId, user.id, user.role);
+  await logAudit({
+    companyId: req.user!.companyId, userId: req.user!.id, action: "create_user",
+    entityType: "user", entityId: user.id, newValue: { username: user.username, role: user.role },
+  });
   res.status(201).json(user);
 },
 );
@@ -164,6 +186,9 @@ router.put("/users/:id", requireAuth, requireRole("admin"), async (req: AuthedRe
   if (isActive !== undefined) updates.isActive = isActive;
   if (password) updates.passwordHash = await bcrypt.hash(password, 10);
 
+  const [before] = await db.select({ role: usersTable.role, permissions: usersTable.permissions, isActive: usersTable.isActive })
+    .from(usersTable).where(and(eq(usersTable.id, id), eq(usersTable.companyId, req.user!.companyId)));
+
   const [updated] = await db.update(usersTable).set(updates)
     .where(and(eq(usersTable.id, id), eq(usersTable.companyId, req.user!.companyId)))
     .returning({
@@ -174,6 +199,15 @@ router.put("/users/:id", requireAuth, requireRole("admin"), async (req: AuthedRe
     res.status(404).json({ error: "Not found" });
     return;
   }
+  if (role !== undefined && role !== before?.role) {
+    await syncUserRoleFromLegacy(req.user!.companyId, id, updated.role);
+  }
+  await logAudit({
+    companyId: req.user!.companyId, userId: req.user!.id, action: "update_user_permissions",
+    entityType: "user", entityId: id,
+    oldValue: before ? { role: before.role, permissions: before.permissions, isActive: before.isActive } : undefined,
+    newValue: { role: updated.role, permissions: updated.permissions, isActive: updated.isActive },
+  });
   res.json(updated);
 });
 

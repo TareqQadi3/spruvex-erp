@@ -544,6 +544,8 @@
     "import_export_title": "Import / Export Data",
     "import_export_desc": "Import your products and customers from Excel, or export your data",
     "open_import_export": "Open Import/Export",
+    "rbac_title": "Roles & Audit Log",
+    "rbac_desc": "Manage roles and permissions, review the activity log",
     "receipt_footer_title": "Receipt Footer",
     "receipt_footer_desc": "Message printed at the bottom of sales receipts.",
     "receipt_footer_placeholder": "e.g. Thank you for your business! Warranty: 30 days on repairs.",
@@ -834,5 +836,30 @@
     "template_name_placeholder": "Template name (e.g. Phone Supplier)",
     "template_saved": "Template saved",
     "template_save_failed": "Failed to save template"
+  },
+  "auditLog": {
+    "title": "Audit Log",
+    "filters": "Filters",
+    "filters_desc": "Search by user, action type, or date",
+    "action": "Action",
+    "entity_type": "Entity Type",
+    "user_id": "User ID",
+    "from": "From",
+    "to": "To",
+    "apply": "Apply",
+    "time": "Time",
+    "user": "User",
+    "entity": "Entity",
+    "details": "Details",
+    "system": "System",
+    "total": "Total",
+    "no_results": "No results",
+    "load_failed": "Failed to load audit log"
+  },
+  "roles": {
+    "title": "Roles & Permissions",
+    "desc": "Default roles and what each one grants. Assign a role to a user from the Users page.",
+    "system": "System role",
+    "no_permissions": "No permissions"
   }
 }

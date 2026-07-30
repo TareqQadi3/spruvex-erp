@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
 import { formatCurrency } from "@/lib/format";
 import { TOKEN_KEY } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface InventoryAlerts {
   lowStock: Array<{ id: string; name: string; stock: number }>;
@@ -27,6 +28,7 @@ export default function InventoryPage() {
   const deleteProduct = useDeleteProduct();
   const queryClient = useQueryClient();
   const { t, lang } = useTranslation();
+  const { has: hasPermission } = usePermissions();
 
   const [alerts, setAlerts] = useState<InventoryAlerts | null>(null);
   useEffect(() => {
@@ -61,9 +63,11 @@ export default function InventoryPage() {
           <Link href="/inventory/movements">
             <Button variant="outline"><History className="me-2 h-4 w-4" /> {t("inventory.view_movements")}</Button>
           </Link>
-          <Link href="/inventory/new">
-            <Button><Plus className="me-2 h-4 w-4" /> {t("inventory.add_product")}</Button>
-          </Link>
+          {hasPermission("products.create") && (
+            <Link href="/inventory/new">
+              <Button><Plus className="me-2 h-4 w-4" /> {t("inventory.add_product")}</Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -143,9 +147,11 @@ export default function InventoryPage() {
                         <Button variant="ghost" size="icon" onClick={() => toast(t("inventory.edit_soon"))}>
                           <Edit className="h-4 w-4 text-muted-foreground" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        {hasPermission("products.delete") && (
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   );

@@ -148,6 +148,13 @@
       "when": 1785408510484,
       "tag": "0020_woozy_chimera",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1785432325011,
+      "tag": "0021_faulty_kree",
+      "breakpoints": true
     }
   ]
 }

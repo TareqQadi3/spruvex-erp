@@ -1,5 +1,5 @@
 import type { DbOrTx } from "../../../core/database/transaction";
-import { withCache } from "../../../core/cache/cacheService";
+import { withCache, invalidateCachePattern } from "../../../core/cache/cacheService";
 import { PermissionResolverRepository } from "../repositories/permissionResolverRepository";
 
 // Short TTL: long enough to meaningfully cut DB load on a busy POS terminal
@@ -31,3 +31,9 @@ export class PermissionResolver {
 }
 
 export const permissionResolver = new PermissionResolver();
+
+// A role/user_roles write must not wait out the 30s TTL before a changed
+// permission set takes effect on the next request from that user.
+export function invalidatePermissionCache(companyId: string, userId: string): Promise<void> {
+  return invalidateCachePattern(`perm:${companyId}:${userId}:*`);
+}

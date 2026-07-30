@@ -24,7 +24,7 @@ export async function ensureGlobalRbacSeeded(): Promise<void> {
 
       const [created] = await tx
         .insert(permissionsTable)
-        .values({ code, module: code.split("_")[0] ?? "general", companyId: null })
+        .values({ code, module: code.includes(".") ? code.split(".")[0] : (code.split("_")[0] ?? "general"), companyId: null })
         .returning();
       permissionCodeToId.set(code, created.id);
     }

@@ -415,6 +415,27 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+        {/* Roles & Audit Log */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <CardTitle className="text-base">{t("settings.rbac_title")}</CardTitle>
+                <CardDescription className="text-xs mt-0.5">{t("settings.rbac_desc")}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            <Link href="/settings/roles">
+              <Button type="button" variant="outline" size="sm">{t("roles.title")}</Button>
+            </Link>
+            <Link href="/settings/audit-log">
+              <Button type="button" variant="outline" size="sm">{t("auditLog.title")}</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
         {/* Modules */}
         <Card>
           <CardHeader>

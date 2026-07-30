@@ -4,6 +4,7 @@ import { eq, and, desc } from "drizzle-orm";
 import type { AuthedRequest } from "../lib/auth-middleware";
 import { IMPORT_ENTITY_CONFIGS, suggestMapping } from "../modules/importExport/entityConfigs";
 import { validateRows, executeImport, type DuplicateStrategy } from "../modules/importExport/importService";
+import { logAudit } from "../modules/auditLog/auditLogService";
 
 const router = Router();
 
@@ -58,6 +59,10 @@ router.post("/execute", async (req: AuthedRequest, res) => {
   const strategy: DuplicateStrategy = ["skip", "update", "create_new"].includes(duplicateStrategy) ? duplicateStrategy : "skip";
   try {
     const result = await executeImport(req.user!.companyId, req.user!.id, entityType, fileName, mapping, rows, strategy);
+    await logAudit({
+      companyId: req.user!.companyId, userId: req.user!.id, action: "import",
+      entityType, metadata: { fileName, created: result.created, updated: result.updated, skipped: result.skipped, failed: result.failed.length },
+    });
     res.status(201).json(result);
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : "Import failed" });
