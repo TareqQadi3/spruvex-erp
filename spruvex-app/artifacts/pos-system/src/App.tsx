@@ -50,7 +50,23 @@ function PageLoadingSpinner() {
   );
 }
 
-const queryClient = new QueryClient();
+// staleTime > 0 so cached data is served without a network round-trip for a
+// short window — the default (staleTime: 0) means every single render of
+// every component that calls the same query hook can trigger its own
+// "refetch on mount" check, which is normally harmless (react-query dedupes
+// concurrent identical requests) but turns pathological under a render storm
+// (several components sharing one query key, each mounting/unmounting
+// rapidly) into a real request flood that trips rate limiting. Read data
+// this stale-tolerant is fine for settings/catalog data that changes rarely;
+// mutations still invalidate immediately.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function AccessDenied() {
   return (
@@ -132,27 +148,27 @@ function AuthenticatedApp() {
     <AppLayout>
       <Suspense fallback={<PageLoadingSpinner />}>
       <Switch>
-        <Route path="/" component={() => <GuardedPage component={Dashboard} basePath="/" />} />
-        <Route path="/pos" component={() => <GuardedPage component={PosPage} basePath="/pos" />} />
-        <Route path="/sales" component={() => <GuardedPage component={SalesPage} basePath="/sales" />} />
-        <Route path="/repairs/new" component={() => <GuardedPage component={NewRepairPage} basePath="/repairs" />} />
-        <Route path="/repairs/:id" component={() => <GuardedPage component={RepairDetailPage} basePath="/repairs" />} />
-        <Route path="/repairs" component={() => <GuardedPage component={RepairsPage} basePath="/repairs" />} />
-        <Route path="/inventory/new" component={() => <GuardedPage component={NewProductPage} basePath="/inventory" />} />
-        <Route path="/inventory/movements" component={() => <GuardedPage component={StockMovementsPage} basePath="/inventory" />} />
-        <Route path="/inventory" component={() => <GuardedPage component={InventoryPage} basePath="/inventory" />} />
-        <Route path="/customers/:id" component={() => <GuardedPage component={CustomerDetailPage} basePath="/customers" />} />
-        <Route path="/customers" component={() => <GuardedPage component={CustomersPage} basePath="/customers" />} />
-        <Route path="/suppliers" component={() => <GuardedPage component={SuppliersPage} basePath="/suppliers" />} />
-        <Route path="/purchases" component={() => <GuardedPage component={PurchasesPage} basePath="/purchases" />} />
-        <Route path="/vouchers" component={() => <GuardedPage component={VouchersPage} basePath="/vouchers" />} />
-        <Route path="/accounting" component={() => <GuardedPage component={AccountingPage} basePath="/accounting" />} />
-        <Route path="/reports" component={() => <GuardedPage component={ReportsPage} basePath="/reports" />} />
-        <Route path="/settings/users" component={() => <GuardedPage component={UsersSettingsPage} basePath="/settings" adminOnly />} />
-        <Route path="/settings/payment-methods" component={() => <GuardedPage component={PaymentMethodsSettingsPage} basePath="/settings" />} />
-        <Route path="/settings/warehouses" component={() => <GuardedPage component={WarehousesSettingsPage} basePath="/settings" />} />
-        <Route path="/settings/installment-plans" component={() => <GuardedPage component={InstallmentPlansSettingsPage} basePath="/settings" />} />
-        <Route path="/settings" component={() => <GuardedPage component={SettingsPage} basePath="/settings" />} />
+        <Route path="/"><GuardedPage component={Dashboard} basePath="/" /></Route>
+        <Route path="/pos"><GuardedPage component={PosPage} basePath="/pos" /></Route>
+        <Route path="/sales"><GuardedPage component={SalesPage} basePath="/sales" /></Route>
+        <Route path="/repairs/new"><GuardedPage component={NewRepairPage} basePath="/repairs" /></Route>
+        <Route path="/repairs/:id"><GuardedPage component={RepairDetailPage} basePath="/repairs" /></Route>
+        <Route path="/repairs"><GuardedPage component={RepairsPage} basePath="/repairs" /></Route>
+        <Route path="/inventory/new"><GuardedPage component={NewProductPage} basePath="/inventory" /></Route>
+        <Route path="/inventory/movements"><GuardedPage component={StockMovementsPage} basePath="/inventory" /></Route>
+        <Route path="/inventory"><GuardedPage component={InventoryPage} basePath="/inventory" /></Route>
+        <Route path="/customers/:id"><GuardedPage component={CustomerDetailPage} basePath="/customers" /></Route>
+        <Route path="/customers"><GuardedPage component={CustomersPage} basePath="/customers" /></Route>
+        <Route path="/suppliers"><GuardedPage component={SuppliersPage} basePath="/suppliers" /></Route>
+        <Route path="/purchases"><GuardedPage component={PurchasesPage} basePath="/purchases" /></Route>
+        <Route path="/vouchers"><GuardedPage component={VouchersPage} basePath="/vouchers" /></Route>
+        <Route path="/accounting"><GuardedPage component={AccountingPage} basePath="/accounting" /></Route>
+        <Route path="/reports"><GuardedPage component={ReportsPage} basePath="/reports" /></Route>
+        <Route path="/settings/users"><GuardedPage component={UsersSettingsPage} basePath="/settings" adminOnly /></Route>
+        <Route path="/settings/payment-methods"><GuardedPage component={PaymentMethodsSettingsPage} basePath="/settings" /></Route>
+        <Route path="/settings/warehouses"><GuardedPage component={WarehousesSettingsPage} basePath="/settings" /></Route>
+        <Route path="/settings/installment-plans"><GuardedPage component={InstallmentPlansSettingsPage} basePath="/settings" /></Route>
+        <Route path="/settings"><GuardedPage component={SettingsPage} basePath="/settings" /></Route>
         <Route component={NotFound} />
       </Switch>
       </Suspense>
