@@ -43,4 +43,5 @@ export interface Settings {
   fiscalYearEnd?: string | null;
   setupCompleted?: boolean;
   posTemplate?: SettingsPosTemplate;
+  expiryAlertDays?: number;
 }

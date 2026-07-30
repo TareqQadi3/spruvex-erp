@@ -1140,7 +1140,8 @@ export const GetSettingsResponse = zod.object({
   "fiscalYearStart": zod.string().nullish(),
   "fiscalYearEnd": zod.string().nullish(),
   "setupCompleted": zod.boolean().optional(),
-  "posTemplate": zod.enum(['list', 'grid', 'image', 'mobile']).optional()
+  "posTemplate": zod.enum(['list', 'grid', 'image', 'mobile']).optional(),
+  "expiryAlertDays": zod.number().optional()
 })
 
 
@@ -1170,7 +1171,8 @@ export const UpdateSettingsBody = zod.object({
   "fiscalYearStart": zod.string().nullish(),
   "fiscalYearEnd": zod.string().nullish(),
   "setupCompleted": zod.boolean().optional(),
-  "posTemplate": zod.enum(['list', 'grid', 'image', 'mobile']).optional()
+  "posTemplate": zod.enum(['list', 'grid', 'image', 'mobile']).optional(),
+  "expiryAlertDays": zod.number().optional()
 })
 
 export const UpdateSettingsResponse = zod.object({
@@ -1196,7 +1198,8 @@ export const UpdateSettingsResponse = zod.object({
   "fiscalYearStart": zod.string().nullish(),
   "fiscalYearEnd": zod.string().nullish(),
   "setupCompleted": zod.boolean().optional(),
-  "posTemplate": zod.enum(['list', 'grid', 'image', 'mobile']).optional()
+  "posTemplate": zod.enum(['list', 'grid', 'image', 'mobile']).optional(),
+  "expiryAlertDays": zod.number().optional()
 })
 
 

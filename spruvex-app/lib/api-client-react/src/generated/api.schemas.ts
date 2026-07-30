@@ -743,6 +743,7 @@ export interface Settings {
   fiscalYearEnd?: string | null;
   setupCompleted?: boolean;
   posTemplate?: SettingsPosTemplate;
+  expiryAlertDays?: number;
 }
 
 export type SettingsInputLanguage = typeof SettingsInputLanguage[keyof typeof SettingsInputLanguage];
@@ -805,6 +806,7 @@ export interface SettingsInput {
   fiscalYearEnd?: string | null;
   setupCompleted?: boolean;
   posTemplate?: SettingsInputPosTemplate;
+  expiryAlertDays?: number;
 }
 
 export type GetProductsParams = {

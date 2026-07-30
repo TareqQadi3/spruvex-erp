@@ -1931,6 +1931,8 @@ components:
         posTemplate:
           type: string
           enum: [list, grid, image, mobile]
+        expiryAlertDays:
+          type: integer
 
     SettingsInput:
       type: object
@@ -1991,3 +1993,5 @@ components:
         posTemplate:
           type: string
           enum: [list, grid, image, mobile]
+        expiryAlertDays:
+          type: integer

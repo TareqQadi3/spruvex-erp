@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Save, Store, Receipt, Bell, Globe, Image, Printer, Shield } from "lucide-react";
+import { Save, Store, Receipt, Bell, Globe, Image, Printer, Shield, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "@/i18n";
@@ -46,6 +46,7 @@ export default function SettingsPage() {
         currency: settings.currency ?? "SAR",
         taxRate: settings.taxRate ?? 15,
         lowStockThreshold: settings.lowStockThreshold ?? 5,
+        expiryAlertDays: (settings as any).expiryAlertDays ?? 7,
         receiptFooter: settings.receiptFooter ?? "",
         language: settings.language ?? "en",
         logoUrl: settings.logoUrl ?? "",
@@ -87,6 +88,7 @@ export default function SettingsPage() {
         currency: data.currency,
         taxRate: Number(data.taxRate),
         lowStockThreshold: Number(data.lowStockThreshold),
+        expiryAlertDays: Number(data.expiryAlertDays),
         receiptFooter: data.receiptFooter || null,
         language: data.language,
         logoUrl: data.logoUrl || null,
@@ -387,6 +389,29 @@ export default function SettingsPage() {
               <Input type="number" min="0" {...register("lowStockThreshold")} placeholder="5" />
               <p className="text-xs text-muted-foreground">{t("settings.low_stock_help")}</p>
             </div>
+            <div className="space-y-1.5">
+              <Label>{t("settings.expiry_alert_days")}</Label>
+              <Input type="number" min="0" {...register("expiryAlertDays")} placeholder="7" />
+              <p className="text-xs text-muted-foreground">{t("settings.expiry_alert_days_help")}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Import / Export */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <CardTitle className="text-base">{t("settings.import_export_title")}</CardTitle>
+                <CardDescription className="text-xs mt-0.5">{t("settings.import_export_desc")}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Link href="/settings/import-export">
+              <Button type="button" variant="outline" size="sm">{t("settings.open_import_export")}</Button>
+            </Link>
           </CardContent>
         </Card>
 

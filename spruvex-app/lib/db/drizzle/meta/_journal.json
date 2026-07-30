@@ -141,6 +141,13 @@
       "when": 1785406222138,
       "tag": "0019_chemical_millenium_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1785408510484,
+      "tag": "0020_woozy_chimera",
+      "breakpoints": true
     }
   ]
 }

@@ -29,6 +29,7 @@ const InventoryPage = lazy(() => import("@/pages/inventory"));
 const NewProductPage = lazy(() => import("@/pages/inventory/new"));
 const CategoriesPage = lazy(() => import("@/pages/inventory/categories"));
 const ManageProductPage = lazy(() => import("@/pages/inventory/manage"));
+const ImportExportPage = lazy(() => import("@/pages/settings/import-export"));
 const StockMovementsPage = lazy(() => import("@/pages/inventory/movements"));
 const CustomersPage = lazy(() => import("@/pages/customers"));
 const CustomerDetailPage = lazy(() => import("@/pages/customers/detail"));
@@ -172,6 +173,7 @@ function AuthenticatedApp() {
         <Route path="/settings/payment-methods"><GuardedPage component={PaymentMethodsSettingsPage} basePath="/settings" /></Route>
         <Route path="/settings/warehouses"><GuardedPage component={WarehousesSettingsPage} basePath="/settings" /></Route>
         <Route path="/settings/installment-plans"><GuardedPage component={InstallmentPlansSettingsPage} basePath="/settings" /></Route>
+        <Route path="/settings/import-export"><GuardedPage component={ImportExportPage} basePath="/settings" /></Route>
         <Route path="/settings"><GuardedPage component={SettingsPage} basePath="/settings" /></Route>
         <Route component={NotFound} />
       </Switch>
