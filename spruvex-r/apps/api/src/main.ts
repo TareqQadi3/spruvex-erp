@@ -35,7 +35,10 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   const port = Number(process.env.PORT ?? 3000);
-  await app.listen(port);
+  // Bind explicitly to all interfaces — some hosts (Fly.io) route requests
+  // to the container's external address, which Node's default bind
+  // (localhost-only on some platforms) never accepts connections on.
+  await app.listen(port, "0.0.0.0");
 }
 
 void bootstrap();
