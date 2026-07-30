@@ -73,8 +73,6 @@ function GuardedPage({ component: Component, basePath, adminOnly }: { component:
 function AppRouter() {
   const { user, isLoading } = useAuth();
   const [location] = useLocation();
-  const [wizardDismissed, setWizardDismissed] = useState(false);
-  const { data: settings } = useGetSettings({ query: { enabled: !!user } as any });
 
   if (isLoading) {
     return (
@@ -112,6 +110,19 @@ function AppRouter() {
   }
 
   if (!user) return <Redirect to="/login" />;
+
+  return <AuthenticatedApp />;
+}
+
+// Isolated from AppRouter on purpose: AppRouter re-renders on every route
+// change (useLocation), and this component's own useGetSettings call/state
+// don't need to. Hoisting the settings fetch + wizard-gate state into
+// AppRouter caused a request burst on every navigation in testing — mounting
+// it once here, below the route switch, keeps the settings query's
+// lifecycle tied to "authenticated session", not "current URL".
+function AuthenticatedApp() {
+  const [wizardDismissed, setWizardDismissed] = useState(false);
+  const { data: settings } = useGetSettings();
 
   if (settings && settings.setupCompleted === false && !wizardDismissed) {
     return <SetupWizardOverlay initialBusinessType={null} onFinished={() => setWizardDismissed(true)} />;
