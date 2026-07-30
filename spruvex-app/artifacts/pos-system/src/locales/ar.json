@@ -736,5 +736,28 @@
     "done_desc": "يمكنك البدء بالبيع مباشرة.",
     "seed_failed": "تعذر إضافة البيانات الجاهزة، لكن متجرك جاهز للعمل.",
     "go_to_dashboard": "الذهاب للوحة التحكم"
+  },
+  "variants": {
+    "page_desc": "إدارة المتغيرات والمنتجات المرتبطة",
+    "manage_button": "المتغيرات والمنتجات المرتبطة",
+    "tab_variants": "المتغيرات (Variants)",
+    "tab_related": "منتجات مرتبطة",
+    "existing_variants": "المتغيرات الحالية",
+    "attributes": "الخصائص (Attributes)",
+    "new_attribute_placeholder": "خاصية جديدة، مثال: اللون",
+    "add_attribute": "إضافة خاصية",
+    "new_value_placeholder": "قيمة جديدة",
+    "generate": "توليد المتغيرات",
+    "review_before_save": "راجع قبل الحفظ",
+    "save_all": "حفظ كل المتغيرات",
+    "created_success": "تم إنشاء المتغيرات بنجاح",
+    "created_failed": "فشل إنشاء بعض المتغيرات",
+    "attribute_create_failed": "فشل إنشاء الخاصية",
+    "value_create_failed": "فشل إضافة القيمة",
+    "search_products": "ابحث عن منتج لربطه",
+    "no_related": "لا توجد منتجات مرتبطة بعد",
+    "related_added": "تم ربط المنتج",
+    "related_add_failed": "فشل ربط المنتج",
+    "related_remove_failed": "فشل إلغاء الربط"
   }
 }

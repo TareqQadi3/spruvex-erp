@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, productsTable, categoriesTable, suppliersTable, productAddonGroupsTable, productAddonOptionsTable } from "@workspace/db";
+import { db, productsTable, categoriesTable, suppliersTable, productAddonGroupsTable, productAddonOptionsTable, productRelatedProductsTable } from "@workspace/db";
 import { eq, and, ilike, lte, or, sql, inArray } from "drizzle-orm";
 import type { AuthedRequest } from "../lib/auth-middleware";
 import { ValidationError, parseRequiredNumber, parseOptionalNumber, isUniqueViolation } from "../lib/validation";
@@ -28,6 +28,8 @@ const PRODUCT_SELECT = {
   displayMode: productsTable.displayMode,
   hasAddons: productsTable.hasAddons,
   hasRelatedProducts: productsTable.hasRelatedProducts,
+  parentProductId: productsTable.parentProductId,
+  variantAttributes: productsTable.variantAttributes,
   createdAt: productsTable.createdAt,
 };
 
@@ -72,7 +74,7 @@ router.get("/", async (req: AuthedRequest, res) => {
 });
 
 router.post("/", async (req: AuthedRequest, res) => {
-  const { name, sku, barcode, description, costPrice, sellingPrice, stock, lowStockThreshold, categoryId, brand, imageUrl, warehouseId, sectionId, supplierId, includesTax } = req.body;
+  const { name, sku, barcode, description, costPrice, sellingPrice, stock, lowStockThreshold, categoryId, brand, imageUrl, warehouseId, sectionId, supplierId, includesTax, parentProductId, variantAttributes } = req.body;
   if (!name || !sku) {
     res.status(400).json({ error: "name and sku are required" });
     return;
@@ -92,6 +94,8 @@ router.post("/", async (req: AuthedRequest, res) => {
       sectionId,
       supplierId,
       includesTax: includesTax ?? false,
+      ...(parentProductId !== undefined ? { parentProductId } : {}),
+      ...(variantAttributes !== undefined ? { variantAttributes } : {}),
     }).returning();
     res.status(201).json(product);
   } catch (err) {
@@ -219,6 +223,78 @@ router.delete("/:id", async (req: AuthedRequest, res) => {
   const id = req.params.id as string;
   await db.delete(productsTable)
     .where(and(eq(productsTable.id, id), eq(productsTable.companyId, req.user!.companyId)));
+  res.status(204).send();
+});
+
+// Variant rows are just ordinary products.ts rows with parentProductId set —
+// each has its own sku/barcode/price/stock (columns already on this table),
+// so nothing about sales, purchases, or the POS needs to change to support
+// them. This endpoint lists a parent product's variants for the "Manage
+// Variants" page.
+router.get("/:id/variants", async (req: AuthedRequest, res) => {
+  const parentId = req.params.id as string;
+  const variants = await db
+    .select(PRODUCT_SELECT)
+    .from(productsTable)
+    .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+    .leftJoin(suppliersTable, eq(productsTable.supplierId, suppliersTable.id))
+    .where(and(eq(productsTable.parentProductId, parentId), eq(productsTable.companyId, req.user!.companyId)))
+    .orderBy(productsTable.name);
+  res.json(variants);
+});
+
+// Related products — independently-stocked cross-sell links (e.g. iPhone ->
+// case, screen protector), distinct from add-ons: each is its own sale_item
+// with its own SKU/stock/price, not a priced modifier on the parent line.
+router.get("/:id/related", async (req: AuthedRequest, res) => {
+  const productId = req.params.id as string;
+  const links = await db.select().from(productRelatedProductsTable)
+    .where(and(eq(productRelatedProductsTable.companyId, req.user!.companyId), eq(productRelatedProductsTable.productId, productId)))
+    .orderBy(productRelatedProductsTable.sortOrder);
+  if (links.length === 0) {
+    res.json([]);
+    return;
+  }
+  const related = await db.select(PRODUCT_SELECT).from(productsTable)
+    .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+    .leftJoin(suppliersTable, eq(productsTable.supplierId, suppliersTable.id))
+    .where(inArray(productsTable.id, links.map(l => l.relatedProductId)));
+  res.json(related);
+});
+
+router.post("/:id/related", async (req: AuthedRequest, res) => {
+  const productId = req.params.id as string;
+  const { relatedProductId } = req.body;
+  if (!relatedProductId) {
+    res.status(400).json({ error: "relatedProductId is required" });
+    return;
+  }
+  if (relatedProductId === productId) {
+    res.status(400).json({ error: "A product cannot be related to itself" });
+    return;
+  }
+  try {
+    await db.insert(productRelatedProductsTable)
+      .values({ companyId: req.user!.companyId, productId, relatedProductId });
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      res.status(409).json({ error: "Already linked" });
+      return;
+    }
+    throw err;
+  }
+  await db.update(productsTable).set({ hasRelatedProducts: true })
+    .where(and(eq(productsTable.id, productId), eq(productsTable.companyId, req.user!.companyId)));
+  res.status(201).json({ linked: true });
+});
+
+router.delete("/:id/related/:relatedProductId", async (req: AuthedRequest, res) => {
+  const { id, relatedProductId } = req.params;
+  await db.delete(productRelatedProductsTable).where(and(
+    eq(productRelatedProductsTable.companyId, req.user!.companyId),
+    eq(productRelatedProductsTable.productId, id as string),
+    eq(productRelatedProductsTable.relatedProductId, relatedProductId as string),
+  ));
   res.status(204).send();
 });
 

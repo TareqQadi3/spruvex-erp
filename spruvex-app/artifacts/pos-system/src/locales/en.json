@@ -736,5 +736,28 @@
     "done_desc": "You can start selling right away.",
     "seed_failed": "Could not add the starter catalog, but your store is ready to use.",
     "go_to_dashboard": "Go to dashboard"
+  },
+  "variants": {
+    "page_desc": "Manage variants and related products",
+    "manage_button": "Variants & Related Products",
+    "tab_variants": "Variants",
+    "tab_related": "Related Products",
+    "existing_variants": "Existing Variants",
+    "attributes": "Attributes",
+    "new_attribute_placeholder": "New attribute, e.g. Color",
+    "add_attribute": "Add Attribute",
+    "new_value_placeholder": "New value",
+    "generate": "Generate Variants",
+    "review_before_save": "Review before saving",
+    "save_all": "Save All Variants",
+    "created_success": "Variants created successfully",
+    "created_failed": "Failed to create some variants",
+    "attribute_create_failed": "Failed to create attribute",
+    "value_create_failed": "Failed to add value",
+    "search_products": "Search for a product to link",
+    "no_related": "No related products yet",
+    "related_added": "Product linked",
+    "related_add_failed": "Failed to link product",
+    "related_remove_failed": "Failed to unlink product"
   }
 }

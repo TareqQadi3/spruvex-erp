@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, Edit, History, FolderTree } from "lucide-react";
+import { Plus, Search, Trash2, Edit, History, FolderTree, Layers } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -99,6 +99,11 @@ export default function InventoryPage() {
                         <Badge variant={isLowStock ? "destructive" : "secondary"}>{product.stock}</Badge>
                       </TableCell>
                       <TableCell className="text-end space-x-2">
+                        <Link href={`/inventory/${product.id}/manage`}>
+                          <Button variant="ghost" size="icon" title={t("variants.manage_button")}>
+                            <Layers className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </Link>
                         <Button variant="ghost" size="icon" onClick={() => toast(t("inventory.edit_soon"))}>
                           <Edit className="h-4 w-4 text-muted-foreground" />
                         </Button>
