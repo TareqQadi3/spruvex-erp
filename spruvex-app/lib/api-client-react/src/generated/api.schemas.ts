@@ -13,14 +13,39 @@ export interface Category {
   id: number;
   name: string;
   /** @nullable */
+  nameEn?: string | null;
+  /** @nullable */
+  code?: string | null;
+  /** @nullable */
   description?: string | null;
+  /** @nullable */
+  parentId?: number | null;
+  /** @nullable */
+  imageUrl?: string | null;
+  status?: string;
+  /** @nullable */
+  displayMode?: string | null;
   createdAt: string;
 }
+
+export type CategoryInputDisplayMode = typeof CategoryInputDisplayMode[keyof typeof CategoryInputDisplayMode];
+
+
+export const CategoryInputDisplayMode = {
+  list: 'list',
+  grid: 'grid',
+  image: 'image',
+  mobile: 'mobile',
+} as const;
 
 export interface CategoryInput {
   /** @minLength 1 */
   name: string;
+  nameEn?: string;
   description?: string;
+  parentId?: number | null;
+  imageUrl?: string;
+  displayMode?: CategoryInputDisplayMode;
 }
 
 export interface Brand {

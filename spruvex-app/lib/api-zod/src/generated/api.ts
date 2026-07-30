@@ -22,7 +22,13 @@ export const HealthCheckResponse = zod.object({
 export const GetCategoriesResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "nameEn": zod.string().nullish(),
+  "code": zod.string().nullish(),
   "description": zod.string().nullish(),
+  "parentId": zod.number().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "displayMode": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const GetCategoriesResponse = zod.array(GetCategoriesResponseItem)
@@ -36,7 +42,11 @@ export const GetCategoriesResponse = zod.array(GetCategoriesResponseItem)
 
 export const CreateCategoryBody = zod.object({
   "name": zod.string().min(1),
-  "description": zod.string().optional()
+  "nameEn": zod.string().optional(),
+  "description": zod.string().optional(),
+  "parentId": zod.number().nullish(),
+  "imageUrl": zod.string().optional(),
+  "displayMode": zod.enum(['list', 'grid', 'image', 'mobile']).optional()
 })
 
 
@@ -52,13 +62,23 @@ export const UpdateCategoryParams = zod.object({
 
 export const UpdateCategoryBody = zod.object({
   "name": zod.string().min(1),
-  "description": zod.string().optional()
+  "nameEn": zod.string().optional(),
+  "description": zod.string().optional(),
+  "parentId": zod.number().nullish(),
+  "imageUrl": zod.string().optional(),
+  "displayMode": zod.enum(['list', 'grid', 'image', 'mobile']).optional()
 })
 
 export const UpdateCategoryResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "nameEn": zod.string().nullish(),
+  "code": zod.string().nullish(),
   "description": zod.string().nullish(),
+  "parentId": zod.number().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "displayMode": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 

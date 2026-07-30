@@ -1049,7 +1049,19 @@ components:
           type: integer
         name:
           type: string
+        nameEn:
+          type: ["string", "null"]
+        code:
+          type: ["string", "null"]
         description:
+          type: ["string", "null"]
+        parentId:
+          type: ["integer", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+        displayMode:
           type: ["string", "null"]
         createdAt:
           type: string
@@ -1062,8 +1074,18 @@ components:
         name:
           type: string
           minLength: 1
+        nameEn:
+          type: string
         description:
           type: string
+        parentId:
+          type: integer
+          nullable: true
+        imageUrl:
+          type: string
+        displayMode:
+          type: string
+          enum: [list, grid, image, mobile]
 
     Brand:
       type: object

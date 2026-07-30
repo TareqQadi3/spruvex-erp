@@ -20,6 +20,7 @@ export * from './cashSessionInput';
 export * from './cashSessionStatus';
 export * from './category';
 export * from './categoryInput';
+export * from './categoryInputDisplayMode';
 export * from './customer';
 export * from './customerDetail';
 export * from './customerInput';

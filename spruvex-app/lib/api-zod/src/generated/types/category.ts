@@ -10,6 +10,17 @@ export interface Category {
   id: number;
   name: string;
   /** @nullable */
+  nameEn?: string | null;
+  /** @nullable */
+  code?: string | null;
+  /** @nullable */
   description?: string | null;
+  /** @nullable */
+  parentId?: number | null;
+  /** @nullable */
+  imageUrl?: string | null;
+  status?: string;
+  /** @nullable */
+  displayMode?: string | null;
   createdAt: Date;
 }

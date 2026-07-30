@@ -13,27 +13,29 @@ router.get("/", async (req: AuthedRequest, res) => {
 });
 
 router.post("/", async (req: AuthedRequest, res) => {
-  const { name, description, parentId, imageUrl } = req.body;
+  const { name, nameEn, description, parentId, imageUrl, displayMode } = req.body;
   if (!name) {
     res.status(400).json({ error: "name is required" });
     return;
   }
   const [category] = await db.insert(categoriesTable)
-    .values({ companyId: req.user!.companyId, name, description, parentId: parentId ?? null, imageUrl }).returning();
+    .values({ companyId: req.user!.companyId, name, nameEn, description, parentId: parentId ?? null, imageUrl, displayMode }).returning();
   res.status(201).json(category);
 });
 
 router.put("/:id", async (req: AuthedRequest, res) => {
   const id = req.params.id as string;
-  const { name, description, parentId, imageUrl } = req.body;
+  const { name, nameEn, description, parentId, imageUrl, displayMode } = req.body;
   if (parentId === id) {
     res.status(400).json({ error: "A category cannot be its own parent" });
     return;
   }
   const [category] = await db.update(categoriesTable).set({
     name, description,
+    ...(nameEn !== undefined ? { nameEn } : {}),
     ...(parentId !== undefined ? { parentId } : {}),
     ...(imageUrl !== undefined ? { imageUrl } : {}),
+    ...(displayMode !== undefined ? { displayMode } : {}),
   })
     .where(and(eq(categoriesTable.id, id), eq(categoriesTable.companyId, req.user!.companyId)))
     .returning();

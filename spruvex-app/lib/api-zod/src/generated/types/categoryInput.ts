@@ -5,9 +5,14 @@
  * POS & Repair Management System API
  * OpenAPI spec version: 0.1.0
  */
+import type { CategoryInputDisplayMode } from './categoryInputDisplayMode';
 
 export interface CategoryInput {
   /** @minLength 1 */
   name: string;
+  nameEn?: string;
   description?: string;
+  parentId?: number | null;
+  imageUrl?: string;
+  displayMode?: CategoryInputDisplayMode;
 }
