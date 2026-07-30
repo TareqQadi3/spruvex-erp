@@ -281,11 +281,17 @@ router.get("/profit", requirePermission(PERMISSIONS.REPORTS_VIEW), async (req: A
     eq(repairsTable.companyId, orgId),
   ));
 
-  const revenue = salesData.revenue;
-  const costOfGoods = costData[0]?.cost ?? 0;
+  // pg returns numeric/sum() aggregates as strings, not JS numbers, despite
+  // the `sql<number>` type annotations above (compile-time only, not a
+  // runtime cast) — Number(...) here is load-bearing, not decorative.
+  // Without it, `grossProfit + repairRevenue` silently does string
+  // concatenation ("3150" + "0.00" -> "31500.00") whenever grossProfit
+  // isn't already a real number, producing a wildly wrong netProfit.
+  const revenue = Number(salesData.revenue);
+  const costOfGoods = Number(costData[0]?.cost ?? 0);
   const grossProfit = revenue - costOfGoods;
-  const expenses = expenseData[0]?.total ?? 0;
-  const repairRevenue = repairData[0]?.total ?? 0;
+  const expenses = Number(expenseData[0]?.total ?? 0);
+  const repairRevenue = Number(repairData[0]?.total ?? 0);
   const netProfit = grossProfit + repairRevenue - expenses;
 
   res.json({ revenue, costOfGoods, grossProfit, expenses, repairRevenue, netProfit });

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useGetProducts } from "@workspace/api-client-react";
+import { useGetProducts, useGetSettings } from "@workspace/api-client-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -39,6 +39,8 @@ export default function PurchasesPage() {
     queryFn: () => api("/purchases"),
   });
   const { data: products } = useGetProducts();
+  const { data: settings } = useGetSettings();
+  const printType = settings?.invoiceType ?? "a4";
 
   const productName = (productId: string) =>
     products?.find(p => String(p.id) === String(productId))?.name ?? productId;
@@ -50,7 +52,7 @@ export default function PurchasesPage() {
     setPrintingPurchaseId(purchase.id);
     try {
       const doc = await api<{ id: string }>(`/purchase-invoices/from-purchase/${purchase.id}`, { method: "POST" });
-      await openServerPrint(`/invoicing/print/purchases/${doc.id}?printType=a4`);
+      await openServerPrint(`/invoicing/print/purchases/${doc.id}?printType=${printType}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("common.error"));
     } finally {
@@ -150,6 +152,8 @@ function PurchaseReturnDialog({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { data: settings } = useGetSettings();
+  const printType = settings?.invoiceType ?? "a4";
   const available = purchase.quantity - (purchase.returnedQuantity ?? 0);
   const [quantity, setQuantity] = useState("");
   const [reason, setReason] = useState("");
@@ -170,7 +174,7 @@ function PurchaseReturnDialog({
       // documents are plain records, not chained to a required original).
       try {
         const doc = await api<{ id: string }>(`/purchase-invoices/from-return/${ret.id}`, { method: "POST" });
-        await openServerPrint(`/invoicing/print/purchases/${doc.id}?printType=a4`);
+        await openServerPrint(`/invoicing/print/purchases/${doc.id}?printType=${printType}`);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t("common.error"));
       }

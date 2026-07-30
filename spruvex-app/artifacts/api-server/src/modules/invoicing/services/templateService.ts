@@ -5,11 +5,37 @@ import {
   type InvoiceTemplateKind,
   type InvoiceTemplatePrintType,
 } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { db, settingsTable } from "@workspace/db";
 import { AppError } from "../../../core/errors/AppError";
 import { withTransaction } from "../../../core/database/transaction";
 import { invoiceTemplateRepository } from "../repositories/invoiceTemplateRepository";
 import type { TenantContext } from "../../../shared/types/tenantContext";
 import { DEFAULT_TEMPLATE_CONFIG, type TemplateConfig } from "../types/print.types";
+
+// No invoice-template management UI exists yet — merchants configure
+// branding exclusively through the Settings page (logo/header/footer/
+// language), never through invoice_templates. Any field a template
+// (explicit row or the bare default) leaves unset falls back to Settings
+// here, so what a merchant actually fills in reaches the printed page
+// without requiring the still-unbuilt template UI.
+async function applySettingsFallback(companyId: string, config: TemplateConfig): Promise<TemplateConfig> {
+  const [settings] = await db.select({
+    logoUrl: settingsTable.logoUrl,
+    invoiceHeaderText: settingsTable.invoiceHeaderText,
+    invoiceFooterText: settingsTable.invoiceFooterText,
+    language: settingsTable.language,
+  }).from(settingsTable).where(eq(settingsTable.companyId, companyId));
+  if (!settings) return config;
+
+  return {
+    ...config,
+    logoUrl: config.logoUrl ?? settings.logoUrl ?? null,
+    headerText: config.headerText ?? settings.invoiceHeaderText ?? null,
+    footerText: config.footerText ?? settings.invoiceFooterText ?? null,
+    language: settings.language === "ar" || settings.language === "en" ? settings.language : config.language,
+  };
+}
 
 export interface CreateTemplateInput {
   name: string;
@@ -158,7 +184,7 @@ export async function resolveTemplate(
       documentKind,
       printType,
       isDefault: template.isDefault,
-      config: mergeConfig(template.config as Partial<TemplateConfig>),
+      config: await applySettingsFallback(companyId, mergeConfig(template.config as Partial<TemplateConfig>)),
     };
   }
 
@@ -170,7 +196,7 @@ export async function resolveTemplate(
       documentKind,
       printType,
       isDefault: true,
-      config: mergeConfig(defaultTemplate.config as Partial<TemplateConfig>),
+      config: await applySettingsFallback(companyId, mergeConfig(defaultTemplate.config as Partial<TemplateConfig>)),
     };
   }
 
@@ -180,6 +206,6 @@ export async function resolveTemplate(
     documentKind,
     printType,
     isDefault: false,
-    config: DEFAULT_TEMPLATE_CONFIG,
+    config: await applySettingsFallback(companyId, DEFAULT_TEMPLATE_CONFIG),
   };
 }

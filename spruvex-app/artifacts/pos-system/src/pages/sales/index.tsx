@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
 import { openServerPrint } from "@/utils/openServerPrint";
+import { useGetSettings } from "@workspace/api-client-react";
 
 interface Sale {
   id: string;
@@ -83,12 +84,14 @@ export default function SalesPage() {
   // Invoicing is on-demand: most sales never need a formal ZATCA invoice
   // printed, so one isn't created at checkout time — this creates it (or
   // reuses the existing one, idempotently) only when the user asks to print.
+  const { data: settings } = useGetSettings();
+  const printType = settings?.invoiceType ?? "a4";
   const [printingSaleId, setPrintingSaleId] = useState<string | null>(null);
   const handlePrintInvoice = async (sale: Sale) => {
     setPrintingSaleId(sale.id);
     try {
       const invoice = await api<{ id: string }>(`/zatca/invoices/for-sale/${sale.id}`, { method: "POST" });
-      await openServerPrint(`/invoicing/print/sales/${invoice.id}?printType=a4`);
+      await openServerPrint(`/invoicing/print/sales/${invoice.id}?printType=${printType}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("common.error"));
     } finally {
@@ -322,6 +325,8 @@ function SaleInstallmentDialog({ sale, onClose }: { sale: Sale; onClose: () => v
 function SaleReturnDialog({ sale, onClose }: { sale: Sale; onClose: () => void }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { data: settings } = useGetSettings();
+  const printType = settings?.invoiceType ?? "a4";
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [reason, setReason] = useState("");
   const [refundMethod, setRefundMethod] = useState<"cash" | "store_credit">("cash");
@@ -350,7 +355,7 @@ function SaleReturnDialog({ sale, onClose }: { sale: Sale; onClose: () => void }
           method: "POST",
           body: JSON.stringify({ saleReturnId: ret.id }),
         });
-        await openServerPrint(`/invoicing/print/sales/${creditNote.id}?printType=a4`);
+        await openServerPrint(`/invoicing/print/sales/${creditNote.id}?printType=${printType}`);
       } catch (err) {
         toast.info(err instanceof Error ? err.message : t("sales.credit_note_skipped"));
       }

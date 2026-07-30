@@ -167,6 +167,29 @@ export async function getOrCreateInvoiceForSale(tenant: TenantContext, saleId: s
   return createInvoiceFromSale(tenant, { saleId });
 }
 
+// Drives an invoice through generate-XML -> sign -> QR idempotently — the
+// print flow's real entry point. Before this existed, the POS "Print
+// Invoice" button only ever created a draft invoice and printed it with no
+// QR code and a "Draft — not submitted" banner; nothing in the UI ever
+// called generateUBLXML/signInvoice/generateQRCode. A merchant should never
+// have to know those steps exist to get a real, scannable invoice.
+export async function ensureInvoiceSignedAndQr(tenant: TenantContext, invoiceId: string): Promise<void> {
+  let invoice = await invoiceRepo.findById(tenant.companyId, invoiceId);
+  if (!invoice) throw AppError.notFound("Invoice not found");
+
+  if (invoice.status === "draft") {
+    await generateUBLXML(tenant, invoiceId);
+    invoice = await invoiceRepo.findById(tenant.companyId, invoiceId);
+  }
+  if (invoice?.status === "xml_generated") {
+    await signInvoice(tenant, invoiceId);
+  }
+  const qr = await invoiceRepo.findQrByInvoiceId(tenant.companyId, invoiceId);
+  if (!qr) {
+    await generateQRCode(tenant, invoiceId);
+  }
+}
+
 // B. generateUBLXML — builds the UBL document and freezes the invoice
 // content hash it will be signed against. Regenerable while still in
 // draft/xml_generated (not yet signed).

@@ -219,6 +219,14 @@ export default function SettingsPage() {
                 rows={2}
               />
             </div>
+            <div className="space-y-1.5">
+              <Label>{t("settings.receipt_footer_title")}</Label>
+              <Textarea
+                {...register("receiptFooter")}
+                placeholder={t("settings.receipt_footer_desc")}
+                rows={2}
+              />
+            </div>
           </CardContent>
         </Card>
 

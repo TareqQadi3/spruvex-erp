@@ -43,6 +43,7 @@ export type PrintType = "thermal_58" | "thermal_80" | "a4";
 
 export interface TemplateConfig {
   showLogo: boolean;
+  logoUrl?: string | null;
   headerText?: string | null;
   footerText?: string | null;
   language: "ar" | "en";
@@ -54,6 +55,7 @@ export interface TemplateConfig {
 
 export const DEFAULT_TEMPLATE_CONFIG: TemplateConfig = {
   showLogo: true,
+  logoUrl: null,
   headerText: null,
   footerText: null,
   language: "ar",

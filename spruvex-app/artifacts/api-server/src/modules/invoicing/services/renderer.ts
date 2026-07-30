@@ -213,9 +213,12 @@ function renderA4(html: {
 </head>
 <body>
   <div class="header">
+    ${config.showLogo && config.logoUrl ? `<img class="logo" src="${escapeHtml(config.logoUrl)}" alt="" />` : ""}
     <div class="doc-title accent">${renderTitle(data, config)}</div>
     <div class="shop-detail">${escapeHtml(data.seller.name)}</div>
     ${data.seller.vatNumber ? `<div class="shop-detail">${escapeHtml(labels.vat)}: ${escapeHtml(data.seller.vatNumber)}</div>` : ""}
+    ${data.seller.address ? `<div class="shop-detail">${escapeHtml(data.seller.address)}</div>` : ""}
+    ${data.seller.phone ? `<div class="shop-detail">${escapeHtml(data.seller.phone)}</div>` : ""}
     ${config.headerText ? `<div class="header-text">${escapeHtml(config.headerText)}</div>` : ""}
   </div>
 
@@ -338,6 +341,7 @@ function renderThermal(html: {
     ${baseStyles(accentColor)}
     body { width: ${widthMm}mm; font-family: 'Courier New', monospace; font-size: 11px; padding: 2mm; }
     .center { text-align: center; }
+    .logo { max-height: 40px; max-width: ${widthMm - 6}mm; margin: 0 auto 4px; display: block; }
     .doc-title { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
     .shop-detail { font-size: 10px; color: #333; }
     .header-text { font-size: 10px; margin-top: 2px; }
@@ -359,9 +363,12 @@ function renderThermal(html: {
 </head>
 <body>
   <div class="center">
+    ${config.showLogo && config.logoUrl ? `<img class="logo" src="${escapeHtml(config.logoUrl)}" alt="" />` : ""}
     <div class="doc-title accent">${renderTitle(data, config)}</div>
     <div class="shop-detail">${escapeHtml(data.seller.name)}</div>
     ${data.seller.vatNumber ? `<div class="shop-detail">${escapeHtml(labels.vat)}: ${escapeHtml(data.seller.vatNumber)}</div>` : ""}
+    ${data.seller.address ? `<div class="shop-detail">${escapeHtml(data.seller.address)}</div>` : ""}
+    ${data.seller.phone ? `<div class="shop-detail">${escapeHtml(data.seller.phone)}</div>` : ""}
     ${config.headerText ? `<div class="header-text">${escapeHtml(config.headerText)}</div>` : ""}
   </div>
   <hr />

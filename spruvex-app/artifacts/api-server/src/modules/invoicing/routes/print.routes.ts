@@ -7,6 +7,7 @@ import { printQuerySchema } from "../validators/invoicing.validators";
 import { assemblePurchasePrintData, assembleSalesPrintData } from "../services/documentAssembler";
 import * as templateService from "../services/templateService";
 import { renderInvoiceHtml } from "../services/renderer";
+import { ensureInvoiceSignedAndQr } from "../../zatca/services/zatcaService";
 
 const router: IRouter = Router();
 
@@ -21,6 +22,7 @@ router.get("/sales/:invoiceId", async (req, res, next) => {
     const invoiceId = uuidParamSchema.parse(req.params.invoiceId);
     const { printType, templateId } = printQuerySchema.parse(req.query);
 
+    await ensureInvoiceSignedAndQr(req.tenant, invoiceId);
     const data = await assembleSalesPrintData(req.tenant.companyId, invoiceId);
     const template = await templateService.resolveTemplate(req.tenant.companyId, "sales", printType, templateId);
     const html = await renderInvoiceHtml(data, printType, template.config);
