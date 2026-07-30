@@ -14,6 +14,16 @@ export const registerCompanySchema = z.object({
   otp: z.string().trim().regex(/^\d{6}$/, "OTP must be a 6-digit code"),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().email(),
+});
+
+export const resetPasswordSchema = z.object({
+  email: z.string().trim().email(),
+  otp: z.string().trim().regex(/^\d{6}$/, "OTP must be a 6-digit code"),
+  newPassword: z.string().min(8).max(200),
+});
+
 export const loginSchema = z.object({
   username: z.string().trim().min(1),
   password: z.string().min(1),

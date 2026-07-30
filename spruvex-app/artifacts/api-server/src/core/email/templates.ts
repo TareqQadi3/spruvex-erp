@@ -53,14 +53,18 @@ function ctaButton(label: string, href: string): string {
   return `<a href="${href}" style="display:inline-block;background:${BRAND_GREEN};color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;margin:16px 0;">${label}</a>`;
 }
 
-export function otpEmail(code: string): { subject: string; html: string } {
+export function otpEmail(
+  code: string,
+  purpose: "registration" | "password_reset" = "registration",
+): { subject: string; html: string } {
+  const purposeTitle = purpose === "password_reset" ? "إعادة تعيين كلمة المرور" : "تأكيد البريد الإلكتروني";
   return {
-    subject: `تأكيد البريد الإلكتروني — رمز التحقق: ${code}`,
+    subject: `${purposeTitle} — رمز التحقق: ${code}`,
     html: wrapper(
       "ERP",
       `
       <p style="font-size:15px;color:#333;">مرحباً،</p>
-      <p style="font-size:15px;color:#333;">رمز التحقق الخاص بك لتأكيد البريد الإلكتروني:</p>
+      <p style="font-size:15px;color:#333;">رمز التحقق الخاص بك لـ${purposeTitle}:</p>
       <div style="font-size:32px;font-weight:700;letter-spacing:8px;text-align:center;background:#f0f9f0;color:${BRAND_GREEN};padding:16px;border-radius:8px;margin:16px 0;">${code}</div>
       <p style="font-size:13px;color:#888;">صالح لمدة 10 دقائق. إذا لم تطلب هذا الرمز، تجاهل هذه الرسالة.</p>
     `,

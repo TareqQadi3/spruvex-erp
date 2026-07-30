@@ -106,6 +106,13 @@
       "when": 1785388221455,
       "tag": "0014_legal_greymalkin",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1785389627547,
+      "tag": "0015_unknown_electro",
+      "breakpoints": true
     }
   ]
 }

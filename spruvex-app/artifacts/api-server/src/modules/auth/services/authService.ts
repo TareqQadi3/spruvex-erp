@@ -9,7 +9,7 @@ import { ensureSeeded as ensureChartOfAccountsSeeded } from "../../accounting";
 import { UserAuthRepository } from "../repositories/userAuthRepository";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "./tokenService";
 import { resolveBusinessTypeDefaults } from "./businessTypeDefaults";
-import { verifyRegistrationOtp } from "./otpService";
+import { verifyRegistrationOtp, requestOtp, verifyOtp } from "./otpService";
 import { sendEmail } from "../../../core/email/resendService";
 import { accountCreatedEmail } from "../../../core/email/templates";
 import type { AuthResult, LoginInput, RegisterCompanyInput } from "../types/auth.types";
@@ -161,6 +161,24 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Auth
     await sendEmail(input.adminEmail, subject, html);
     return result;
   });
+}
+
+// Deliberately never reveals whether the email exists — sends the OTP only
+// when a matching, active user is found, otherwise silently no-ops.
+export async function forgotPassword(email: string): Promise<void> {
+  const user = await repo.findUserByEmail(email);
+  if (!user || !user.isActive) return;
+  await requestOtp(email, "password_reset");
+}
+
+export async function resetPassword(input: { email: string; otp: string; newPassword: string }): Promise<void> {
+  const user = await repo.findUserByEmail(input.email);
+  if (!user) throw AppError.validation("Invalid or expired code");
+
+  await verifyOtp(input.email, "password_reset", input.otp);
+
+  const passwordHash = await bcrypt.hash(input.newPassword, BCRYPT_ROUNDS);
+  await repo.updatePasswordHash(user.id, passwordHash);
 }
 
 export async function login(input: LoginInput): Promise<AuthResult> {

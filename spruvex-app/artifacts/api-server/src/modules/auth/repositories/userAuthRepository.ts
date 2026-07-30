@@ -32,6 +32,15 @@ export class UserAuthRepository {
     return user ?? null;
   }
 
+  async findUserByEmail(email: string, client: DbOrTx = db) {
+    const [user] = await client.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    return user ?? null;
+  }
+
+  async updatePasswordHash(userId: string, passwordHash: string, client: DbOrTx = db) {
+    await client.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, userId));
+  }
+
   async createCompany(name: string, client: DbOrTx = db) {
     const [company] = await client.insert(companiesTable).values({ name }).returning();
     return company;

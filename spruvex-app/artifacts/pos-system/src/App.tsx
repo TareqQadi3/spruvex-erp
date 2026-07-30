@@ -16,6 +16,7 @@ import { AppLayout } from "@/components/layout/app-layout";
 // that route and cached by the browser after.
 const LoginPage = lazy(() => import("@/pages/login"));
 const SignupPage = lazy(() => import("@/pages/signup"));
+const ForgotPasswordPage = lazy(() => import("@/pages/forgot-password"));
 
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const PosPage = lazy(() => import("@/pages/pos"));
@@ -93,6 +94,15 @@ function AppRouter() {
     return (
       <Suspense fallback={<PageLoadingSpinner />}>
         <SignupPage />
+      </Suspense>
+    );
+  }
+
+  if (location === "/forgot-password") {
+    if (user) return <Redirect to="/" />;
+    return (
+      <Suspense fallback={<PageLoadingSpinner />}>
+        <ForgotPasswordPage />
       </Suspense>
     );
   }

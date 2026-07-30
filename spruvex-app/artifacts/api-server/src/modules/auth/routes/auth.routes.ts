@@ -4,7 +4,14 @@ import { enforceTenantIsolation } from "../../../core/middleware/tenant.middlewa
 import { rateLimitAuth } from "../../../core/middleware/rateLimit.middleware";
 import { AppError } from "../../../core/errors/AppError";
 import { buildSuccess } from "../../../shared/utils/responseEnvelope";
-import { registerCompanySchema, requestOtpSchema, loginSchema, refreshSchema } from "../validators/auth.validators";
+import {
+  registerCompanySchema,
+  requestOtpSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  loginSchema,
+  refreshSchema,
+} from "../validators/auth.validators";
 import * as authService from "../services/authService";
 import { requestRegistrationOtp } from "../services/otpService";
 
@@ -25,6 +32,26 @@ router.post("/register-company", rateLimitAuth, async (req, res, next) => {
     const input = registerCompanySchema.parse(req.body);
     const result = await authService.registerCompany(input);
     res.status(201).json(buildSuccess(result));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/forgot-password", rateLimitAuth, async (req, res, next) => {
+  try {
+    const { email } = forgotPasswordSchema.parse(req.body);
+    await authService.forgotPassword(email);
+    res.status(200).json(buildSuccess({ sent: true }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/reset-password", rateLimitAuth, async (req, res, next) => {
+  try {
+    const input = resetPasswordSchema.parse(req.body);
+    await authService.resetPassword(input);
+    res.status(200).json(buildSuccess({ reset: true }));
   } catch (err) {
     next(err);
   }
