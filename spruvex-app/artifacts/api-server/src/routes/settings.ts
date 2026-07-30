@@ -58,7 +58,7 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
     repairsModuleEnabled, vatNumber, themeColor,
     repairInvoiceType, repairInvoiceSameAsSales,
     openingBalance, fiscalYearStart, fiscalYearEnd, setupCompleted,
-    posTemplate, companyNameEn, businessType,
+    posTemplate, companyNameEn, businessType, expiryAlertDays,
   } = req.body;
   const currencyValue = nonBlank(currency);
   const languageValue = nonBlank(language);
@@ -92,6 +92,7 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
     ...(fiscalYearEnd !== undefined ? { fiscalYearEnd } : {}),
     ...(setupCompleted !== undefined ? { setupCompleted } : {}),
     ...(posTemplateValue !== undefined ? { posTemplate: posTemplateValue } : {}),
+    ...(expiryAlertDays !== undefined ? { expiryAlertDays: Number(expiryAlertDays) } : {}),
   };
   // An empty SET clause is invalid SQL — a request that only touches company
   // fields (e.g. the setup wizard's business-type-only step) legitimately

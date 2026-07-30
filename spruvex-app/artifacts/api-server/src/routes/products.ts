@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, productsTable, categoriesTable, suppliersTable, productAddonGroupsTable, productAddonOptionsTable, productRelatedProductsTable } from "@workspace/db";
+import { db, productsTable, categoriesTable, suppliersTable, productAddonGroupsTable, productAddonOptionsTable, productRelatedProductsTable, productUnitsTable, unitsTable, productBatchesTable } from "@workspace/db";
 import { eq, and, ilike, lte, or, sql, inArray } from "drizzle-orm";
 import type { AuthedRequest } from "../lib/auth-middleware";
 import { ValidationError, parseRequiredNumber, parseOptionalNumber, isUniqueViolation } from "../lib/validation";
@@ -296,6 +296,79 @@ router.delete("/:id/related/:relatedProductId", async (req: AuthedRequest, res) 
     eq(productRelatedProductsTable.relatedProductId, relatedProductId as string),
   ));
   res.status(204).send();
+});
+
+// Multi-unit / unit conversion: a product can be bought/sold in more than
+// one unit (carton/box/piece), each with its own conversion factor back to
+// the base unit that products.stock is tracked in. Selling or purchasing in
+// a non-base unit is the caller's job to multiply by conversionFactor before
+// calling the existing stock endpoints — this is just the catalog of which
+// units + factors apply to which product.
+router.get("/:id/units", async (req: AuthedRequest, res) => {
+  const productId = req.params.id as string;
+  const rows = await db.select({
+    id: productUnitsTable.id,
+    unitId: productUnitsTable.unitId,
+    unitName: unitsTable.nameAr,
+    unitSymbol: unitsTable.symbol,
+    conversionFactor: productUnitsTable.conversionFactor,
+    isBaseUnit: productUnitsTable.isBaseUnit,
+    barcode: productUnitsTable.barcode,
+    sellingPrice: productUnitsTable.sellingPrice,
+  }).from(productUnitsTable)
+    .innerJoin(unitsTable, eq(productUnitsTable.unitId, unitsTable.id))
+    .where(and(eq(productUnitsTable.companyId, req.user!.companyId), eq(productUnitsTable.productId, productId)));
+  res.json(rows);
+});
+
+router.post("/:id/units", async (req: AuthedRequest, res) => {
+  const productId = req.params.id as string;
+  const { unitId, conversionFactor, isBaseUnit, barcode, sellingPrice } = req.body;
+  if (!unitId || !conversionFactor) {
+    res.status(400).json({ error: "unitId and conversionFactor are required" });
+    return;
+  }
+  const [row] = await db.insert(productUnitsTable).values({
+    companyId: req.user!.companyId, productId, unitId,
+    conversionFactor: String(conversionFactor),
+    isBaseUnit: isBaseUnit ?? false,
+    barcode, sellingPrice: sellingPrice != null ? String(sellingPrice) : undefined,
+  }).returning();
+  res.status(201).json(row);
+});
+
+router.delete("/:id/units/:unitAssignmentId", async (req: AuthedRequest, res) => {
+  await db.delete(productUnitsTable).where(and(
+    eq(productUnitsTable.id, req.params.unitAssignmentId as string),
+    eq(productUnitsTable.companyId, req.user!.companyId),
+  ));
+  res.status(204).send();
+});
+
+// Batch/lot tracking (grocery, perishables) — see productBatches.ts schema
+// comment for why this is informational-only (no FIFO consumption wired to
+// sales yet). Listing supports the expiry-alerts endpoint below.
+router.get("/:id/batches", async (req: AuthedRequest, res) => {
+  const productId = req.params.id as string;
+  const batches = await db.select().from(productBatchesTable)
+    .where(and(eq(productBatchesTable.companyId, req.user!.companyId), eq(productBatchesTable.productId, productId)))
+    .orderBy(productBatchesTable.expiryDate);
+  res.json(batches);
+});
+
+router.post("/:id/batches", async (req: AuthedRequest, res) => {
+  const productId = req.params.id as string;
+  const { batchNumber, quantity, expiryDate } = req.body;
+  if (!batchNumber || quantity == null) {
+    res.status(400).json({ error: "batchNumber and quantity are required" });
+    return;
+  }
+  const [batch] = await db.insert(productBatchesTable).values({
+    companyId: req.user!.companyId, productId, batchNumber,
+    quantity: Number(quantity),
+    expiryDate: expiryDate ? new Date(expiryDate) : undefined,
+  }).returning();
+  res.status(201).json(batch);
 });
 
 // Grid POS template fetches this on demand (only for products flagged

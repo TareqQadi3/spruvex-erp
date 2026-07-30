@@ -198,6 +198,9 @@
     "edit_soon": "Edit coming soon",
     "view_movements": "Stock Movements",
     "categories": "Categories",
+    "alerts_low_stock": "product(s) low on stock",
+    "alerts_expired": "expired batch(es)",
+    "alerts_expiring_soon": "batch(es) expiring soon",
     "categories_title": "Manage Categories",
     "categories_desc": "Main and sub-categories — use them to organize products",
     "add_main_category": "New Main Category",
@@ -759,5 +762,25 @@
     "related_added": "Product linked",
     "related_add_failed": "Failed to link product",
     "related_remove_failed": "Failed to unlink product"
+  },
+  "units": {
+    "tab_units": "Units",
+    "tab_batches": "Batches",
+    "unit": "Unit",
+    "conversion_factor": "Conversion Factor",
+    "base_unit": "base unit",
+    "select_unit": "Select unit...",
+    "assign": "Assign",
+    "new_unit_placeholder": "New unit, e.g. Carton",
+    "add_unit": "Add Unit",
+    "unit_create_failed": "Failed to create unit",
+    "assigned_success": "Unit assigned",
+    "assign_failed": "Failed to assign unit",
+    "remove_failed": "Failed to remove",
+    "batch_number": "Batch Number",
+    "expiry_date": "Expiry Date",
+    "add_batch": "Add Batch",
+    "batch_created": "Batch added",
+    "batch_create_failed": "Failed to add batch"
   }
 }

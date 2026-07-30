@@ -31,6 +31,9 @@ interface AttributeDefinition { id: string; name: string; values: AttributeValue
 interface DraftVariant { key: string; attrs: Record<string, string>; sku: string; barcode: string; sellingPrice: string; stock: string; }
 interface Variant { id: number; name: string; sku: string; sellingPrice: string; stock: number; variantAttributes: Record<string, string> | null; }
 interface RelatedProduct { id: number; name: string; sku: string; sellingPrice: string; }
+interface CompanyUnit { id: string; nameAr: string; symbol: string | null; }
+interface ProductUnit { id: string; unitId: string; unitName: string; conversionFactor: string; isBaseUnit: boolean; }
+interface Batch { id: string; batchNumber: string; quantity: number; expiryDate: string | null; }
 
 export default function ManageProductPage() {
   const params = useParams<{ id: string }>();
@@ -159,6 +162,59 @@ export default function ManageProductPage() {
       .catch(() => toast.error(t("variants.related_remove_failed")));
   };
 
+  // ─── Units state ───────────────────────────────────────────────
+  const [companyUnits, setCompanyUnits] = useState<CompanyUnit[]>([]);
+  const [productUnits, setProductUnits] = useState<ProductUnit[]>([]);
+  const [newUnitName, setNewUnitName] = useState("");
+  const [selectedUnitId, setSelectedUnitId] = useState("");
+  const [conversionFactor, setConversionFactor] = useState("1");
+
+  const loadCompanyUnits = () => authFetch("/units").then(setCompanyUnits);
+  const loadProductUnits = () => authFetch(`/products/${productId}/units`).then(setProductUnits);
+  useEffect(() => { loadCompanyUnits(); loadProductUnits(); }, [productId]);
+
+  const handleAddCompanyUnit = () => {
+    if (!newUnitName.trim()) return;
+    authFetch("/units", { method: "POST", body: JSON.stringify({ nameAr: newUnitName.trim() }) })
+      .then(() => { setNewUnitName(""); loadCompanyUnits(); })
+      .catch(() => toast.error(t("units.unit_create_failed")));
+  };
+
+  const handleAssignUnit = () => {
+    if (!selectedUnitId || !conversionFactor) return;
+    authFetch(`/products/${productId}/units`, {
+      method: "POST",
+      body: JSON.stringify({ unitId: selectedUnitId, conversionFactor: Number(conversionFactor) }),
+    })
+      .then(() => { toast.success(t("units.assigned_success")); setSelectedUnitId(""); setConversionFactor("1"); loadProductUnits(); })
+      .catch(() => toast.error(t("units.assign_failed")));
+  };
+
+  const removeProductUnit = (id: string) => {
+    authFetch(`/products/${productId}/units/${id}`, { method: "DELETE" })
+      .then(() => loadProductUnits())
+      .catch(() => toast.error(t("units.remove_failed")));
+  };
+
+  // ─── Batches state ─────────────────────────────────────────────
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [batchNumber, setBatchNumber] = useState("");
+  const [batchQuantity, setBatchQuantity] = useState("");
+  const [batchExpiry, setBatchExpiry] = useState("");
+
+  const loadBatches = () => authFetch(`/products/${productId}/batches`).then(setBatches);
+  useEffect(() => { loadBatches(); }, [productId]);
+
+  const handleAddBatch = () => {
+    if (!batchNumber.trim() || !batchQuantity) return;
+    authFetch(`/products/${productId}/batches`, {
+      method: "POST",
+      body: JSON.stringify({ batchNumber: batchNumber.trim(), quantity: Number(batchQuantity), expiryDate: batchExpiry || undefined }),
+    })
+      .then(() => { toast.success(t("units.batch_created")); setBatchNumber(""); setBatchQuantity(""); setBatchExpiry(""); loadBatches(); })
+      .catch(() => toast.error(t("units.batch_create_failed")));
+  };
+
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center gap-4">
@@ -175,6 +231,8 @@ export default function ManageProductPage() {
         <TabsList>
           <TabsTrigger value="variants">{t("variants.tab_variants")}</TabsTrigger>
           <TabsTrigger value="related">{t("variants.tab_related")}</TabsTrigger>
+          <TabsTrigger value="units">{t("units.tab_units")}</TabsTrigger>
+          <TabsTrigger value="batches">{t("units.tab_batches")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="variants" className="space-y-4">
@@ -312,6 +370,112 @@ export default function ManageProductPage() {
                     </Button>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="units" className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle className="text-base">{t("units.tab_units")}</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              {productUnits.length > 0 && (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("units.unit")}</TableHead>
+                      <TableHead>{t("units.conversion_factor")}</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {productUnits.map(u => (
+                      <TableRow key={u.id}>
+                        <TableCell>{u.unitName}</TableCell>
+                        <TableCell>1 {u.unitName} = {u.conversionFactor} {t("units.base_unit")}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" onClick={() => removeProductUnit(u.id)}>
+                            <X className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+
+              <div className="grid grid-cols-3 gap-2 items-end">
+                <div className="space-y-1.5">
+                  <Label>{t("units.unit")}</Label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={selectedUnitId}
+                    onChange={e => setSelectedUnitId(e.target.value)}
+                  >
+                    <option value="">{t("units.select_unit")}</option>
+                    {companyUnits.map(u => <option key={u.id} value={u.id}>{u.nameAr}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t("units.conversion_factor")}</Label>
+                  <Input type="number" value={conversionFactor} onChange={e => setConversionFactor(e.target.value)} placeholder="24" />
+                </div>
+                <Button onClick={handleAssignUnit} disabled={!selectedUnitId}>{t("units.assign")}</Button>
+              </div>
+
+              <div className="flex gap-2 pt-2 border-t">
+                <Input
+                  placeholder={t("units.new_unit_placeholder")}
+                  value={newUnitName}
+                  onChange={e => setNewUnitName(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") handleAddCompanyUnit(); }}
+                />
+                <Button variant="outline" onClick={handleAddCompanyUnit}>
+                  <Plus className="me-1.5 h-4 w-4" /> {t("units.add_unit")}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="batches" className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle className="text-base">{t("units.tab_batches")}</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              {batches.length > 0 && (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("units.batch_number")}</TableHead>
+                      <TableHead>{t("inventory.stock_qty")}</TableHead>
+                      <TableHead>{t("units.expiry_date")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {batches.map(b => (
+                      <TableRow key={b.id}>
+                        <TableCell className="font-mono text-xs">{b.batchNumber}</TableCell>
+                        <TableCell>{b.quantity}</TableCell>
+                        <TableCell>{b.expiryDate ? new Date(b.expiryDate).toLocaleDateString() : "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+              <div className="grid grid-cols-4 gap-2 items-end">
+                <div className="space-y-1.5">
+                  <Label>{t("units.batch_number")}</Label>
+                  <Input value={batchNumber} onChange={e => setBatchNumber(e.target.value)} placeholder="B-001" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t("inventory.stock_qty")}</Label>
+                  <Input type="number" value={batchQuantity} onChange={e => setBatchQuantity(e.target.value)} placeholder="100" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t("units.expiry_date")}</Label>
+                  <Input type="date" value={batchExpiry} onChange={e => setBatchExpiry(e.target.value)} />
+                </div>
+                <Button onClick={handleAddBatch}>{t("units.add_batch")}</Button>
               </div>
             </CardContent>
           </Card>

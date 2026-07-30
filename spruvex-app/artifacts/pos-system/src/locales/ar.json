@@ -198,6 +198,9 @@
     "edit_soon": "التعديل قريباً",
     "view_movements": "حركات المخزون",
     "categories": "الأقسام",
+    "alerts_low_stock": "منتج بمخزون منخفض",
+    "alerts_expired": "دفعة منتهية الصلاحية",
+    "alerts_expiring_soon": "دفعة قاربت على الانتهاء",
     "categories_title": "إدارة الأقسام",
     "categories_desc": "قسم رئيسي وأقسام فرعية — استخدمها لتنظيم المنتجات",
     "add_main_category": "قسم رئيسي جديد",
@@ -759,5 +762,25 @@
     "related_added": "تم ربط المنتج",
     "related_add_failed": "فشل ربط المنتج",
     "related_remove_failed": "فشل إلغاء الربط"
+  },
+  "units": {
+    "tab_units": "الوحدات",
+    "tab_batches": "الدفعات (Batch)",
+    "unit": "الوحدة",
+    "conversion_factor": "معامل التحويل",
+    "base_unit": "وحدة أساسية",
+    "select_unit": "اختر وحدة...",
+    "assign": "ربط",
+    "new_unit_placeholder": "وحدة جديدة، مثال: كرتون",
+    "add_unit": "إضافة وحدة",
+    "unit_create_failed": "فشل إنشاء الوحدة",
+    "assigned_success": "تم ربط الوحدة",
+    "assign_failed": "فشل ربط الوحدة",
+    "remove_failed": "فشل الحذف",
+    "batch_number": "رقم الدفعة",
+    "expiry_date": "تاريخ الانتهاء",
+    "add_batch": "إضافة دفعة",
+    "batch_created": "تم إضافة الدفعة",
+    "batch_create_failed": "فشل إضافة الدفعة"
   }
 }

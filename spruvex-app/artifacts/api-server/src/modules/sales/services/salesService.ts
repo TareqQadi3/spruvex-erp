@@ -3,6 +3,7 @@ import { salesRepository, type SaleListFilters } from "../repositories/salesRepo
 import { recordPurchaseOnAccount, settleOutstandingBalance } from "../../customers/services/customerService";
 import { postSaleEntry, postSaleReturnEntry } from "../../accounting";
 import { parseRequiredNumber, parseOptionalNumber, ValidationError } from "../../../lib/validation";
+import { logStockMovement } from "../../../lib/stockMovementLogger";
 
 export interface SaleItemInput {
   productId: string;
@@ -71,7 +72,7 @@ export async function createSale(companyId: string, input: CreateSaleInput, crea
     let subtotal = 0;
     const resolvedItems: Array<{
       productId: string; productName: string; quantity: number; unitPrice: number; discount: number;
-      subtotal: number; costPrice: number;
+      subtotal: number; costPrice: number; warehouseId: string | null;
       selectedAddons?: SaleItemInput["selectedAddons"]; itemNotes?: string; serialNumber?: string;
     }> = [];
 
@@ -100,6 +101,7 @@ export async function createSale(companyId: string, input: CreateSaleInput, crea
         discount,
         subtotal: itemSubtotal,
         costPrice: Number(product.costPrice),
+        warehouseId: product.warehouseId,
         selectedAddons: item.selectedAddons,
         itemNotes: item.itemNotes,
         serialNumber: item.serialNumber,
@@ -187,6 +189,11 @@ export async function createSale(companyId: string, input: CreateSaleInput, crea
         serialNumber: item.serialNumber,
       });
       await salesRepository.adjustProductStock(tx, companyId, item.productId, -item.quantity);
+      await logStockMovement(tx, {
+        companyId, productId: item.productId, warehouseId: item.warehouseId,
+        movementType: "sale", quantity: -item.quantity,
+        referenceType: "sale", referenceId: sale.id,
+      });
       cogsTotal += item.costPrice * item.quantity;
     }
 

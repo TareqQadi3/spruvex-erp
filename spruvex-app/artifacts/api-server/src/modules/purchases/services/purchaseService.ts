@@ -3,6 +3,7 @@ import { purchaseRepository } from "../repositories/purchaseRepository";
 import { recordPurchaseDebt } from "../../suppliers/services/supplierService";
 import { postPurchaseEntry } from "../../accounting";
 import { parseRequiredNumber, ValidationError } from "../../../lib/validation";
+import { logStockMovement } from "../../../lib/stockMovementLogger";
 
 export interface CreatePurchaseInput {
   productId: string;
@@ -56,6 +57,11 @@ export async function createPurchase(companyId: string, input: CreatePurchaseInp
     });
 
     await purchaseRepository.adjustProductStock(tx, productId, qty, supplierId);
+    await logStockMovement(tx, {
+      companyId, productId, warehouseId: product.warehouseId,
+      movementType: "purchase", quantity: qty,
+      referenceType: "purchase", referenceId: purchase.id,
+    });
     await recordPurchaseDebt(tx, companyId, supplierId, remaining);
 
     await postPurchaseEntry(tx, {

@@ -40,6 +40,9 @@ export const settingsTable = pgTable("settings", {
   // a new template only means adding a new value here plus a new template
   // component in the registry, never touching this column or its callers.
   posTemplate: text("pos_template").notNull().default("list"),
+  // Days-before-expiry an unexpired batch starts showing up in the expiry
+  // alerts endpoint (GET /api/reports/inventory-alerts).
+  expiryAlertDays: integer("expiry_alert_days").notNull().default(7),
 }, (table) => [
   uniqueIndex("settings_company_idx").on(table.companyId),
 ]);

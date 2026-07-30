@@ -5,13 +5,20 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, Edit, History, FolderTree, Layers } from "lucide-react";
+import { Plus, Search, Trash2, Edit, History, FolderTree, Layers, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
 import { formatCurrency } from "@/lib/format";
+import { TOKEN_KEY } from "@/contexts/AuthContext";
+
+interface InventoryAlerts {
+  lowStock: Array<{ id: string; name: string; stock: number }>;
+  expired: Array<{ id: string; productName: string; batchNumber: string }>;
+  expiringSoon: Array<{ id: string; productName: string; batchNumber: string; expiryDate: string }>;
+}
 
 export default function InventoryPage() {
   const [search, setSearch] = useState("");
@@ -20,6 +27,16 @@ export default function InventoryPage() {
   const deleteProduct = useDeleteProduct();
   const queryClient = useQueryClient();
   const { t, lang } = useTranslation();
+
+  const [alerts, setAlerts] = useState<InventoryAlerts | null>(null);
+  useEffect(() => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    fetch("/api/reports/inventory-alerts", { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.ok ? r.json() : null)
+      .then(setAlerts)
+      .catch(() => {});
+  }, []);
+  const alertCount = alerts ? alerts.lowStock.length + alerts.expired.length + alerts.expiringSoon.length : 0;
 
   const handleDelete = (id: number) => {
     if (window.confirm(t("inventory.delete_confirm"))) {
@@ -49,6 +66,25 @@ export default function InventoryPage() {
           </Link>
         </div>
       </div>
+
+      {alertCount > 0 && (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="py-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="text-sm space-y-1">
+              {alerts!.lowStock.length > 0 && (
+                <div><strong>{alerts!.lowStock.length}</strong> {t("inventory.alerts_low_stock")}</div>
+              )}
+              {alerts!.expired.length > 0 && (
+                <div><strong>{alerts!.expired.length}</strong> {t("inventory.alerts_expired")}</div>
+              )}
+              {alerts!.expiringSoon.length > 0 && (
+                <div><strong>{alerts!.expiringSoon.length}</strong> {t("inventory.alerts_expiring_soon")}</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="py-4">

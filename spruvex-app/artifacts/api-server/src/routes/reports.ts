@@ -1,9 +1,62 @@
 import { Router } from "express";
-import { db, salesTable, repairsTable, productsTable, customersTable, expensesTable, saleItemsTable } from "@workspace/db";
-import { eq, sql, and, gte, lte, desc } from "drizzle-orm";
+import { db, salesTable, repairsTable, productsTable, customersTable, expensesTable, saleItemsTable, productBatchesTable, settingsTable } from "@workspace/db";
+import { eq, sql, and, gte, lte, desc, lt } from "drizzle-orm";
 import type { AuthedRequest } from "../lib/auth-middleware";
 
 const router = Router();
+
+// Foundation for Phase 4 item 6 (Stock Valuation) — total cost-basis value of
+// on-hand stock, company-wide and per product. No weighted-average-cost
+// tracking yet (every unit of a product uses its current costPrice); that
+// refinement needs purchase-price history and is left for a later pass.
+router.get("/inventory-valuation", async (req: AuthedRequest, res) => {
+  const orgId = req.user!.companyId;
+  const rows = await db.select({
+    productId: productsTable.id,
+    name: productsTable.name,
+    sku: productsTable.sku,
+    stock: productsTable.stock,
+    costPrice: productsTable.costPrice,
+    value: sql<string>`(${productsTable.stock} * ${productsTable.costPrice})::numeric(14,2)`,
+  }).from(productsTable).where(eq(productsTable.companyId, orgId));
+  const totalValue = rows.reduce((sum, r) => sum + Number(r.value), 0);
+  res.json({ totalValue, products: rows });
+});
+
+// Foundation for Phase 4 item 5 (Expiry Alerts) + existing low-stock alerts,
+// combined into one endpoint the Inventory page can poll. expiryAlertDays is
+// company-configurable (settings.expiryAlertDays).
+router.get("/inventory-alerts", async (req: AuthedRequest, res) => {
+  const orgId = req.user!.companyId;
+  const [settings] = await db.select().from(settingsTable).where(eq(settingsTable.companyId, orgId)).limit(1);
+  const alertDays = settings?.expiryAlertDays ?? 7;
+
+  const lowStock = await db.select({
+    id: productsTable.id, name: productsTable.name, sku: productsTable.sku,
+    stock: productsTable.stock, lowStockThreshold: productsTable.lowStockThreshold,
+  }).from(productsTable)
+    .where(and(eq(productsTable.companyId, orgId), lte(productsTable.stock, productsTable.lowStockThreshold)));
+
+  const soon = new Date();
+  soon.setDate(soon.getDate() + alertDays);
+
+  const expiring = await db.select({
+    id: productBatchesTable.id, productId: productBatchesTable.productId,
+    batchNumber: productBatchesTable.batchNumber, quantity: productBatchesTable.quantity,
+    expiryDate: productBatchesTable.expiryDate, productName: productsTable.name,
+  }).from(productBatchesTable)
+    .innerJoin(productsTable, eq(productBatchesTable.productId, productsTable.id))
+    .where(and(eq(productBatchesTable.companyId, orgId), lt(productBatchesTable.expiryDate, soon)))
+    .orderBy(productBatchesTable.expiryDate);
+
+  const now = new Date();
+  res.json({
+    lowStock,
+    expired: expiring.filter(e => e.expiryDate && e.expiryDate < now),
+    expiringSoon: expiring.filter(e => e.expiryDate && e.expiryDate >= now),
+    alertDays,
+  });
+});
 
 router.get("/dashboard", async (req: AuthedRequest, res) => {
   const orgId = req.user!.companyId;
