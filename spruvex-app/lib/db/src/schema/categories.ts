@@ -14,6 +14,10 @@ export const categoriesTable = pgTable("categories", {
   parentId: uuid("parent_id"),
   imageUrl: text("image_url"),
   status: text("status").notNull().default("active"), // active | inactive
+  // POS template override for every product in this category (null = fall
+  // through to the product's own override, then to settings.posTemplate).
+  // Resolution order lives in one place: pos-shared/resolvePosTemplate.ts.
+  displayMode: text("display_mode"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

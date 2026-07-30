@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, integer, numeric, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, integer, numeric, boolean, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -25,6 +25,15 @@ export const salesTable = pgTable("sales", {
   paymentFee: numeric("payment_fee", { precision: 10, scale: 2 }).notNull().default("0"),
   status: text("status").notNull().default("completed"),
   notes: text("notes"),
+  // Fulfillment type (Grid POS template) — stores order_types.key as plain
+  // text, not a DB enum/FK, so the type list stays company-configurable and
+  // historical sales never break if a type is renamed/removed. Null for
+  // templates that don't collect this (List/Image/Mobile).
+  orderType: text("order_type"),
+  // Optional dine-in table reference (reuses the existing restaurant_tables
+  // catalog for table numbers only — this sale still flows through the
+  // normal sales/sale_items tables, not the separate restaurant_orders model).
+  tableId: uuid("table_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   // Every list/report/BI query filters by companyId and orders/ranges by
@@ -47,6 +56,17 @@ export const saleItemsTable = pgTable("sale_items", {
   discount: numeric("discount", { precision: 10, scale: 2 }).notNull().default("0"),
   subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
   returnedQuantity: integer("returned_quantity").notNull().default(0),
+  // Add-ons chosen for this line at sale time (Grid template), snapshotted
+  // (not just an FK to product_addon_options) so a later edit/deletion of the
+  // add-on catalog never rewrites historical receipts — mirrors the same
+  // snapshot approach products.variantAttributes already uses for variants.
+  // Shape: [{ groupName, optionName, priceDelta }].
+  selectedAddons: jsonb("selected_addons"),
+  itemNotes: text("item_notes"), // free-text per-line instruction, e.g. "no onions"
+  // Optional IMEI/serial captured at sale time (Mobile template) — lightweight
+  // capture, not a full serialized-inventory subsystem (see productBatches.ts
+  // for the equivalent note on batch tracking).
+  serialNumber: text("serial_number"),
 }, (table) => [
   index("sale_items_company_sale_idx").on(table.companyId, table.saleId),
   index("sale_items_company_product_idx").on(table.companyId, table.productId),

@@ -35,13 +35,23 @@ export const productsTable = pgTable("products", {
   brand: text("brand"),
   imageUrl: text("image_url"),
   includesTax: boolean("includes_tax").notNull().default(false),
-  // Per-product override of the company's POS template (settings.posTemplate)
-  // — null means "use the company default". Lets one company mix e.g. a
-  // grid-style POS for prepared food alongside list-style for bottled drinks.
+  // POS template resolution is businessType default (settings.posTemplate) ->
+  // category override (categories.displayMode) -> this product's own
+  // override, each step optional. Lets the same product (e.g. a bottled
+  // drink) render as Grid when sold by a cafe and List when sold by a
+  // grocery, without per-tenant product duplication. See
+  // pos-shared/resolvePosTemplate.ts for the one place this order is applied.
   displayMode: text("display_mode"),
-  // Cheap flags so the POS engine can skip an extra addon-group fetch for
-  // the (common) case a product has none, instead of a join on every load.
+  // Cheap flags so the POS engine can skip an extra addon/related-products
+  // fetch for the (common) case a product has none, instead of a join on
+  // every load.
   hasAddons: boolean("has_addons").notNull().default(false),
+  hasRelatedProducts: boolean("has_related_products").notNull().default(false),
+  // Grocery/perishables: single expiry date for simple cases. Batch-level
+  // tracking (multiple expiry dates per product, received in separate lots)
+  // is productBatches.ts — set this OR use batches, not both, for a given
+  // product; app-side convention, not a DB constraint.
+  expiryDate: timestamp("expiry_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("products_company_sku_idx").on(table.companyId, table.sku),

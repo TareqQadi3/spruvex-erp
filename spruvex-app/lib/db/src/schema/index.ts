@@ -53,3 +53,6 @@ export * from "./invoiceTemplates";
 export * from "./registrationOtps";
 export * from "./productAttributes";
 export * from "./productAddons";
+export * from "./productRelated";
+export * from "./productBatches";
+export * from "./orderTypes";
