@@ -35,10 +35,13 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   const port = Number(process.env.PORT ?? 3000);
-  // Bind explicitly to all interfaces — some hosts (Fly.io) route requests
-  // to the container's external address, which Node's default bind
-  // (localhost-only on some platforms) never accepts connections on.
-  await app.listen(port, "0.0.0.0");
+  // Bind explicitly to all interfaces, IPv4 and IPv6. Some hosts (Fly.io)
+  // route external traffic over IPv4 but internal machine-to-machine
+  // traffic (the private 6PN network other services use to reach this API)
+  // exclusively over IPv6 — binding to "0.0.0.0" alone leaves that IPv6
+  // path unreachable ("connection refused" from sibling services) even
+  // though the public URL works fine.
+  await app.listen(port, "::");
 }
 
 void bootstrap();
