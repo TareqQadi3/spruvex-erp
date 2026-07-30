@@ -127,6 +127,7 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Auth
         currency: "SAR",
         repairsModuleEnabled: moduleDefaults.repairsModuleEnabled,
         ecommerceModuleEnabled: moduleDefaults.ecommerceModuleEnabled,
+        posTemplate: moduleDefaults.posTemplate,
       },
       tx,
     );

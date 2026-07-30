@@ -641,6 +641,16 @@ export const SettingsRepairInvoiceType = {
   thermal_58: 'thermal_58',
 } as const;
 
+export type SettingsPosTemplate = typeof SettingsPosTemplate[keyof typeof SettingsPosTemplate];
+
+
+export const SettingsPosTemplate = {
+  list: 'list',
+  grid: 'grid',
+  image: 'image',
+  mobile: 'mobile',
+} as const;
+
 export interface Settings {
   shopName: string;
   /** @nullable */
@@ -673,6 +683,7 @@ export interface Settings {
   /** @nullable */
   fiscalYearEnd?: string | null;
   setupCompleted?: boolean;
+  posTemplate?: SettingsPosTemplate;
 }
 
 export type SettingsInputLanguage = typeof SettingsInputLanguage[keyof typeof SettingsInputLanguage];
@@ -701,6 +712,16 @@ export const SettingsInputRepairInvoiceType = {
   thermal_58: 'thermal_58',
 } as const;
 
+export type SettingsInputPosTemplate = typeof SettingsInputPosTemplate[keyof typeof SettingsInputPosTemplate];
+
+
+export const SettingsInputPosTemplate = {
+  list: 'list',
+  grid: 'grid',
+  image: 'image',
+  mobile: 'mobile',
+} as const;
+
 export interface SettingsInput {
   shopName?: string;
   shopAddress?: string;
@@ -724,6 +745,7 @@ export interface SettingsInput {
   fiscalYearStart?: string | null;
   fiscalYearEnd?: string | null;
   setupCompleted?: boolean;
+  posTemplate?: SettingsInputPosTemplate;
 }
 
 export type GetProductsParams = {

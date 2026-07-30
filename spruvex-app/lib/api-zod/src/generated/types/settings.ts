@@ -7,6 +7,7 @@
  */
 import type { SettingsInvoiceType } from './settingsInvoiceType';
 import type { SettingsLanguage } from './settingsLanguage';
+import type { SettingsPosTemplate } from './settingsPosTemplate';
 import type { SettingsRepairInvoiceType } from './settingsRepairInvoiceType';
 
 export interface Settings {
@@ -41,4 +42,5 @@ export interface Settings {
   /** @nullable */
   fiscalYearEnd?: string | null;
   setupCompleted?: boolean;
+  posTemplate?: SettingsPosTemplate;
 }

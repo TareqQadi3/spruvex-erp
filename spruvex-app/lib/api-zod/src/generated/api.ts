@@ -1035,7 +1035,8 @@ export const GetSettingsResponse = zod.object({
   "openingBalance": zod.union([zod.string(),zod.number()]).optional(),
   "fiscalYearStart": zod.string().nullish(),
   "fiscalYearEnd": zod.string().nullish(),
-  "setupCompleted": zod.boolean().optional()
+  "setupCompleted": zod.boolean().optional(),
+  "posTemplate": zod.enum(['list', 'grid', 'image', 'mobile']).optional()
 })
 
 
@@ -1064,7 +1065,8 @@ export const UpdateSettingsBody = zod.object({
   "openingBalance": zod.number().optional(),
   "fiscalYearStart": zod.string().nullish(),
   "fiscalYearEnd": zod.string().nullish(),
-  "setupCompleted": zod.boolean().optional()
+  "setupCompleted": zod.boolean().optional(),
+  "posTemplate": zod.enum(['list', 'grid', 'image', 'mobile']).optional()
 })
 
 export const UpdateSettingsResponse = zod.object({
@@ -1089,7 +1091,8 @@ export const UpdateSettingsResponse = zod.object({
   "openingBalance": zod.union([zod.string(),zod.number()]).optional(),
   "fiscalYearStart": zod.string().nullish(),
   "fiscalYearEnd": zod.string().nullish(),
-  "setupCompleted": zod.boolean().optional()
+  "setupCompleted": zod.boolean().optional(),
+  "posTemplate": zod.enum(['list', 'grid', 'image', 'mobile']).optional()
 })
 
 

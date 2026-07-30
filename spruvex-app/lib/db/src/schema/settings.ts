@@ -33,6 +33,13 @@ export const settingsTable = pgTable("settings", {
   // Repair invoice printer profile (note #6); when mirrorSales true reuse the sales profile
   repairInvoiceType: text("repair_invoice_type").notNull().default("a4"),
   repairInvoiceSameAsSales: boolean("repair_invoice_same_as_sales").notNull().default(true),
+  // Which POS screen layout this tenant's point-of-sale renders: list | grid
+  // | image | mobile (see pos-system/src/pages/pos/templates). Defaults by
+  // business type at signup (businessTypeDefaults.ts) but is a plain settings
+  // field so a merchant can switch it later without any code change — adding
+  // a new template only means adding a new value here plus a new template
+  // component in the registry, never touching this column or its callers.
+  posTemplate: text("pos_template").notNull().default("list"),
 }, (table) => [
   uniqueIndex("settings_company_idx").on(table.companyId),
 ]);

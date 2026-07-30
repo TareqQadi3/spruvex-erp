@@ -35,6 +35,13 @@ export const productsTable = pgTable("products", {
   brand: text("brand"),
   imageUrl: text("image_url"),
   includesTax: boolean("includes_tax").notNull().default(false),
+  // Per-product override of the company's POS template (settings.posTemplate)
+  // — null means "use the company default". Lets one company mix e.g. a
+  // grid-style POS for prepared food alongside list-style for bottled drinks.
+  displayMode: text("display_mode"),
+  // Cheap flags so the POS engine can skip an extra addon-group fetch for
+  // the (common) case a product has none, instead of a join on every load.
+  hasAddons: boolean("has_addons").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("products_company_sku_idx").on(table.companyId, table.sku),

@@ -113,6 +113,13 @@
       "when": 1785389627547,
       "tag": "0015_unknown_electro",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1785390494061,
+      "tag": "0016_strange_black_panther",
+      "breakpoints": true
     }
   ]
 }

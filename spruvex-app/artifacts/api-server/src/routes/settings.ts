@@ -47,6 +47,7 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
     repairsModuleEnabled, vatNumber, themeColor,
     repairInvoiceType, repairInvoiceSameAsSales,
     openingBalance, fiscalYearStart, fiscalYearEnd, setupCompleted,
+    posTemplate,
   } = req.body;
   const currencyValue = nonBlank(currency);
   const languageValue = nonBlank(language);
@@ -54,6 +55,8 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
   const repairInvoiceTypeValue = nonBlank(repairInvoiceType);
   const themeColorValue = nonBlank(themeColor);
   const shopNameValue = nonBlank(shopName);
+  const POS_TEMPLATES = new Set(["list", "grid", "image", "mobile"]);
+  const posTemplateValue = typeof posTemplate === "string" && POS_TEMPLATES.has(posTemplate) ? posTemplate : undefined;
   const [updated] = await db.update(settingsTable).set({
     ...(shopNameValue !== undefined ? { shopName: shopNameValue } : {}),
     ...(shopAddress !== undefined ? { shopAddress } : {}),
@@ -77,6 +80,7 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
     ...(fiscalYearStart !== undefined ? { fiscalYearStart } : {}),
     ...(fiscalYearEnd !== undefined ? { fiscalYearEnd } : {}),
     ...(setupCompleted !== undefined ? { setupCompleted } : {}),
+    ...(posTemplateValue !== undefined ? { posTemplate: posTemplateValue } : {}),
   }).where(eq(settingsTable.id, settings.id)).returning();
   res.json(updated);
 });

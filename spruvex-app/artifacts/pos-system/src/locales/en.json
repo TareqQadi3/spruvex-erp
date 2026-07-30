@@ -72,6 +72,15 @@
   },
   "pos": {
     "title": "POS",
+    "templates": {
+      "grid_title": "Restaurant & Cafe Screen",
+      "grid_desc": "The grid/button POS layout for this business type is under development.",
+      "image_title": "Photo-Based Products Screen",
+      "image_desc": "The image-driven POS layout for this business type is under development.",
+      "mobile_title": "Mobile & Electronics Screen",
+      "mobile_desc": "The color/storage/model variant picker POS layout for this business type is under development.",
+      "use_list_for_now": "Use the list screen for now"
+    },
     "search_placeholder": "Search products or scan barcode...",
     "current_sale": "Current Sale",
     "cart_empty": "Cart is empty",
