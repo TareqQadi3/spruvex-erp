@@ -3,7 +3,7 @@
 -- is physically absent from this environment's database (out-of-band drift). This
 -- migration recreates it to match the schema definition exactly — no schema.ts
 -- change accompanies this file, so no new snapshot is generated.
-CREATE TABLE "subscriptions" (
+CREATE TABLE IF NOT EXISTS "subscriptions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"company_id" uuid NOT NULL,
 	"plan" text DEFAULT 'trial' NOT NULL,
