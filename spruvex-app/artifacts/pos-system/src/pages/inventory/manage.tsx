@@ -35,7 +35,7 @@ interface RelatedProduct { id: number; name: string; sku: string; sellingPrice: 
 export default function ManageProductPage() {
   const params = useParams<{ id: string }>();
   const productId = params.id;
-  const { data: product } = useGetProduct(Number(productId));
+  const { data: product } = useGetProduct(productId as any);
   const { t } = useTranslation();
 
   // ─── Variants state ────────────────────────────────────────────
@@ -123,7 +123,7 @@ export default function ManageProductPage() {
             costPrice: product?.costPrice ?? 0,
             stock: Number(d.stock) || 0,
             categoryId: product?.categoryId ?? undefined,
-            parentProductId: Number(productId),
+            parentProductId: productId,
             variantAttributes: d.attrs,
           }),
         });
@@ -285,7 +285,7 @@ export default function ManageProductPage() {
                 <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t("inventory.search_placeholder")} />
                 {search && (
                   <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
-                    {searchResults?.filter(p => p.id !== Number(productId)).map(p => (
+                    {searchResults?.filter(p => String(p.id) !== productId).map(p => (
                       <button
                         key={p.id}
                         type="button"
