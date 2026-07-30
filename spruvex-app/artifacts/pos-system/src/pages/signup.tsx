@@ -41,6 +41,8 @@ const PLANS: { value: CompanyPlan }[] = [
   { value: "enterprise" },
 ];
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function SignupPage() {
   const [step, setStep] = useState(1);
   const [companyName, setCompanyName] = useState("");
@@ -52,6 +54,8 @@ export default function SignupPage() {
   const [plan, setPlan] = useState<CompanyPlan | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
 
   useEffect(() => {
     const planParam = new URLSearchParams(window.location.search).get("plan");
@@ -65,19 +69,50 @@ export default function SignupPage() {
   const { t, lang, setLang } = useTranslation();
   const { resolvedTheme } = useTheme();
 
-  const step1Valid = companyName.trim().length > 0 && adminUsername.trim().length >= 3 && adminPassword.length >= 8;
+  const step1Valid =
+    companyName.trim().length > 0 &&
+    adminUsername.trim().length >= 3 &&
+    EMAIL_RE.test(adminEmail.trim()) &&
+    adminPassword.length >= 8;
+  const otpValid = /^\d{6}$/.test(otp);
 
-  const handleNext = () => {
+  const sendOtp = async () => {
     setError("");
-    if (step === 1 && !step1Valid) {
-      setError(t("signup.step1_incomplete"));
+    setIsSendingOtp(true);
+    try {
+      const res = await fetch("/api/auth/register-company/request-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: adminEmail.trim() }),
+      });
+      if (!res.ok) throw new Error(t("signup.otp_send_failed"));
+    } catch (err: any) {
+      setError(err.message ?? t("signup.otp_send_failed"));
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleNext = async () => {
+    setError("");
+    if (step === 1) {
+      if (!step1Valid) {
+        setError(t("signup.step1_incomplete"));
+        return;
+      }
+      setStep(2);
+      await sendOtp();
       return;
     }
-    if (step === 2 && !businessType) {
+    if (step === 2 && !otpValid) {
+      setError(t("signup.otp_incomplete"));
+      return;
+    }
+    if (step === 3 && !businessType) {
       setError(t("signup.select_business_type"));
       return;
     }
-    setStep(s => Math.min(3, s + 1));
+    setStep(s => Math.min(4, s + 1));
   };
 
   const handleBack = () => {
@@ -99,10 +134,11 @@ export default function SignupPage() {
         body: JSON.stringify({
           companyName: companyName.trim(),
           adminUsername: adminUsername.trim(),
-          adminEmail: adminEmail.trim() || undefined,
+          adminEmail: adminEmail.trim(),
           adminPassword,
           businessType,
           plan,
+          otp,
         }),
       });
       const body = await res.json().catch(() => null);
@@ -142,7 +178,7 @@ export default function SignupPage() {
 
         {/* Step indicator */}
         <div className="flex items-center justify-center gap-2">
-          {[1, 2, 3].map(n => (
+          {[1, 2, 3, 4].map(n => (
             <div
               key={n}
               className={cn(
@@ -157,13 +193,15 @@ export default function SignupPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">
               {step === 1 && t("signup.step1_title")}
-              {step === 2 && t("signup.step2_title")}
-              {step === 3 && t("signup.step3_title")}
+              {step === 2 && t("signup.otp_step_title")}
+              {step === 3 && t("signup.step2_title")}
+              {step === 4 && t("signup.step3_title")}
             </CardTitle>
             <CardDescription>
               {step === 1 && t("signup.step1_desc")}
-              {step === 2 && t("signup.step2_desc")}
-              {step === 3 && t("signup.step3_desc")}
+              {step === 2 && t("signup.otp_step_desc")}
+              {step === 3 && t("signup.step2_desc")}
+              {step === 4 && t("signup.step3_desc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -235,6 +273,33 @@ export default function SignupPage() {
             )}
 
             {step === 2 && (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="otp">{t("signup.otp_label")}</Label>
+                  <Input
+                    id="otp"
+                    value={otp}
+                    onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder={t("signup.otp_placeholder")}
+                    className="text-center text-2xl tracking-[0.5em]"
+                    inputMode="numeric"
+                    autoFocus
+                    disabled={isLoading}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={sendOtp}
+                  disabled={isSendingOtp || isLoading}
+                >
+                  {isSendingOtp ? t("signup.otp_sending") : t("signup.otp_resend")}
+                </Button>
+              </div>
+            )}
+
+            {step === 3 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {BUSINESS_TYPES.map(({ value, icon: Icon }) => (
                   <button
@@ -253,7 +318,7 @@ export default function SignupPage() {
               </div>
             )}
 
-            {step === 3 && (
+            {step === 4 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {PLANS.map(({ value }) => (
                   <button
@@ -279,13 +344,13 @@ export default function SignupPage() {
                   {t("signup.back")}
                 </Button>
               )}
-              {step < 3 && (
-                <Button type="button" className="flex-1 h-11" onClick={handleNext} disabled={isLoading}>
+              {step < 4 && (
+                <Button type="button" className="flex-1 h-11" onClick={handleNext} disabled={isLoading || isSendingOtp}>
                   {t("signup.next")}
                   <ChevronRight className="h-4 w-4 ms-1 rtl:rotate-180" />
                 </Button>
               )}
-              {step === 3 && (
+              {step === 4 && (
                 <Button type="button" className="flex-1 h-11" onClick={handleSubmit} disabled={isLoading || !plan}>
                   {isLoading ? (
                     <span className="flex items-center gap-2">

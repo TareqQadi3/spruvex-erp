@@ -4,10 +4,11 @@ export type CompanyPlan = "erp_business" | "restaurant" | "sales_repair" | "ente
 export interface RegisterCompanyInput {
   companyName: string;
   adminUsername: string;
-  adminEmail?: string;
+  adminEmail: string;
   adminPassword: string;
   businessType: BusinessType;
   plan: CompanyPlan;
+  otp: string;
 }
 
 export interface LoginInput {

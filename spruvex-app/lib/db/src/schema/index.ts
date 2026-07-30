@@ -50,3 +50,4 @@ export * from "./ecommerceOrders";
 export * from "./paymentGateways";
 export * from "./purchaseInvoices";
 export * from "./invoiceTemplates";
+export * from "./registrationOtps";

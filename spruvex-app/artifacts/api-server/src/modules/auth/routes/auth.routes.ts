@@ -4,10 +4,21 @@ import { enforceTenantIsolation } from "../../../core/middleware/tenant.middlewa
 import { rateLimitAuth } from "../../../core/middleware/rateLimit.middleware";
 import { AppError } from "../../../core/errors/AppError";
 import { buildSuccess } from "../../../shared/utils/responseEnvelope";
-import { registerCompanySchema, loginSchema, refreshSchema } from "../validators/auth.validators";
+import { registerCompanySchema, requestOtpSchema, loginSchema, refreshSchema } from "../validators/auth.validators";
 import * as authService from "../services/authService";
+import { requestRegistrationOtp } from "../services/otpService";
 
 const router: IRouter = Router();
+
+router.post("/register-company/request-otp", rateLimitAuth, async (req, res, next) => {
+  try {
+    const { email } = requestOtpSchema.parse(req.body);
+    await requestRegistrationOtp(email);
+    res.status(200).json(buildSuccess({ sent: true }));
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.post("/register-company", rateLimitAuth, async (req, res, next) => {
   try {

@@ -9,7 +9,14 @@ import { ensureSeeded as ensureChartOfAccountsSeeded } from "../../accounting";
 import { UserAuthRepository } from "../repositories/userAuthRepository";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "./tokenService";
 import { resolveBusinessTypeDefaults } from "./businessTypeDefaults";
+import { verifyRegistrationOtp } from "./otpService";
+import { sendEmail } from "../../../core/email/resendService";
+import { accountCreatedEmail } from "../../../core/email/templates";
 import type { AuthResult, LoginInput, RegisterCompanyInput } from "../types/auth.types";
+
+function dashboardUrl(): string {
+  return process.env.DASHBOARD_BASE_URL ?? "http://localhost:5173";
+}
 
 const TRIAL_PERIOD_DAYS = 14;
 const DEFAULT_BRANCH_NAME = "الفرع الرئيسي";
@@ -60,6 +67,8 @@ async function toAuthResult(
 export async function registerCompany(input: RegisterCompanyInput): Promise<AuthResult> {
   const existing = await repo.findUserByUsername(input.adminUsername);
   if (existing) throw AppError.conflict("Username is already taken");
+
+  await verifyRegistrationOtp(input.adminEmail, input.otp);
 
   const passwordHash = await bcrypt.hash(input.adminPassword, BCRYPT_ROUNDS);
   const moduleDefaults = resolveBusinessTypeDefaults(input.businessType);
@@ -142,6 +151,15 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Auth
     recordAuditEvent(tenant, { action: "register_company", entityType: "company", entityId: company.id });
     const result = await toAuthResult(user, tenant, tx);
     return { ...result, branchId: branch.id, enabledModules: moduleDefaults.enabledModules };
+  }).then(async (result) => {
+    const { subject, html } = accountCreatedEmail(
+      input.companyName,
+      input.adminUsername,
+      input.adminPassword,
+      dashboardUrl(),
+    );
+    await sendEmail(input.adminEmail, subject, html);
+    return result;
   });
 }
 
