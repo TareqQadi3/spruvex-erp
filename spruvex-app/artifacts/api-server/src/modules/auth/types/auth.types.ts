@@ -1,4 +1,13 @@
-export type BusinessType = "retail" | "electronics" | "repair" | "restaurant" | "ecommerce";
+export type BusinessType =
+  | "retail"
+  | "electronics"
+  | "repair"
+  | "restaurant"
+  | "ecommerce"
+  | "grocery"
+  | "cafe"
+  | "clothing"
+  | "other";
 export type CompanyPlan = "erp_business" | "restaurant" | "sales_repair" | "enterprise";
 
 export interface RegisterCompanyInput {

@@ -5,14 +5,17 @@ import { z } from "zod/v4";
 export const companiesTable = pgTable("companies", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
+  nameEn: text("name_en"),
   // Licensing / subscription — controls trial period, seat/branch limits,
   // and which optional modules a customer has paid for. Values are this
   // project's SaaS package codes: erp_business | restaurant | sales_repair |
   // enterprise (see PROJECT_VISION_UPDATED.md's commercial packaging model).
   plan: text("plan").notNull().default("erp_business"),
   // The tenant's declared line of business at signup (retail | electronics |
-  // repair | restaurant | ecommerce) — drives the default enabledModules set;
-  // kept even after signup for analytics/future plan-recommendation use.
+  // repair | restaurant | ecommerce | grocery | cafe | clothing | other) —
+  // drives the default enabledModules set and POS template; kept even after
+  // signup (editable from the setup wizard / Settings) since it also selects
+  // the starter catalog template (see businessCatalogTemplates.ts).
   businessType: text("business_type"),
   status: text("status").notNull().default("active"), // active | suspended
   trialEndsAt: timestamp("trial_ends_at"),

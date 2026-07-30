@@ -1,6 +1,7 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useGetSettings } from "@workspace/api-client-react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -8,6 +9,7 @@ import { LanguageProvider } from "@/i18n";
 import { AuthProvider, useAuth, canAccess } from "@/contexts/AuthContext";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout/app-layout";
+import { SetupWizardOverlay } from "@/components/SetupWizardOverlay";
 
 // Route-level code splitting: each page becomes its own chunk instead of one
 // ~1.15MB bundle loaded up front for every user regardless of which pages
@@ -71,6 +73,8 @@ function GuardedPage({ component: Component, basePath, adminOnly }: { component:
 function AppRouter() {
   const { user, isLoading } = useAuth();
   const [location] = useLocation();
+  const [wizardDismissed, setWizardDismissed] = useState(false);
+  const { data: settings } = useGetSettings({ query: { enabled: !!user } as any });
 
   if (isLoading) {
     return (
@@ -108,6 +112,10 @@ function AppRouter() {
   }
 
   if (!user) return <Redirect to="/login" />;
+
+  if (settings && settings.setupCompleted === false && !wizardDismissed) {
+    return <SetupWizardOverlay initialBusinessType={null} onFinished={() => setWizardDismissed(true)} />;
+  }
 
   return (
     <AppLayout>

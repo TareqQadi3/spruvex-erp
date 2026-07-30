@@ -14,7 +14,9 @@ import {
   Smartphone,
   Wrench,
   UtensilsCrossed,
-  ShoppingCart,
+  Coffee,
+  Shirt,
+  MoreHorizontal,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -23,15 +25,17 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth, type AuthUser } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
-type BusinessType = "retail" | "electronics" | "repair" | "restaurant" | "ecommerce";
+type BusinessType = "electronics" | "grocery" | "restaurant" | "cafe" | "clothing" | "repair" | "other";
 type CompanyPlan = "erp_business" | "restaurant" | "sales_repair" | "enterprise";
 
 const BUSINESS_TYPES: { value: BusinessType; icon: typeof Store }[] = [
-  { value: "retail", icon: Store },
   { value: "electronics", icon: Smartphone },
-  { value: "repair", icon: Wrench },
+  { value: "grocery", icon: Store },
   { value: "restaurant", icon: UtensilsCrossed },
-  { value: "ecommerce", icon: ShoppingCart },
+  { value: "cafe", icon: Coffee },
+  { value: "clothing", icon: Shirt },
+  { value: "repair", icon: Wrench },
+  { value: "other", icon: MoreHorizontal },
 ];
 
 const PLANS: { value: CompanyPlan }[] = [

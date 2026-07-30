@@ -56,6 +56,33 @@ const BUSINESS_TYPE_DEFAULTS: Record<BusinessType, BusinessTypeDefaults> = {
     ecommerceModuleEnabled: true,
     posTemplate: "list",
   },
+  grocery: {
+    enabledModules: ["pos", "inventory", "customers"],
+    repairsModuleEnabled: false,
+    ecommerceModuleEnabled: false,
+    posTemplate: "list",
+  },
+  cafe: {
+    enabledModules: ["pos", "inventory", "customers", "restaurant"],
+    repairsModuleEnabled: false,
+    ecommerceModuleEnabled: false,
+    posTemplate: "grid",
+  },
+  clothing: {
+    enabledModules: ["pos", "inventory", "customers"],
+    repairsModuleEnabled: false,
+    ecommerceModuleEnabled: false,
+    posTemplate: "image",
+  },
+  // Generic fallback for anything that doesn't fit the named types — same
+  // defaults as retail, kept as its own key so the signup wizard's "Other"
+  // option doesn't have to misuse "retail"'s label.
+  other: {
+    enabledModules: ["pos", "inventory", "customers"],
+    repairsModuleEnabled: false,
+    ecommerceModuleEnabled: false,
+    posTemplate: "list",
+  },
 };
 
 export function resolveBusinessTypeDefaults(businessType: BusinessType): BusinessTypeDefaults {

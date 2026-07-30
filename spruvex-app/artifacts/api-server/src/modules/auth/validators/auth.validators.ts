@@ -9,7 +9,10 @@ export const registerCompanySchema = z.object({
   adminUsername: z.string().trim().min(3).max(50),
   adminEmail: z.string().trim().email(),
   adminPassword: z.string().min(8).max(200),
-  businessType: z.enum(["retail", "electronics", "repair", "restaurant", "ecommerce"]),
+  businessType: z.enum([
+    "retail", "electronics", "repair", "restaurant", "ecommerce",
+    "grocery", "cafe", "clothing", "other",
+  ]),
   plan: z.enum(["erp_business", "restaurant", "sales_repair", "enterprise"]),
   otp: z.string().trim().regex(/^\d{6}$/, "OTP must be a 6-digit code"),
 });

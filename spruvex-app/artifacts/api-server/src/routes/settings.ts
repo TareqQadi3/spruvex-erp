@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, settingsTable, PERMISSIONS } from "@workspace/db";
+import { db, settingsTable, companiesTable, PERMISSIONS } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requirePermission, type AuthedRequest } from "../lib/auth-middleware";
 
@@ -28,7 +28,13 @@ async function getOrCreateSettings(companyId: string) {
 
 router.get("/", async (req: AuthedRequest, res) => {
   const settings = await getOrCreateSettings(req.user!.companyId);
-  res.json(settings);
+  const [company] = await db.select().from(companiesTable).where(eq(companiesTable.id, req.user!.companyId)).limit(1);
+  res.json({
+    ...settings,
+    companyName: company?.name,
+    companyNameEn: company?.nameEn ?? null,
+    businessType: company?.businessType ?? null,
+  });
 });
 
 // Required, enum-like fields: never let an empty/blank string blank out a saved value.
@@ -37,6 +43,11 @@ router.get("/", async (req: AuthedRequest, res) => {
 function nonBlank(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
+
+const BUSINESS_TYPES = new Set([
+  "retail", "electronics", "repair", "restaurant", "ecommerce",
+  "grocery", "cafe", "clothing", "other",
+]);
 
 router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: AuthedRequest, res) => {
   const settings = await getOrCreateSettings(req.user!.companyId);
@@ -47,7 +58,7 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
     repairsModuleEnabled, vatNumber, themeColor,
     repairInvoiceType, repairInvoiceSameAsSales,
     openingBalance, fiscalYearStart, fiscalYearEnd, setupCompleted,
-    posTemplate,
+    posTemplate, companyNameEn, businessType,
   } = req.body;
   const currencyValue = nonBlank(currency);
   const languageValue = nonBlank(language);
@@ -82,6 +93,16 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
     ...(setupCompleted !== undefined ? { setupCompleted } : {}),
     ...(posTemplateValue !== undefined ? { posTemplate: posTemplateValue } : {}),
   }).where(eq(settingsTable.id, settings.id)).returning();
+
+  const companyNameEnValue = nonBlank(companyNameEn);
+  const businessTypeValue = typeof businessType === "string" && BUSINESS_TYPES.has(businessType) ? businessType : undefined;
+  if (companyNameEnValue !== undefined || businessTypeValue !== undefined) {
+    await db.update(companiesTable).set({
+      ...(companyNameEnValue !== undefined ? { nameEn: companyNameEnValue } : {}),
+      ...(businessTypeValue !== undefined ? { businessType: businessTypeValue } : {}),
+    }).where(eq(companiesTable.id, req.user!.companyId));
+  }
+
   res.json(updated);
 });
 
