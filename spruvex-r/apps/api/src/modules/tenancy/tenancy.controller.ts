@@ -14,6 +14,8 @@ import {
 
 import { AuditService } from "../../shared/audit/audit.service";
 import { LimitsService } from "../../shared/billing/limits.service";
+import { ResendService } from "../../shared/email/resend.service";
+import { staffCredentialsEmail } from "../../shared/email/templates";
 import { RequireAuthenticated } from "../../shared/rbac/require-authenticated.decorator";
 import { RequirePermission } from "../../shared/rbac/require-permission.decorator";
 import { PlatformPrismaService } from "../../shared/prisma/platform-prisma.service";
@@ -24,6 +26,10 @@ import { UpdateOrderingSettingsDto } from "./dto/branch-ordering-settings.dto";
 import { AddTeamMemberDto } from "./dto/onboarding.dto";
 import { UpdateTenantDto } from "./dto/tenant-settings.dto";
 
+function dashboardUrl(): string {
+  return process.env.DASHBOARD_BASE_URL ?? "http://localhost:5173";
+}
+
 /** Read endpoints backing the dashboard shell (branches / team / roles / restaurant info). */
 @Controller()
 export class TenancyController {
@@ -33,6 +39,7 @@ export class TenancyController {
     private readonly tenantContext: TenantContextService,
     private readonly audit: AuditService,
     private readonly limits: LimitsService,
+    private readonly resend: ResendService,
   ) {}
 
   @RequirePermission("tenant.settings.manage")
@@ -246,6 +253,24 @@ export class TenancyController {
           emailVerifiedAt: new Date(),
         },
       }));
+
+    // Only a brand-new account has a password worth emailing — an existing
+    // user just being added to another tenant keeps whatever password they
+    // already had, which dto.password was never applied to.
+    if (!existingUser) {
+      const tenant = await this.prisma.scoped.tenant.findUnique({
+        where: { id: tenantId },
+        select: { name: true },
+      });
+      const { subject, html } = staffCredentialsEmail(
+        dto.name,
+        tenant?.name ?? "SpruVex R",
+        email,
+        dto.password,
+        dashboardUrl(),
+      );
+      await this.resend.send(email, subject, html);
+    }
 
     const membership = await this.prisma.scoped.userRole.create({
       data: {
