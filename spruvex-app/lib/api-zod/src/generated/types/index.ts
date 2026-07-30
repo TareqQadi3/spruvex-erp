@@ -12,6 +12,8 @@ export * from './accountInputType';
 export * from './accountNormalBalance';
 export * from './accountType';
 export * from './accountUpdateInput';
+export * from './brand';
+export * from './brandInput';
 export * from './cashSession';
 export * from './cashSessionClose';
 export * from './cashSessionInput';

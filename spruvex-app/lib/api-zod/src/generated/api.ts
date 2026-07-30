@@ -72,6 +72,65 @@ export const DeleteCategoryParams = zod.object({
 
 
 /**
+ * @summary List all brands
+ */
+export const GetBrandsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "nameEn": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const GetBrandsResponse = zod.array(GetBrandsResponseItem)
+
+
+/**
+ * @summary Create a brand
+ */
+
+
+
+export const CreateBrandBody = zod.object({
+  "name": zod.string().min(1),
+  "nameEn": zod.string().optional(),
+  "imageUrl": zod.string().optional()
+})
+
+
+/**
+ * @summary Update a brand
+ */
+export const UpdateBrandParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateBrandBody = zod.object({
+  "name": zod.string().min(1),
+  "nameEn": zod.string().optional(),
+  "imageUrl": zod.string().optional()
+})
+
+export const UpdateBrandResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "nameEn": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a brand
+ */
+export const DeleteBrandParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary List products
  */
 export const GetProductsQueryParams = zod.object({

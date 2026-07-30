@@ -23,6 +23,23 @@ export interface CategoryInput {
   description?: string;
 }
 
+export interface Brand {
+  id: number;
+  name: string;
+  /** @nullable */
+  nameEn?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
+  createdAt: string;
+}
+
+export interface BrandInput {
+  /** @minLength 1 */
+  name: string;
+  nameEn?: string;
+  imageUrl?: string;
+}
+
 export interface Product {
   id: number;
   name: string;

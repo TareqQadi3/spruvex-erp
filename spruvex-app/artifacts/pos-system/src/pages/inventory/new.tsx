@@ -1,4 +1,4 @@
-import { useCreateProduct, useCreateCategory, useGetCategories, getGetProductsQueryKey, getGetCategoriesQueryKey } from "@workspace/api-client-react";
+import { useCreateProduct, useCreateCategory, useGetCategories, useCreateBrand, useGetBrands, getGetProductsQueryKey, getGetCategoriesQueryKey, getGetBrandsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,10 @@ export default function NewProductPage() {
   const { data: categories } = useGetCategories();
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const createBrand = useCreateBrand();
+  const { data: brands } = useGetBrands();
+  const [isBrandDialogOpen, setIsBrandDialogOpen] = useState(false);
+  const [newBrandName, setNewBrandName] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,6 +59,20 @@ export default function NewProductPage() {
     });
   };
 
+  const handleCreateBrand = () => {
+    if (!newBrandName.trim()) return;
+    createBrand.mutate({ data: { name: newBrandName.trim() } }, {
+      onSuccess: (created) => {
+        queryClient.invalidateQueries({ queryKey: getGetBrandsQueryKey() });
+        setValue("brandName", created.name);
+        setNewBrandName("");
+        setIsBrandDialogOpen(false);
+        toast.success(t("inventory.brand_created"));
+      },
+      onError: () => toast.error(t("inventory.brand_create_failed")),
+    });
+  };
+
   const includesTax = watch("includesTax");
   const sellingPrice = watch("sellingPrice");
 
@@ -71,7 +89,7 @@ export default function NewProductPage() {
     if (data.barcode) payload.barcode = data.barcode;
     if (data.description) payload.description = data.description;
     if (data.categoryId) payload.categoryId = Number(data.categoryId);
-    if (data.brand) payload.brand = data.brand;
+    if (data.brandName) payload.brand = data.brandName;
     if (imagePreview) payload.imageUrl = imagePreview;
 
     createProduct.mutate({ data: payload }, {
@@ -120,7 +138,27 @@ export default function NewProductPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>{t("inventory.brand")}</Label>
-                <Input {...register("brand")} placeholder={t("inventory.brand_placeholder")} />
+                <div className="flex gap-2">
+                  <Controller
+                    name="brandName"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder={t("inventory.select_brand")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {brands?.map(b => (
+                            <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  <Button type="button" variant="outline" size="icon" onClick={() => setIsBrandDialogOpen(true)}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label>{t("inventory.image")}</Label>
@@ -276,6 +314,31 @@ export default function NewProductPage() {
             </Button>
             <Button type="button" onClick={handleCreateCategory} disabled={createCategory.isPending || !newCategoryName.trim()}>
               {createCategory.isPending ? t("common.saving") : t("common.add")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isBrandDialogOpen} onOpenChange={setIsBrandDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("inventory.new_brand_title")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label>{t("inventory.brand_name")}</Label>
+            <Input
+              value={newBrandName}
+              onChange={(e) => setNewBrandName(e.target.value)}
+              placeholder={t("inventory.brand_placeholder")}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleCreateBrand(); } }}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsBrandDialogOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button type="button" onClick={handleCreateBrand} disabled={createBrand.isPending || !newBrandName.trim()}>
+              {createBrand.isPending ? t("common.saving") : t("common.add")}
             </Button>
           </DialogFooter>
         </DialogContent>
