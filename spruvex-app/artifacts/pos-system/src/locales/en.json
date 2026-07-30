@@ -668,7 +668,28 @@
     "list_title": "Your warehouses",
     "list_desc": "Create multiple stock locations.",
     "save_success": "Warehouse saved",
-    "transfer_stock": "Transfer Stock"
+    "transfer_stock": "Transfer Stock",
+    "no_branch": "No branch (company-wide)"
+  },
+  "branches": {
+    "title": "Branches",
+    "add": "Add Branch",
+    "name": "Branch Name",
+    "code": "Code",
+    "phone": "Phone",
+    "address": "Address",
+    "list_title": "Company branches",
+    "list_desc": "Each branch has its own warehouses and sales.",
+    "save_success": "Branch saved",
+    "default": "Default",
+    "inactive": "Inactive",
+    "set_default": "Set as default",
+    "manage_users": "Manage users",
+    "assign": "Assign",
+    "remove": "Remove",
+    "select_title": "Select Branch",
+    "select_desc": "Your account belongs to more than one branch. Pick the one you want to work in now.",
+    "select_failed": "Failed to select branch"
   },
   "inventory_movements": {
     "title": "Stock Movements",

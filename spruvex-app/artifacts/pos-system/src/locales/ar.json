@@ -668,7 +668,28 @@
     "list_title": "مخازنك",
     "list_desc": "أنشئ أكثر من موقع تخزين.",
     "save_success": "تم حفظ المخزن",
-    "transfer_stock": "نقل المخزون"
+    "transfer_stock": "نقل المخزون",
+    "no_branch": "بدون فرع (على مستوى الشركة)"
+  },
+  "branches": {
+    "title": "الفروع",
+    "add": "إضافة فرع",
+    "name": "اسم الفرع",
+    "code": "الرمز",
+    "phone": "الجوال",
+    "address": "العنوان",
+    "list_title": "فروع الشركة",
+    "list_desc": "كل فرع له مستودعاته ومبيعاته الخاصة.",
+    "save_success": "تم حفظ الفرع",
+    "default": "افتراضي",
+    "inactive": "غير نشط",
+    "set_default": "تعيين كافتراضي",
+    "manage_users": "إدارة المستخدمين",
+    "assign": "إضافة",
+    "remove": "إزالة",
+    "select_title": "اختر الفرع",
+    "select_desc": "حسابك مرتبط بأكثر من فرع. اختر الفرع الذي تريد العمل به الآن.",
+    "select_failed": "فشل اختيار الفرع"
   },
   "inventory_movements": {
     "title": "حركات المخزون",

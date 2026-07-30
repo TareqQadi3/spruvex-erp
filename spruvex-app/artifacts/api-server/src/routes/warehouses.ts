@@ -38,14 +38,17 @@ router.delete("/sections/:id", async (req: AuthedRequest, res) => {
 });
 
 router.get("/", async (req: AuthedRequest, res) => {
+  const branchId = req.query.branchId as string | undefined;
+  const conditions = [eq(warehousesTable.companyId, req.user!.companyId)];
+  if (branchId) conditions.push(eq(warehousesTable.branchId, branchId));
   const warehouses = await db.select().from(warehousesTable)
-    .where(eq(warehousesTable.companyId, req.user!.companyId))
+    .where(and(...conditions))
     .orderBy(warehousesTable.name);
   res.json(warehouses);
 });
 
 router.post("/", async (req: AuthedRequest, res) => {
-  const { name, isRepairStock, isDefault } = req.body;
+  const { name, isRepairStock, isDefault, branchId } = req.body;
   const companyId = req.user!.companyId;
   if (!name) {
     res.status(400).json({ error: "name is required" });
@@ -61,6 +64,7 @@ router.post("/", async (req: AuthedRequest, res) => {
         name,
         isRepairStock: isRepairStock ?? false,
         isDefault: true,
+        branchId,
       }).returning();
     });
     res.status(201).json(warehouse);
@@ -70,6 +74,7 @@ router.post("/", async (req: AuthedRequest, res) => {
     companyId,
     name,
     isRepairStock: isRepairStock ?? false,
+    branchId,
   }).returning();
   res.status(201).json(warehouse);
 });
@@ -77,7 +82,7 @@ router.post("/", async (req: AuthedRequest, res) => {
 router.put("/:id", async (req: AuthedRequest, res) => {
   const id = req.params.id as string;
   const companyId = req.user!.companyId;
-  const { name, isRepairStock, isDefault } = req.body;
+  const { name, isRepairStock, isDefault, branchId } = req.body;
 
   // Exactly one default per company — clear the existing default first in
   // the same transaction so a failed update never leaves zero or two.
@@ -89,6 +94,7 @@ router.put("/:id", async (req: AuthedRequest, res) => {
       return tx.update(warehousesTable).set({
         ...(name !== undefined ? { name } : {}),
         ...(isRepairStock !== undefined ? { isRepairStock } : {}),
+        ...(branchId !== undefined ? { branchId } : {}),
         isDefault: true,
       }).where(and(eq(warehousesTable.id, id), eq(warehousesTable.companyId, companyId))).returning();
     });
@@ -103,6 +109,7 @@ router.put("/:id", async (req: AuthedRequest, res) => {
   const [warehouse] = await db.update(warehousesTable).set({
     ...(name !== undefined ? { name } : {}),
     ...(isRepairStock !== undefined ? { isRepairStock } : {}),
+    ...(branchId !== undefined ? { branchId } : {}),
     ...(isDefault === false ? { isDefault: false } : {}),
   }).where(and(eq(warehousesTable.id, id), eq(warehousesTable.companyId, companyId))).returning();
   if (!warehouse) {

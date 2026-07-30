@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, ArrowLeftRight, Plus, Trash2, Warehouse } from "lucide-react";
@@ -17,6 +18,12 @@ interface WarehouseItem {
   id: number;
   name: string;
   isRepairStock: boolean;
+  branchId: string | null;
+}
+
+interface BranchItem {
+  id: string;
+  name: string;
 }
 
 export default function WarehousesSettingsPage() {
@@ -25,20 +32,28 @@ export default function WarehousesSettingsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [name, setName] = useState("");
   const [isRepairStock, setIsRepairStock] = useState(false);
+  const [branchId, setBranchId] = useState<string>("");
 
   const { data: warehouses, isLoading } = useQuery<WarehouseItem[]>({
     queryKey: ["warehouses"],
     queryFn: () => api("/warehouses"),
   });
 
+  const { data: branches } = useQuery<BranchItem[]>({
+    queryKey: ["branches"],
+    queryFn: () => api("/branches"),
+  });
+  const branchName = (id: string | null) => branches?.find(b => b.id === id)?.name;
+
   const createMutation = useMutation({
-    mutationFn: (vars: { name: string; isRepairStock: boolean }) =>
+    mutationFn: (vars: { name: string; isRepairStock: boolean; branchId?: string }) =>
       api("/warehouses", { method: "POST", body: JSON.stringify(vars) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["warehouses"] });
       setDialogOpen(false);
       setName("");
       setIsRepairStock(false);
+      setBranchId("");
       toast.success(t("warehouses.save_success"));
     },
     onError: (err: Error) => toast.error(err.message),
@@ -85,7 +100,10 @@ export default function WarehousesSettingsPage() {
                 <Warehouse className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <div className="font-medium text-sm">{w.name}</div>
-                  {w.isRepairStock && <div className="text-xs text-muted-foreground">{t("warehouses.repair_stock")}</div>}
+                  <div className="flex gap-2 text-xs text-muted-foreground">
+                    {w.isRepairStock && <span>{t("warehouses.repair_stock")}</span>}
+                    {branchName(w.branchId) && <span>{branchName(w.branchId)}</span>}
+                  </div>
                 </div>
               </div>
               <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(w.id)}>
@@ -106,6 +124,16 @@ export default function WarehousesSettingsPage() {
               <Label>{t("warehouses.name")}</Label>
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("warehouses.name_placeholder")} />
             </div>
+            <div className="space-y-1.5">
+              <Label>{t("branches.title")}</Label>
+              <Select value={branchId || "__none__"} onValueChange={v => setBranchId(v === "__none__" ? "" : v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">{t("warehouses.no_branch")}</SelectItem>
+                  {branches?.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <Label className="text-sm">{t("warehouses.is_repair_stock")}</Label>
               <Switch checked={isRepairStock} onCheckedChange={setIsRepairStock} />
@@ -113,7 +141,7 @@ export default function WarehousesSettingsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("common.cancel")}</Button>
-            <Button disabled={createMutation.isPending || !name.trim()} onClick={() => createMutation.mutate({ name: name.trim(), isRepairStock })}>
+            <Button disabled={createMutation.isPending || !name.trim()} onClick={() => createMutation.mutate({ name: name.trim(), isRepairStock, branchId: branchId || undefined })}>
               {createMutation.isPending ? t("common.saving") : t("common.add")}
             </Button>
           </DialogFooter>

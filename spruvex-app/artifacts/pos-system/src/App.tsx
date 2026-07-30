@@ -10,6 +10,7 @@ import { AuthProvider, useAuth, canAccess } from "@/contexts/AuthContext";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout/app-layout";
 import { SetupWizardOverlay } from "@/components/SetupWizardOverlay";
+import { BranchSelectOverlay } from "@/components/BranchSelectOverlay";
 
 // Route-level code splitting: each page becomes its own chunk instead of one
 // ~1.15MB bundle loaded up front for every user regardless of which pages
@@ -41,6 +42,7 @@ const SettingsPage = lazy(() => import("@/pages/settings"));
 const UsersSettingsPage = lazy(() => import("@/pages/settings/users"));
 const PaymentMethodsSettingsPage = lazy(() => import("@/pages/settings/payment-methods"));
 const WarehousesSettingsPage = lazy(() => import("@/pages/settings/warehouses"));
+const BranchesSettingsPage = lazy(() => import("@/pages/settings/branches"));
 const InstallmentPlansSettingsPage = lazy(() => import("@/pages/settings/installment-plans"));
 const SuppliersPage = lazy(() => import("@/pages/suppliers"));
 const PurchasesPage = lazy(() => import("@/pages/purchases"));
@@ -144,6 +146,11 @@ function AppRouter() {
 function AuthenticatedApp() {
   const [wizardDismissed, setWizardDismissed] = useState(false);
   const { data: settings } = useGetSettings();
+  const { pendingBranches } = useAuth();
+
+  if (pendingBranches) {
+    return <BranchSelectOverlay branches={pendingBranches} />;
+  }
 
   if (settings && settings.setupCompleted === false && !wizardDismissed) {
     return <SetupWizardOverlay initialBusinessType={null} onFinished={() => setWizardDismissed(true)} />;
@@ -174,6 +181,7 @@ function AuthenticatedApp() {
         <Route path="/settings/users"><GuardedPage component={UsersSettingsPage} basePath="/settings" adminOnly /></Route>
         <Route path="/settings/payment-methods"><GuardedPage component={PaymentMethodsSettingsPage} basePath="/settings" /></Route>
         <Route path="/settings/warehouses"><GuardedPage component={WarehousesSettingsPage} basePath="/settings" /></Route>
+        <Route path="/settings/branches"><GuardedPage component={BranchesSettingsPage} basePath="/settings" adminOnly /></Route>
         <Route path="/settings/installment-plans"><GuardedPage component={InstallmentPlansSettingsPage} basePath="/settings" /></Route>
         <Route path="/settings/import-export"><GuardedPage component={ImportExportPage} basePath="/settings" /></Route>
         <Route path="/settings/audit-log"><GuardedPage component={AuditLogPage} basePath="/settings" adminOnly /></Route>

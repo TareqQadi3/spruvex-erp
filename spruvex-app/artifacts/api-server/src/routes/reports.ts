@@ -2,6 +2,21 @@ import { Router } from "express";
 import { db, salesTable, repairsTable, productsTable, customersTable, expensesTable, saleItemsTable, productBatchesTable, settingsTable, PERMISSIONS } from "@workspace/db";
 import { eq, sql, and, gte, lte, desc, lt } from "drizzle-orm";
 import { requirePermission, type AuthedRequest } from "../lib/auth-middleware";
+import { permissionResolver } from "../modules/rbac/services/permissionResolverService";
+import { ensureUserRoleAssigned } from "../modules/rbac/services/userRoleSyncService";
+
+// Owner/Manager-with-all-branches-permission see company-wide numbers;
+// everyone else (including a Manager without it, per Phase 7 spec: "Manager
+// يرى فرعه فقط") is silently pinned to their own current branch — a
+// client-supplied branchId is never trusted to widen scope, only to narrow
+// it further within what the caller is already allowed to see.
+async function resolveReportBranchFilter(req: AuthedRequest): Promise<string | undefined> {
+  if (req.user!.role === "admin") return req.query.branchId as string | undefined;
+  await ensureUserRoleAssigned(req.user!.companyId, req.user!.id, req.user!.role);
+  const permissions = await permissionResolver.resolve(req.user!.companyId, req.user!.id);
+  if (permissions.includes("reports.view_all_branches")) return req.query.branchId as string | undefined;
+  return req.user!.branchId;
+}
 
 const router = Router();
 
@@ -157,6 +172,7 @@ router.get("/sales-summary", requirePermission(PERMISSIONS.REPORTS_VIEW), async 
     return;
   }
 
+  const branchFilter = await resolveReportBranchFilter(req);
   const rows = await db.select({
     date: sql<string>`date_trunc('day', created_at)::date::text`,
     totalSales: sql<number>`count(*)::int`,
@@ -168,6 +184,7 @@ router.get("/sales-summary", requirePermission(PERMISSIONS.REPORTS_VIEW), async 
       lte(salesTable.createdAt, new Date(to as string + "T23:59:59")),
       eq(salesTable.status, "completed"),
       eq(salesTable.companyId, req.user!.companyId),
+      ...(branchFilter ? [eq(salesTable.branchId, branchFilter)] : []),
     ))
     .groupBy(sql`date_trunc('day', created_at)::date`)
     .orderBy(sql`date_trunc('day', created_at)::date`);
@@ -176,9 +193,11 @@ router.get("/sales-summary", requirePermission(PERMISSIONS.REPORTS_VIEW), async 
 
 router.get("/top-products", requirePermission(PERMISSIONS.REPORTS_VIEW), async (req: AuthedRequest, res) => {
   const { limit = "10", from, to } = req.query;
+  const branchFilter = await resolveReportBranchFilter(req);
   const conditions = [eq(salesTable.status, "completed"), eq(salesTable.companyId, req.user!.companyId)];
   if (from) conditions.push(gte(salesTable.createdAt, new Date(from as string)));
   if (to) conditions.push(lte(salesTable.createdAt, new Date(to as string + "T23:59:59")));
+  if (branchFilter) conditions.push(eq(salesTable.branchId, branchFilter));
 
   const rows = await db
     .select({
@@ -226,11 +245,13 @@ router.get("/profit", requirePermission(PERMISSIONS.REPORTS_VIEW), async (req: A
     return;
   }
 
+  const branchFilter = await resolveReportBranchFilter(req);
   const dateConditions = [
     gte(salesTable.createdAt, new Date(from as string)),
     lte(salesTable.createdAt, new Date(to as string + "T23:59:59")),
     eq(salesTable.status, "completed"),
     eq(salesTable.companyId, orgId),
+    ...(branchFilter ? [eq(salesTable.branchId, branchFilter)] : []),
   ];
 
   const [salesData] = await db.select({

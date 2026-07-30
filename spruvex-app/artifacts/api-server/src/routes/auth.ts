@@ -1,7 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { db, usersTable, companiesTable, settingsTable, paymentMethodsTable, PERMISSIONS } from "@workspace/db";
+import { db, usersTable, companiesTable, settingsTable, paymentMethodsTable, branchesTable, warehousesTable, subscriptionsTable, PERMISSIONS } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { JWT_SECRET } from "../lib/jwt-secret";
 import { requireAuth, requireRole, type AuthedRequest } from "../lib/auth-middleware";
@@ -20,6 +20,7 @@ import { rateLimitAuth } from "../core/middleware/rateLimit.middleware";
 import { logAudit } from "../modules/auditLog/auditLogService";
 import { syncUserRoleFromLegacy, ensureUserRoleAssigned } from "../modules/rbac/services/userRoleSyncService";
 import { permissionResolver } from "../modules/rbac/services/permissionResolverService";
+import { listUserBranches, isUserAllowedBranch } from "../modules/branches/branchService";
 
 const router = Router();
 const JWT_EXPIRES = "7d";
@@ -32,6 +33,20 @@ async function seedOrgDefaults(companyId: string, shopName: string) {
     { companyId, name: "Visa/Mastercard", percentFee: "2", fixedFee: "0" },
   ]);
   await ensureChartOfAccountsSeeded(db, companyId);
+
+  // Same gap the modular register-company flow already closed (Phase 10):
+  // without a default branch/warehouse, the first POS sale on this legacy
+  // signup path fails or silently lands with no branch context, and without
+  // a subscription row every plan-limited endpoint (branches, users, ...)
+  // reads as "inactive" and 403s outright.
+  await db.insert(branchesTable).values({ companyId, name: "الفرع الرئيسي", isDefault: true, isActive: true });
+  await db.insert(warehousesTable).values({ companyId, name: "المستودع الرئيسي", isDefault: true, isRepairStock: false });
+  const now = new Date();
+  const trialEndsAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+  await db.insert(subscriptionsTable).values({
+    companyId, plan: "erp_business", status: "trial", billingCycle: "monthly",
+    price: "0", currency: "SAR", trialEndsAt, currentPeriodStart: now,
+  });
 }
 
 
@@ -95,7 +110,14 @@ router.post("/login", rateLimitAuth, async (req, res) => {
     return;
   }
 
-  const payload = { id: user.id, username: user.username, role: user.role, companyId: user.companyId };
+  // Only pre-select a branch in the token when there's exactly one real
+  // choice — a multi-branch user must explicitly pick via
+  // POST /auth/select-branch (see below) before any branch-scoped action
+  // (sale, warehouse view, branch-filtered report) will resolve correctly.
+  const branches = await listUserBranches(user.companyId, user.id);
+  const branchId = branches.length === 1 ? branches[0].id : undefined;
+
+  const payload = { id: user.id, username: user.username, role: user.role, companyId: user.companyId, branchId };
   // sub mirrors id so this token is also accepted by the modular routers'
   // auth middleware (core/middleware/auth.middleware.ts), which reads sub.
   const token = jwt.sign({ ...payload, sub: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
@@ -105,7 +127,28 @@ router.post("/login", rateLimitAuth, async (req, res) => {
   res.json({
     token,
     user: payload,
+    branches,
   });
+});
+
+router.get("/me/branches", requireAuth, async (req: AuthedRequest, res) => {
+  res.json(await listUserBranches(req.user!.companyId, req.user!.id));
+});
+
+router.post("/select-branch", requireAuth, async (req: AuthedRequest, res) => {
+  const { branchId } = req.body;
+  if (!branchId) {
+    res.status(400).json({ error: "branchId is required" });
+    return;
+  }
+  const allowed = await isUserAllowedBranch(req.user!.companyId, req.user!.id, branchId);
+  if (!allowed) {
+    res.status(403).json({ error: "Not a member of this branch" });
+    return;
+  }
+  const payload = { id: req.user!.id, username: req.user!.username, role: req.user!.role, companyId: req.user!.companyId, branchId };
+  const token = jwt.sign({ ...payload, sub: req.user!.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+  res.json({ token, user: payload });
 });
 
 router.get("/me", requireAuth, (req: AuthedRequest, res) => {

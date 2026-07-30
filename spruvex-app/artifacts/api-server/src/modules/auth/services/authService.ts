@@ -5,6 +5,7 @@ import { AppError } from "../../../core/errors/AppError";
 import { recordAuditEvent } from "../../../core/logging/auditLogger";
 import type { TenantContext } from "../../../shared/types/tenantContext";
 import { permissionResolver } from "../../rbac/services/permissionResolverService";
+import { listUserBranches } from "../../branches/branchService";
 import { ensureSeeded as ensureChartOfAccountsSeeded } from "../../accounting";
 import { UserAuthRepository } from "../repositories/userAuthRepository";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "./tokenService";
@@ -34,7 +35,11 @@ const repo = new UserAuthRepository();
 // authorize via core/middleware/permission.middleware's live DB resolution.
 async function buildTenantContext(companyId: string, userId: string, client: DbOrTx = db): Promise<TenantContext> {
   const roleName = await repo.getUserPrimaryRoleName(companyId, userId, client);
-  return { userId, companyId, role: roleName ?? "member" };
+  // Only pre-select when unambiguous (exactly one branch) — same rule as
+  // the legacy login path; a genuinely multi-branch user picks explicitly.
+  const branches = await listUserBranches(companyId, userId, client);
+  const branchId = branches.length === 1 ? branches[0].id : undefined;
+  return { userId, companyId, role: roleName ?? "member", branchId };
 }
 
 // Permissions shown here are informational only (so a client can render its

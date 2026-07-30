@@ -8,7 +8,7 @@ import { permissionResolver } from "../modules/rbac/services/permissionResolverS
 import { ensureUserRoleAssigned } from "../modules/rbac/services/userRoleSyncService";
 
 export interface AuthedRequest extends Request {
-  user?: { id: string; username: string; role: string; companyId: string };
+  user?: { id: string; username: string; role: string; companyId: string; branchId?: string };
 }
 
 export function requireAuth(req: AuthedRequest, res: Response, next: NextFunction): void {
@@ -26,6 +26,7 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
       username?: string;
       role: string;
       companyId: string;
+      branchId?: string;
     };
     const userId = decoded.id ?? decoded.sub;
     if (!decoded.companyId || !userId) {
@@ -37,6 +38,7 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
       username: decoded.username ?? "",
       role: decoded.role,
       companyId: decoded.companyId,
+      branchId: decoded.branchId,
     };
     next();
   } catch {

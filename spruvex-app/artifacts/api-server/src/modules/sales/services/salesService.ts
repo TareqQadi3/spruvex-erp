@@ -54,7 +54,7 @@ export async function getSaleWithDetails(companyId: string, id: string) {
 // The whole sale — header, items, stock, customer balance, cash session, and its
 // journal entry — commits or rolls back as one unit. A ledger-posting failure must
 // undo the stock decrement and balance changes, not leave them half-applied.
-export async function createSale(companyId: string, input: CreateSaleInput, createdByUserId?: string) {
+export async function createSale(companyId: string, input: CreateSaleInput, createdByUserId?: string, branchId?: string) {
   if (!input.items || input.items.length === 0) {
     throw new SaleValidationError("items are required");
   }
@@ -157,6 +157,7 @@ export async function createSale(companyId: string, input: CreateSaleInput, crea
       status: "completed",
       notes: input.notes,
       createdByUserId,
+      branchId,
       orderType: input.orderType,
       tableId: input.tableId,
     });

@@ -48,6 +48,9 @@ export const PERMISSIONS = {
   REPORTS_VIEW: "reports.view",
   USERS_MANAGE: "users.manage",
   AUDIT_VIEW: "audit.view",
+  // Phase 7
+  BRANCHES_MANAGE: "branches.manage",
+  REPORTS_VIEW_ALL_BRANCHES: "reports.view_all_branches",
 } as const;
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -96,7 +99,12 @@ export const DEFAULT_ROLES: Array<{ name: string; displayName: string; permissio
   {
     name: "manager",
     displayName: "Manager",
-    permissions: (Object.values(PERMISSIONS) as Permission[]).filter(p => p !== PERMISSIONS.USERS_MANAGE),
+    // Manager sees/manages everything within their own branch — never
+    // company-wide user management, branch structure, or the all-branches
+    // report view (Owner-only).
+    permissions: (Object.values(PERMISSIONS) as Permission[]).filter(
+      p => !([PERMISSIONS.USERS_MANAGE, PERMISSIONS.BRANCHES_MANAGE, PERMISSIONS.REPORTS_VIEW_ALL_BRANCHES] as Permission[]).includes(p),
+    ),
   },
   {
     name: "inventory_staff",

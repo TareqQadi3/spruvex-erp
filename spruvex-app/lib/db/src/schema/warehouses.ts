@@ -9,6 +9,10 @@ export const warehousesTable = pgTable("warehouses", {
   // "repairs" warehouses are auto-hidden when the repairs module is disabled.
   isRepairStock: boolean("is_repair_stock").notNull().default(false),
   isDefault: boolean("is_default").notNull().default(false),
+  // Phase 7 — nullable so every pre-existing (company-wide) warehouse keeps
+  // working unchanged; a warehouse only becomes branch-scoped once an admin
+  // explicitly assigns it to one.
+  branchId: uuid("branch_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

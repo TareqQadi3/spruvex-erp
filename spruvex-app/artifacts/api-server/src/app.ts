@@ -18,6 +18,7 @@ import inventoryRouter from "./modules/inventory/routes/inventory.routes";
 import zatcaRouter from "./modules/zatca/routes/zatca.routes";
 import syncRouter from "./modules/sync/routes/sync.routes";
 import subscriptionsRouter from "./modules/subscriptions/routes/subscriptions.routes";
+import branchesRouter from "./modules/branches/routes/branches.routes";
 import platformRouter from "./modules/platform/routes/platform.routes";
 import supportRouter from "./modules/support/routes/support.routes";
 import publicRouter from "./modules/public/routes/public.routes";
@@ -141,8 +142,9 @@ app.use("/api/bi", biRouter);
 // modules/platform/middleware/platformAdmin.middleware.ts.
 app.use("/api/platform", platformRouter);
 
-// Remaining business module routers are mounted here as each is rebuilt, e.g.:
-//   app.use("/api/branches", requireAuth, enforceTenantIsolation, branchesRouter);
+app.use("/api/branches", branchesRouter);
+
+// Remaining business module routers are mounted here as each is rebuilt.
 
 app.use(errorHandler);
 

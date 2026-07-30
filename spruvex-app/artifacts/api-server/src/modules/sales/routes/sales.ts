@@ -18,7 +18,7 @@ router.get("/", async (req: AuthedRequest, res) => {
 
 router.post("/", requirePermission(PERMISSIONS.SALES_CREATE), async (req: AuthedRequest, res) => {
   try {
-    const sale = await salesService.createSale(req.user!.companyId, req.body, req.user!.id);
+    const sale = await salesService.createSale(req.user!.companyId, req.body, req.user!.id, req.user!.branchId);
     await logAudit({
       companyId: req.user!.companyId, userId: req.user!.id, action: "create_sale",
       entityType: "sale", entityId: sale.id, newValue: { total: sale.total, paymentMethod: sale.paymentMethod },

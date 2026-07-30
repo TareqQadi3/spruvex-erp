@@ -462,6 +462,9 @@ export default function SettingsPage() {
               />
             </div>
             <div className="flex flex-wrap gap-2 pt-3">
+              <Link href="/settings/branches">
+                <Button type="button" variant="outline" size="sm">{t("branches.title")}</Button>
+              </Link>
               <Link href="/settings/warehouses">
                 <Button type="button" variant="outline" size="sm">{t("warehouses.title")}</Button>
               </Link>
