@@ -68,7 +68,7 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
   const shopNameValue = nonBlank(shopName);
   const POS_TEMPLATES = new Set(["list", "grid", "image", "mobile"]);
   const posTemplateValue = typeof posTemplate === "string" && POS_TEMPLATES.has(posTemplate) ? posTemplate : undefined;
-  const [updated] = await db.update(settingsTable).set({
+  const settingsPatch = {
     ...(shopNameValue !== undefined ? { shopName: shopNameValue } : {}),
     ...(shopAddress !== undefined ? { shopAddress } : {}),
     ...(shopPhone !== undefined ? { shopPhone } : {}),
@@ -92,7 +92,13 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
     ...(fiscalYearEnd !== undefined ? { fiscalYearEnd } : {}),
     ...(setupCompleted !== undefined ? { setupCompleted } : {}),
     ...(posTemplateValue !== undefined ? { posTemplate: posTemplateValue } : {}),
-  }).where(eq(settingsTable.id, settings.id)).returning();
+  };
+  // An empty SET clause is invalid SQL — a request that only touches company
+  // fields (e.g. the setup wizard's business-type-only step) legitimately
+  // sends nothing here, so just keep the row unchanged instead of updating.
+  const updated = Object.keys(settingsPatch).length > 0
+    ? (await db.update(settingsTable).set(settingsPatch).where(eq(settingsTable.id, settings.id)).returning())[0]
+    : settings;
 
   const companyNameEnValue = nonBlank(companyNameEn);
   const businessTypeValue = typeof businessType === "string" && BUSINESS_TYPES.has(businessType) ? businessType : undefined;
