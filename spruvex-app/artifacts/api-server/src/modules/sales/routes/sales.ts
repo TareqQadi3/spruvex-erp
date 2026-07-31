@@ -33,6 +33,16 @@ router.post("/", requirePermission(PERMISSIONS.SALES_CREATE), async (req: Authed
   }
 });
 
+// Literal "/returns" must be registered before "/:id" so it isn't captured as a sale id.
+router.get("/returns", async (req: AuthedRequest, res) => {
+  const { from, to } = req.query;
+  const returns = await salesService.listSaleReturns(req.user!.companyId, {
+    from: from as string | undefined,
+    to: to as string | undefined,
+  });
+  res.json(returns);
+});
+
 router.get("/:id", async (req: AuthedRequest, res) => {
   const sale = await salesService.getSaleWithDetails(req.user!.companyId, req.params.id as string);
   if (!sale) {

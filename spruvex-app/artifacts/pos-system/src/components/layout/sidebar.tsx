@@ -19,27 +19,62 @@ import {
   PackageSearch,
   FolderTree,
   Tag,
+  PlusCircle,
+  Undo2,
+  HandCoins,
+  Settings2,
+  Timer,
 } from "lucide-react";
 
-const NAV_ITEMS = [
-  { key: "nav.dashboard", href: "/", icon: LayoutDashboard },
-  { key: "nav.pos", href: "/pos", icon: ShoppingCart },
-  { key: "nav.sales", href: "/sales", icon: Receipt },
-  { key: "nav.repairs", href: "/repairs", icon: Wrench },
-  { key: "nav.customers", href: "/customers", icon: Users },
-  { key: "nav.suppliers", href: "/suppliers", icon: Truck },
-  { key: "nav.purchases", href: "/purchases", icon: PackageSearch },
-  { key: "nav.vouchers", href: "/vouchers", icon: ReceiptText },
-  { key: "nav.accounting", href: "/accounting", icon: Calculator },
-  { key: "nav.reports", href: "/reports", icon: BarChart3 },
-  { key: "nav.settings", href: "/settings", icon: Settings },
-];
+type NavIcon = React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
 
-// A grouped nav entry instead of a single flat "Inventory" link — products,
-// categories, and brands each get their own real page now (brands didn't
-// even have one before), so they need their own sidebar entries rather than
-// being buried inside tabs on one page.
-const PRODUCTS_GROUP = {
+interface NavItem {
+  key: string;
+  href: string;
+  icon: NavIcon;
+}
+
+interface NavGroup {
+  key: string;
+  basePath: string;
+  icon: NavIcon;
+  items: NavItem[];
+}
+
+// Sales and POS get their own grouped sections per the navigation restructure:
+// every entry points at a real page — /pos creates invoices, /vouchers records
+// customer payments (receipt vouchers), /accounting hosts cash sessions, and
+// /settings holds the invoice + POS screen configuration.
+const SALES_GROUP: NavGroup = {
+  key: "nav.sales_group",
+  basePath: "/sales",
+  icon: Receipt,
+  items: [
+    { key: "nav.sales", href: "/sales", icon: Receipt },
+    { key: "nav.create_invoice", href: "/pos", icon: PlusCircle },
+    { key: "nav.sales_returns", href: "/sales/returns", icon: Undo2 },
+    { key: "nav.credit_notes", href: "/sales/credit-notes", icon: ReceiptText },
+    { key: "nav.customer_payments", href: "/vouchers", icon: HandCoins },
+    { key: "nav.sales_settings", href: "/settings", icon: Settings2 },
+  ],
+};
+
+const POS_GROUP: NavGroup = {
+  key: "nav.pos_group",
+  basePath: "/pos",
+  icon: ShoppingCart,
+  items: [
+    { key: "nav.start_sale", href: "/pos", icon: ShoppingCart },
+    { key: "nav.pos_sessions", href: "/accounting", icon: Timer },
+    { key: "nav.pos_reports", href: "/reports", icon: BarChart3 },
+    { key: "nav.pos_settings", href: "/settings", icon: Settings2 },
+  ],
+};
+
+// Products, categories, and brands each get their own real page now (brands
+// didn't even have one before), so they need their own sidebar entries rather
+// than being buried inside tabs on one page.
+const PRODUCTS_GROUP: NavGroup = {
   key: "nav.products_group",
   basePath: "/inventory",
   icon: Package,
@@ -50,8 +85,33 @@ const PRODUCTS_GROUP = {
   ],
 };
 
+const FINANCE_GROUP: NavGroup = {
+  key: "nav.finance_group",
+  basePath: "/accounting",
+  icon: Calculator,
+  items: [
+    { key: "nav.accounting", href: "/accounting", icon: Calculator },
+    { key: "nav.vouchers", href: "/vouchers", icon: ReceiptText },
+  ],
+};
+
+const NAV_GROUPS: NavGroup[] = [SALES_GROUP, POS_GROUP, PRODUCTS_GROUP, FINANCE_GROUP];
+
+const TOP_ITEMS: NavItem[] = [
+  { key: "nav.dashboard", href: "/", icon: LayoutDashboard },
+];
+
+const BOTTOM_ITEMS: NavItem[] = [
+  { key: "nav.repairs", href: "/repairs", icon: Wrench },
+  { key: "nav.customers", href: "/customers", icon: Users },
+  { key: "nav.suppliers", href: "/suppliers", icon: Truck },
+  { key: "nav.purchases", href: "/purchases", icon: PackageSearch },
+  { key: "nav.reports", href: "/reports", icon: BarChart3 },
+  { key: "nav.settings", href: "/settings", icon: Settings },
+];
+
 function NavLink({ href, icon: Icon, label, isRTL, isActive, sub }: {
-  href: string; icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  href: string; icon: NavIcon;
   label: string; isRTL: boolean; isActive: boolean; sub?: boolean;
 }) {
   return (
@@ -86,15 +146,10 @@ export function Sidebar() {
   const { user } = useAuth();
   const { data: settings } = useGetSettings();
 
-  const productsGroupVisible = !user || canAccess(user.role, PRODUCTS_GROUP.basePath);
-
-  const beforeGroup = NAV_ITEMS.slice(0, 3).filter(item => {
+  const topItems = TOP_ITEMS.filter(item => !user || canAccess(user.role, item.href));
+  const bottomItems = BOTTOM_ITEMS.filter(item => {
     if (user && !canAccess(user.role, item.href)) return false;
     if (item.href === "/repairs" && settings?.repairsModuleEnabled === false) return false;
-    return true;
-  });
-  const afterGroup = NAV_ITEMS.slice(3).filter(item => {
-    if (user && !canAccess(user.role, item.href)) return false;
     return true;
   });
 
@@ -105,24 +160,28 @@ export function Sidebar() {
       </div>
       <div className="flex-1 overflow-y-auto py-4">
         <nav className="space-y-1 px-2">
-          {beforeGroup.map((item) => {
+          {topItems.map((item) => {
             const isActive = item.href === "/" ? location === "/" : location.startsWith(item.href);
             return <NavLink key={item.key} href={item.href} icon={item.icon} label={t(item.key)} isRTL={isRTL} isActive={isActive} />;
           })}
 
-          {productsGroupVisible && (
-            <div>
-              <div className={cn("px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/40", isRTL && "text-right")}>
-                {t(PRODUCTS_GROUP.key)}
+          {NAV_GROUPS.map((group) => {
+            const items = group.items.filter(item => !user || canAccess(user.role, item.href));
+            if (items.length === 0) return null;
+            return (
+              <div key={group.key}>
+                <div className={cn("px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/40", isRTL && "text-right")}>
+                  {t(group.key)}
+                </div>
+                {items.map((item) => {
+                  const isActive = location === item.href;
+                  return <NavLink key={item.key} href={item.href} icon={item.icon} label={t(item.key)} isRTL={isRTL} isActive={isActive} sub />;
+                })}
               </div>
-              {PRODUCTS_GROUP.items.map((item) => {
-                const isActive = location === item.href;
-                return <NavLink key={item.key} href={item.href} icon={item.icon} label={t(item.key)} isRTL={isRTL} isActive={isActive} sub />;
-              })}
-            </div>
-          )}
+            );
+          })}
 
-          {afterGroup.map((item) => {
+          {bottomItems.map((item) => {
             const isActive = item.href === "/" ? location === "/" : location.startsWith(item.href);
             return <NavLink key={item.key} href={item.href} icon={item.icon} label={t(item.key)} isRTL={isRTL} isActive={isActive} />;
           })}

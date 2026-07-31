@@ -51,6 +51,7 @@ const InstallmentPlansSettingsPage = lazy(() => import("@/pages/settings/install
 const SuppliersPage = lazy(() => import("@/pages/suppliers"));
 const PurchasesPage = lazy(() => import("@/pages/purchases"));
 const SalesPage = lazy(() => import("@/pages/sales"));
+const SalesReturnsModule = lazy(() => import("@/pages/sales/returns"));
 const VouchersPage = lazy(() => import("@/pages/vouchers"));
 
 function PageLoadingSpinner() {
@@ -157,6 +158,16 @@ function readSignupBusinessType(): string | null {
   return saved;
 }
 
+// Two routes, one page: the same list rendered with a different title/filter
+// intent — returned invoices (/sales/returns) vs. the credit notes they
+// produce (/sales/credit-notes). No duplicated page code.
+function SalesReturns() {
+  return <SalesReturnsModule variant="returns" />;
+}
+function CreditNotes() {
+  return <SalesReturnsModule variant="credit-notes" />;
+}
+
 function AuthenticatedApp() {
   const [wizardDismissed, setWizardDismissed] = useState(false);
   const { data: settings } = useGetSettings();
@@ -177,6 +188,8 @@ function AuthenticatedApp() {
         <Route path="/"><GuardedPage component={Dashboard} basePath="/" /></Route>
         <Route path="/pos"><GuardedPage component={PosPage} basePath="/pos" /></Route>
         <Route path="/sales"><GuardedPage component={SalesPage} basePath="/sales" /></Route>
+        <Route path="/sales/returns"><GuardedPage component={SalesReturns} basePath="/sales" /></Route>
+        <Route path="/sales/credit-notes"><GuardedPage component={CreditNotes} basePath="/sales" /></Route>
         <Route path="/repairs/new"><GuardedPage component={NewRepairPage} basePath="/repairs" /></Route>
         <Route path="/repairs/:id"><GuardedPage component={RepairDetailPage} basePath="/repairs" /></Route>
         <Route path="/repairs"><GuardedPage component={RepairsPage} basePath="/repairs" /></Route>

@@ -342,6 +342,10 @@ export async function createSaleReturn(companyId: string, saleId: string, input:
   });
 }
 
+export async function listSaleReturns(companyId: string, filters: SaleListFilters) {
+  return salesRepository.listReturns(db, companyId, filters);
+}
+
 export async function getSaleReturns(companyId: string, saleId: string) {
   const returns = await salesRepository.getReturnsForSale(db, companyId, saleId);
   return Promise.all(returns.map(async (r) => ({

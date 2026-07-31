@@ -46,6 +46,35 @@ export const salesRepository = {
       .orderBy(desc(salesTable.createdAt));
   },
 
+  async listReturns(db: DbClient, companyId: string, filters: SaleListFilters) {
+    const conditions = [eq(saleReturnsTable.companyId, companyId)];
+    if (filters.from) conditions.push(gte(saleReturnsTable.createdAt, new Date(filters.from)));
+    if (filters.to) {
+      const toDate = new Date(filters.to);
+      toDate.setDate(toDate.getDate() + 1);
+      conditions.push(lte(saleReturnsTable.createdAt, toDate));
+    }
+    return db.select({
+      id: saleReturnsTable.id,
+      returnNumber: saleReturnsTable.returnNumber,
+      saleId: saleReturnsTable.saleId,
+      customerId: salesTable.customerId,
+      customerName: customersTable.name,
+      reason: saleReturnsTable.reason,
+      refundMethod: saleReturnsTable.refundMethod,
+      refundAmount: saleReturnsTable.refundAmount,
+      exchangeAmount: saleReturnsTable.exchangeAmount,
+      netAmount: saleReturnsTable.netAmount,
+      paymentMethod: salesTable.paymentMethod,
+      saleTotal: salesTable.total,
+      createdAt: saleReturnsTable.createdAt,
+    }).from(saleReturnsTable)
+      .innerJoin(salesTable, eq(saleReturnsTable.saleId, salesTable.id))
+      .leftJoin(customersTable, eq(salesTable.customerId, customersTable.id))
+      .where(and(...conditions))
+      .orderBy(desc(saleReturnsTable.createdAt));
+  },
+
   async findById(db: DbClient, companyId: string, id: string) {
     const [sale] = await db.select(SALE_SELECT).from(salesTable)
       .leftJoin(customersTable, eq(salesTable.customerId, customersTable.id))
