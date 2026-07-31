@@ -64,7 +64,9 @@
     "updating": "جار التحديث...",
     "creating": "جار الإنشاء...",
     "language_en": "English",
-    "language_ar": "العربية"
+    "language_ar": "العربية",
+    "not_found": "الصفحة غير موجودة",
+    "not_found_desc": "الصفحة التي تبحث عنها غير موجودة أو تم نقلها."
   },
   "topbar": {
     "search_placeholder": "البحث العام (قريباً)...",
@@ -879,6 +881,7 @@
     "notes": "ملاحظات",
     "search_placeholder": "بحث عن مورد...",
     "empty": "لا يوجد موردون بعد.",
+    "empty_desc": "أضف أول مورد لتتبع مشتريات المنتجات وإعادة التخزين.",
     "outstanding": "مستحق: {{amount}}",
     "save_success": "تم حفظ المورد"
   },
@@ -981,6 +984,7 @@
     "date": "التاريخ",
     "description": "الوصف",
     "empty": "لا توجد سندات بعد.",
+    "empty_desc": "سجّل مدفوعات العملاء أو دفعات المصاريف للموردين هنا.",
     "save_success": "تم حفظ السند"
   },
   "warehouses": {

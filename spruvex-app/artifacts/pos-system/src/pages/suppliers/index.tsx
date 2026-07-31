@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Pencil, Trash2, Truck, Phone } from "lucide-react";
+import { Plus, Pencil, Trash2, Truck, Phone, AlertTriangle } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
+import { EmptyState } from "@/components/EmptyState";
 
 interface Supplier {
   id: number;
@@ -28,7 +29,7 @@ export default function SuppliersPage() {
   const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<Supplier | "new" | null>(null);
 
-  const { data: suppliers, isLoading } = useQuery<Supplier[]>({
+  const { data: suppliers, isLoading, isError } = useQuery<Supplier[]>({
     queryKey: ["suppliers", search],
     queryFn: () => api(`/suppliers${search ? `?search=${encodeURIComponent(search)}` : ""}`),
   });
@@ -70,8 +71,13 @@ export default function SuppliersPage() {
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {isLoading && [1, 2, 3].map(i => <Skeleton key={i} className="h-28 w-full" />)}
-        {suppliers?.length === 0 && (
-          <p className="text-muted-foreground text-sm col-span-full">{t("suppliers.empty")}</p>
+        {isError && (
+          <div className="col-span-full"><EmptyState icon={AlertTriangle} title={t("common.error")} /></div>
+        )}
+        {!isLoading && !isError && !suppliers?.length && (
+          <div className="col-span-full">
+            <EmptyState icon={Truck} title={t("suppliers.empty")} description={t("suppliers.empty_desc")} action={<Button onClick={() => setDialog("new")}><Plus className="me-2 h-4 w-4" />{t("suppliers.add")}</Button>} />
+          </div>
         )}
         {suppliers?.map(s => (
           <Card key={s.id}>

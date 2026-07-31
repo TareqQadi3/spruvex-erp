@@ -9,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowDownCircle, ArrowUpCircle, Plus, Trash2 } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Plus, Trash2, ReceiptText, AlertTriangle } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
+import { EmptyState } from "@/components/EmptyState";
 
 type PartyType = "customer" | "supplier" | "employee" | "other";
 interface PartyOption { id: string; name: string; }
@@ -32,7 +33,7 @@ export default function VouchersPage() {
   const queryClient = useQueryClient();
   const [dialogType, setDialogType] = useState<"receipt" | "payment" | null>(null);
 
-  const { data: vouchers, isLoading } = useQuery<Voucher[]>({
+  const { data: vouchers, isLoading, isError } = useQuery<Voucher[]>({
     queryKey: ["vouchers"],
     queryFn: () => api("/vouchers"),
   });
@@ -73,7 +74,10 @@ export default function VouchersPage() {
 
       <div className="space-y-2">
         {isLoading && [1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
-        {vouchers?.length === 0 && <p className="text-muted-foreground text-sm">{t("vouchers.empty")}</p>}
+        {isError && <EmptyState icon={AlertTriangle} title={t("common.error")} />}
+        {!isLoading && !isError && !vouchers?.length && (
+          <EmptyState icon={ReceiptText} title={t("vouchers.empty")} description={t("vouchers.empty_desc")} />
+        )}
         {vouchers?.map(v => (
           <Card key={v.id}>
             <CardContent className="p-3 flex items-center justify-between">

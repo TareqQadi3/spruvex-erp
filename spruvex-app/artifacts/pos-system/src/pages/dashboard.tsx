@@ -34,7 +34,19 @@ export default function Dashboard() {
     );
   }
 
-  if (!stats) return null;
+  if (!stats) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.title")}</h1>
+        <Card>
+          <CardContent className="py-12 flex flex-col items-center text-muted-foreground gap-2">
+            <AlertTriangle className="h-8 w-8" />
+            <p className="text-sm">{t("common.error")}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

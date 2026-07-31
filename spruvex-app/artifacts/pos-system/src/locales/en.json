@@ -64,7 +64,9 @@
     "updating": "Updating...",
     "creating": "Creating...",
     "language_en": "English",
-    "language_ar": "العربية"
+    "language_ar": "العربية",
+    "not_found": "Page not found",
+    "not_found_desc": "The page you are looking for does not exist or has been moved."
   },
   "topbar": {
     "search_placeholder": "Global search (coming soon)...",
@@ -879,6 +881,7 @@
     "notes": "Notes",
     "search_placeholder": "Search suppliers...",
     "empty": "No suppliers yet.",
+    "empty_desc": "Add your first supplier to track product purchases and restocking.",
     "outstanding": "Outstanding: {{amount}}",
     "save_success": "Supplier saved"
   },
@@ -981,6 +984,7 @@
     "date": "Date",
     "description": "Description",
     "empty": "No vouchers yet.",
+    "empty_desc": "Record customer payments or supplier expense receipts here.",
     "save_success": "Voucher saved"
   },
   "warehouses": {
