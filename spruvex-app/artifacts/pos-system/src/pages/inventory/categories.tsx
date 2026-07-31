@@ -16,9 +16,12 @@ import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
 import { MediaUploadField } from "@/components/MediaUploadField";
 
+import { TranslateButton } from "@/components/TranslateButton";
+
 interface CategoryRow {
   id: string;
   name: string;
+  nameEn?: string | null;
   parentId: string | null;
   imageUrl?: string | null;
 }
@@ -34,6 +37,7 @@ export default function CategoriesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CategoryRow | null>(null);
   const [name, setName] = useState("");
+  const [nameEn, setNameEn] = useState("");
   const [parentId, setParentId] = useState<string>("__none__");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
@@ -43,6 +47,7 @@ export default function CategoriesPage() {
   const openCreate = (forParentId?: string) => {
     setEditing(null);
     setName("");
+    setNameEn("");
     setParentId(forParentId ? String(forParentId) : "__none__");
     setImageUrl(null);
     setDialogOpen(true);
@@ -51,6 +56,7 @@ export default function CategoriesPage() {
   const openEdit = (cat: CategoryRow) => {
     setEditing(cat);
     setName(cat.name);
+    setNameEn(cat.nameEn ?? "");
     setParentId(cat.parentId ? String(cat.parentId) : "__none__");
     setImageUrl(cat.imageUrl ?? null);
     setDialogOpen(true);
@@ -60,7 +66,7 @@ export default function CategoriesPage() {
 
   const handleSave = () => {
     if (!name.trim()) return;
-    const payload = { name: name.trim(), parentId: parentId === "__none__" ? null : parentId, imageUrl };
+    const payload = { name: name.trim(), nameEn: nameEn.trim() || null, parentId: parentId === "__none__" ? null : parentId, imageUrl };
     if (editing) {
       updateCategory.mutate({ id: editing.id as any, data: payload as any }, {
         onSuccess: () => { toast.success(t("inventory.category_updated")); invalidate(); setDialogOpen(false); },
@@ -149,6 +155,19 @@ export default function CategoriesPage() {
                 autoFocus
                 onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleSave(); } }}
               />
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <Label>{t("inventory.category_name_en")}</Label>
+                  <Input
+                    value={nameEn}
+                    onChange={e => setNameEn(e.target.value)}
+                    placeholder={t("inventory.category_name_en_placeholder")}
+                  />
+                </div>
+                <TranslateButton text={name} onTranslated={setNameEn} />
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>{t("inventory.category_label")}</Label>

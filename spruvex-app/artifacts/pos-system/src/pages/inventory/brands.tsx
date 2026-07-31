@@ -15,7 +15,9 @@ import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
 import { MediaUploadField } from "@/components/MediaUploadField";
 
-interface Brand { id: number; name: string; imageUrl: string | null; }
+import { TranslateButton } from "@/components/TranslateButton";
+
+interface Brand { id: number; name: string; nameEn?: string | null; imageUrl: string | null; }
 
 export default function BrandsPage() {
   const { t } = useTranslation();
@@ -29,6 +31,7 @@ export default function BrandsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
   const [name, setName] = useState("");
+  const [nameEn, setNameEn] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -43,6 +46,7 @@ export default function BrandsPage() {
   const openCreate = () => {
     setEditingBrand(null);
     setName("");
+    setNameEn("");
     setImageUrl(null);
     setDialogOpen(true);
   };
@@ -50,19 +54,21 @@ export default function BrandsPage() {
   const openEdit = (brand: Brand) => {
     setEditingBrand(brand);
     setName(brand.name);
+    setNameEn(brand.nameEn ?? "");
     setImageUrl(brand.imageUrl ?? null);
     setDialogOpen(true);
   };
 
   const handleSave = () => {
     if (!name.trim()) return;
+    const data = { name: name.trim(), nameEn: nameEn.trim() || null, imageUrl };
     if (editingBrand) {
-      updateBrand.mutate({ id: editingBrand.id as any, data: { name: name.trim(), imageUrl } as any }, {
+      updateBrand.mutate({ id: editingBrand.id as any, data: data as any }, {
         onSuccess: () => { invalidate(); setDialogOpen(false); toast.success(t("brands.save_success")); },
         onError: () => toast.error(t("brands.save_failed")),
       });
     } else {
-      createBrand.mutate({ data: { name: name.trim(), imageUrl } as any }, {
+      createBrand.mutate({ data: data as any }, {
         onSuccess: () => { invalidate(); setDialogOpen(false); toast.success(t("brands.save_success")); },
         onError: () => toast.error(t("brands.save_failed")),
       });
@@ -113,6 +119,7 @@ export default function BrandsPage() {
                 {b.imageUrl ? <img src={b.imageUrl} alt="" className="h-full w-full object-contain" /> : <Tag className="h-5 w-5 text-muted-foreground/50" />}
               </div>
               <div className="text-sm font-medium text-center truncate w-full">{b.name}</div>
+              {"nameEn" in b && (b as any).nameEn && <div className="text-[10px] text-muted-foreground text-center truncate w-full">{(b as any).nameEn}</div>}
               <div className="flex gap-1">
                 <Button variant="ghost" size="icon" onClick={() => openEdit(b)}>
                   <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
@@ -135,6 +142,15 @@ export default function BrandsPage() {
             <div className="space-y-1.5">
               <Label>{t("brands.name")}</Label>
               <Input value={name} onChange={e => setName(e.target.value)} placeholder={t("brands.name_placeholder")} />
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <Label>{t("brands.name_en")}</Label>
+                  <Input value={nameEn} onChange={e => setNameEn(e.target.value)} placeholder={t("brands.name_en_placeholder")} />
+                </div>
+                <TranslateButton text={name} onTranslated={setNameEn} />
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>{t("brands.image")}</Label>
