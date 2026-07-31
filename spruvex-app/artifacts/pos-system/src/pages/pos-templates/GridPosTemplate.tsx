@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  useGetProducts, useGetCustomers,
+  useGetProducts,
   useGetSettings, useGetCategories,
 } from "@workspace/api-client-react";
 import { Card } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import { CartPanel } from "../pos-shared/CartPanel";
 import { PosSuccessScreen } from "../pos-shared/PosSuccessScreen";
 import { AddonPickerDialog, type SelectedAddon } from "../pos-shared/AddonPickerDialog";
 import { usePosSale } from "../pos-shared/usePosSale";
+import { usePosCustomerSelection } from "../pos-shared/usePosCustomerSelection";
 import type { CartItem, PosCustomer, CheckoutPayload } from "../pos-shared/types";
 
 interface OrderType { id: string; key: string; name: string; nameEn?: string | null }
@@ -31,8 +32,7 @@ export default function GridPosTemplate() {
   const [search, setSearch] = useState("");
   const [orderTypes, setOrderTypes] = useState<OrderType[]>([]);
   const [selectedOrderType, setSelectedOrderType] = useState<string | null>(null);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [selectedCustomerName, setSelectedCustomerName] = useState<string>("");
+  const customer = usePosCustomerSelection();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [editingPrice, setEditingPrice] = useState<number | null>(null);
   const [editPriceValue, setEditPriceValue] = useState("");
@@ -42,8 +42,6 @@ export default function GridPosTemplate() {
     search ? { search } : (selectedCategoryId ? { categoryId: selectedCategoryId as any } : undefined),
   );
   const { data: categories } = useGetCategories();
-  const { data: customers } = useGetCustomers();
-  const customerList = (customers ?? []) as unknown as PosCustomer[];
   const { data: settings } = useGetSettings();
   const { t } = useTranslation();
 
@@ -112,18 +110,15 @@ export default function GridPosTemplate() {
   const subtotalBeforeTax = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity - item.discount, 0);
   const total = cart.reduce((sum, item) => sum + getItemTotal(item), 0);
 
-  const selectedCustomer = customerList.find(c => c.id === selectedCustomerId) ?? null;
-
   const resetAfterSale = () => {
     setCart([]);
-    setSelectedCustomerId(null);
-    setSelectedCustomerName("");
+    customer.resetCustomer();
   };
 
   const handleCheckout = (payload: CheckoutPayload) => {
     sale.submitSale({
       cart,
-      customer: selectedCustomer,
+      customer: customer.selectedCustomer,
       discount: 0,
       orderType: selectedOrderType ?? undefined,
       payload,
@@ -140,8 +135,7 @@ export default function GridPosTemplate() {
     const held = sale.restoreHeldCart(id);
     if (held) {
       setCart(held.items);
-      setSelectedCustomerId(null);
-      setSelectedCustomerName("");
+      customer.resetCustomer();
     }
   };
 
@@ -225,11 +219,11 @@ export default function GridPosTemplate() {
         }
         cartPanel={
           <CartPanel
-            customers={customerList}
-            selectedCustomerId={selectedCustomerId}
-            selectedCustomerName={selectedCustomerName}
-            onSelectCustomer={(id, name) => { setSelectedCustomerId(id); setSelectedCustomerName(name); }}
-            onCustomerCreated={c => { setSelectedCustomerId(c.id); setSelectedCustomerName(c.name); }}
+            customers={customer.customerList}
+            selectedCustomerId={customer.selectedCustomerId}
+            selectedCustomerName={customer.selectedCustomerName}
+            onSelectCustomer={customer.selectCustomer}
+            onCustomerCreated={customer.customerCreated}
             cart={cart}
             editingPriceId={editingPrice}
             editPriceValue={editPriceValue}
