@@ -9,10 +9,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { useTranslation } from "@/i18n";
 
+import { QueryErrorState } from "@/components/QueryErrorState";
+
 export default function TrialBalance() {
   const { t } = useTranslation();
   const [asOf, setAsOf] = useState("");
-  const { data: trialBalance, isLoading } = useGetTrialBalance(asOf ? { asOf } : undefined);
+  const { data: trialBalance, isLoading, isError, refetch } = useGetTrialBalance(asOf ? { asOf } : undefined);
 
   return (
     <div className="space-y-4">
@@ -56,6 +58,8 @@ export default function TrialBalance() {
                     {[1, 2, 3, 4, 5].map(j => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
                   </TableRow>
                 ))
+              ) : isError ? (
+                <TableRow><TableCell colSpan={5} className="py-12"><QueryErrorState onRetry={() => refetch()} /></TableCell></TableRow>
               ) : trialBalance?.lines.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t("accounting.no_trial_balance_data")}</TableCell>

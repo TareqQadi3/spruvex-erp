@@ -18,6 +18,7 @@ import { Plus, Pencil, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "@/i18n";
+import { QueryErrorState } from "@/components/QueryErrorState";
 
 const ACCOUNT_TYPES = ["asset", "liability", "equity", "revenue", "expense"] as const;
 
@@ -181,7 +182,7 @@ function AccountDialog({
 
 export default function ChartOfAccounts() {
   const queryClient = useQueryClient();
-  const { data: accounts, isLoading } = useGetAccounts();
+  const { data: accounts, isLoading, isError, refetch } = useGetAccounts();
   const { t } = useTranslation();
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getGetAccountsQueryKey() });
@@ -216,6 +217,10 @@ export default function ChartOfAccounts() {
                     {[1, 2, 3, 4, 5, 6].map(j => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
                   </TableRow>
                 ))
+              ) : isError ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-12"><QueryErrorState onRetry={() => refetch()} /></TableCell>
+                </TableRow>
               ) : accounts?.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t("accounting.no_accounts")}</TableCell>

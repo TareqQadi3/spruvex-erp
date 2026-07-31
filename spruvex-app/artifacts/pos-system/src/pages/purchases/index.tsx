@@ -36,7 +36,7 @@ export default function PurchasesPage() {
   const [newPurchaseOpen, setNewPurchaseOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: purchases, isLoading } = useQuery<Purchase[]>({
+  const { data: purchases, isLoading, isError, refetch } = useQuery<Purchase[]>({
     queryKey: ["purchases"],
     queryFn: () => api("/purchases"),
   });

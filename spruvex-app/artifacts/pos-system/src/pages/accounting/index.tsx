@@ -143,7 +143,7 @@ function AddExpenseDialog({ onCreated }: { onCreated: () => void }) {
 
 export default function AccountingPage() {
   const queryClient = useQueryClient();
-  const { data: expenses, isLoading } = useGetExpenses();
+  const { data: expenses, isLoading, isError, refetch } = useGetExpenses();
   const { data: activeSession } = useGetActiveCashSession({ query: { retry: false } as any });
   const openSession = useOpenCashSession();
   const closeSession = useCloseCashSession();

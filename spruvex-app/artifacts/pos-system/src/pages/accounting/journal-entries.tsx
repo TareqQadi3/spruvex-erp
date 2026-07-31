@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
+import { QueryErrorState } from "@/components/QueryErrorState";
 
 interface DraftLine {
   accountId: string;
@@ -183,7 +184,7 @@ function NewJournalEntryDialog({ onCreated }: { onCreated: () => void }) {
 
 export default function JournalEntries() {
   const queryClient = useQueryClient();
-  const { data: entries, isLoading } = useGetJournalEntries();
+  const { data: entries, isLoading, isError, refetch } = useGetJournalEntries();
   const { t } = useTranslation();
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getGetJournalEntriesQueryKey() });
@@ -213,6 +214,8 @@ export default function JournalEntries() {
                     {[1, 2, 3, 4, 5, 6].map(j => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
                   </TableRow>
                 ))
+              ) : isError ? (
+                <TableRow><TableCell colSpan={6} className="py-12"><QueryErrorState onRetry={() => refetch()} /></TableCell></TableRow>
               ) : entries?.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t("accounting.no_journal_entries")}</TableCell>
