@@ -53,6 +53,7 @@ const PurchasesPage = lazy(() => import("@/pages/purchases"));
 const SalesPage = lazy(() => import("@/pages/sales"));
 const SalesReturnsModule = lazy(() => import("@/pages/sales/returns"));
 const VouchersPage = lazy(() => import("@/pages/vouchers"));
+const EcommerceOrdersPage = lazy(() => import("@/pages/ecommerce/orders"));
 
 function PageLoadingSpinner() {
   return (
@@ -190,6 +191,7 @@ function AuthenticatedApp() {
         <Route path="/sales"><GuardedPage component={SalesPage} basePath="/sales" /></Route>
         <Route path="/sales/returns"><GuardedPage component={SalesReturns} basePath="/sales" /></Route>
         <Route path="/sales/credit-notes"><GuardedPage component={CreditNotes} basePath="/sales" /></Route>
+        <Route path="/ecommerce/orders"><GuardedPage component={EcommerceOrdersPage} basePath="/ecommerce" /></Route>
         <Route path="/repairs/new"><GuardedPage component={NewRepairPage} basePath="/repairs" /></Route>
         <Route path="/repairs/:id"><GuardedPage component={RepairDetailPage} basePath="/repairs" /></Route>
         <Route path="/repairs"><GuardedPage component={RepairsPage} basePath="/repairs" /></Route>

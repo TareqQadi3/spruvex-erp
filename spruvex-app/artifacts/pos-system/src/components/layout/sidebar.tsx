@@ -52,6 +52,7 @@ const SALES_GROUP: NavGroup = {
   items: [
     { key: "nav.sales", href: "/sales", icon: Receipt },
     { key: "nav.create_invoice", href: "/pos", icon: PlusCircle },
+    { key: "nav.online_orders", href: "/ecommerce/orders", icon: ShoppingCart },
     { key: "nav.sales_returns", href: "/sales/returns", icon: Undo2 },
     { key: "nav.credit_notes", href: "/sales/credit-notes", icon: ReceiptText },
     { key: "nav.customer_payments", href: "/vouchers", icon: HandCoins },
