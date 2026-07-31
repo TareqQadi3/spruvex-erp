@@ -3,6 +3,8 @@ import { db, repairPartsTable, productsTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import type { AuthedRequest } from "../lib/auth-middleware";
 import { ValidationError, parseRequiredNumber, parseOptionalNumber } from "../lib/validation";
+import { applyStockDelta } from "../lib/stockDelta";
+import { logAudit } from "../modules/auditLog/auditLogService";
 
 const router = Router();
 
@@ -21,9 +23,6 @@ router.get("/", async (req: AuthedRequest, res) => {
   res.json(parts);
 });
 
-// Adding a part that's linked to a real inventory product consumes stock from that
-// product — the same `productsTable.stock` column sales/purchases use. A part that's
-// purely descriptive (no productId) doesn't touch inventory at all.
 router.post("/", async (req: AuthedRequest, res) => {
   const orgId = req.user!.companyId;
   const { repairId, productId, partName, quantity, partCost, laborFee } = req.body;
@@ -39,12 +38,19 @@ router.post("/", async (req: AuthedRequest, res) => {
 
     const part = await db.transaction(async (tx) => {
       if (productId) {
-        const [product] = await tx.select().from(productsTable)
-          .where(and(eq(productsTable.id, productId), eq(productsTable.companyId, orgId)));
-        if (!product) throw new ValidationError("Product not found");
-        if (product.stock < qty) throw new ValidationError(`Insufficient stock for ${product.name}`);
-        await tx.update(productsTable).set({ stock: sql`${productsTable.stock} - ${qty}` })
-          .where(eq(productsTable.id, productId));
+        const booked = await applyStockDelta(tx, {
+          companyId: orgId,
+          productId,
+          delta: -qty,
+          movementType: "sale",
+          referenceType: "repair_part",
+          referenceId: repairId,
+        });
+        if (booked === null) {
+          const [product] = await tx.select().from(productsTable)
+            .where(and(eq(productsTable.id, productId), eq(productsTable.companyId, orgId)));
+          throw new ValidationError(`Insufficient stock for ${product?.name ?? "product"}`);
+        }
       }
       const [row] = await tx.insert(repairPartsTable).values({
         companyId: orgId,
@@ -57,6 +63,16 @@ router.post("/", async (req: AuthedRequest, res) => {
       }).returning();
       return row;
     });
+
+    await logAudit({
+      companyId: orgId,
+      userId: req.user!.id,
+      action: "add_repair_part",
+      entityType: "repair_part",
+      entityId: part.id,
+      newValue: { repairId, partName, quantity: qty, productId: productId ?? null },
+    });
+
     res.status(201).json(part);
   } catch (err) {
     if (err instanceof ValidationError) {
@@ -102,13 +118,26 @@ router.delete("/:id", async (req: AuthedRequest, res) => {
     if (!part) throw new ValidationError("Part not found");
 
     if (part.productId) {
-      await tx.update(productsTable)
-        .set({ stock: sql`${productsTable.stock} + ${part.quantity}` })
-        .where(and(eq(productsTable.id, part.productId), eq(productsTable.companyId, orgId)));
+      await applyStockDelta(tx, {
+        companyId: orgId,
+        productId: part.productId,
+        delta: part.quantity,
+        movementType: "sale",
+        referenceType: "repair_part_return",
+        referenceId: id,
+      });
     }
 
     await tx.delete(repairPartsTable)
       .where(and(eq(repairPartsTable.id, id), eq(repairPartsTable.companyId, orgId)));
+  });
+
+  await logAudit({
+    companyId: orgId,
+    userId: req.user!.id,
+    action: "delete_repair_part",
+    entityType: "repair_part",
+    entityId: id,
   });
 
   res.status(204).send();

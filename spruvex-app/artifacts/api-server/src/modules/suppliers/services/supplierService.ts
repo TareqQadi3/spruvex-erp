@@ -4,6 +4,7 @@ import type { DbClient } from "../../accounting/types";
 
 export interface CreateSupplierInput {
   name: string;
+  nameEn?: string | null;
   phone?: string;
   email?: string;
   address?: string;
@@ -24,6 +25,7 @@ export async function createSupplier(db: DbClient, companyId: string, input: Cre
   return supplierRepository.insert(db, {
     companyId,
     name: input.name,
+    nameEn: input.nameEn ?? null,
     phone: input.phone,
     email: input.email,
     address: input.address,
@@ -35,6 +37,7 @@ export async function createSupplier(db: DbClient, companyId: string, input: Cre
 export async function updateSupplier(db: DbClient, companyId: string, id: string, input: Partial<CreateSupplierInput>): Promise<Supplier | undefined> {
   const changes: SupplierUpdate = {
     name: input.name,
+    nameEn: input.nameEn,
     phone: input.phone,
     email: input.email,
     address: input.address,

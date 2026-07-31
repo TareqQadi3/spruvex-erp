@@ -3,12 +3,15 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, Edit, History, FolderTree, Layers, AlertTriangle } from "lucide-react";
+import { Plus, Search, Trash2, Edit, History, FolderTree, Layers, AlertTriangle, Scale } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState, useRef } from "react";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
 import { formatCurrency } from "@/lib/format";
@@ -39,6 +42,33 @@ export default function InventoryPage() {
       .catch(() => {});
   }, []);
   const alertCount = alerts ? alerts.lowStock.length + alerts.expired.length + alerts.expiringSoon.length : 0;
+
+  const [adjustProduct, setAdjustProduct] = useState<any | null>(null);
+  const [adjustQty, setAdjustQty] = useState("");
+  const [adjustReason, setAdjustReason] = useState("");
+
+  const adjustMutation = useMutation({
+    mutationFn: () => {
+      const token = localStorage.getItem(TOKEN_KEY);
+      return fetch("/api/inventory/stock/adjust", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          productId: adjustProduct.id,
+          quantity: Number(adjustQty),
+          reason: adjustReason.trim() || undefined,
+        }),
+      }).then(r => r.ok ? r.json() : r.json().then(err => { throw new Error(err.error ?? "Adjustment failed"); }));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: getGetProductsQueryKey() });
+      setAdjustProduct(null);
+      setAdjustQty("");
+      setAdjustReason("");
+      toast.success(t("inventory.stock_adjusted"));
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   const handleDelete = (id: number) => {
     if (window.confirm(t("inventory.delete_confirm"))) {
@@ -139,6 +169,9 @@ export default function InventoryPage() {
                         <Badge variant={isLowStock ? "destructive" : "secondary"}>{product.stock}</Badge>
                       </TableCell>
                       <TableCell className="text-end space-x-2">
+                        <Button variant="ghost" size="icon" onClick={() => { setAdjustProduct(product); setAdjustQty(""); setAdjustReason(""); }}>
+                          <Scale className="h-4 w-4 text-muted-foreground" />
+                        </Button>
                         <Link href={`/inventory/${product.id}/manage`}>
                           <Button variant="ghost" size="icon" title={t("variants.manage_button")}>
                             <Layers className="h-4 w-4 text-muted-foreground" />
@@ -163,6 +196,39 @@ export default function InventoryPage() {
           </Table>
         </CardContent>
       </Card>
+      {adjustProduct && (
+        <Dialog open onOpenChange={() => setAdjustProduct(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>{t("inventory.adjust_stock")} — {adjustProduct.name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">{t("inventory.current_stock")}</span>
+                <span className="font-bold">{adjustProduct.stock}</span>
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t("inventory.adjust_quantity")}</Label>
+                <Input type="number" step="1" value={adjustQty} onChange={e => setAdjustQty(e.target.value)}
+                  placeholder={`${t("inventory.adjust_increase")} / ${t("inventory.adjust_decrease")}`} />
+                <p className="text-xs text-muted-foreground">
+                  {t("inventory.adjust_hint", { current: adjustProduct.stock, new: Number(adjustQty) + adjustProduct.stock })}
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t("inventory.adjust_reason")}</Label>
+                <Textarea value={adjustReason} onChange={e => setAdjustReason(e.target.value)} placeholder={t("inventory.adjust_reason_placeholder")} rows={2} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAdjustProduct(null)}>{t("common.cancel")}</Button>
+              <Button onClick={() => adjustMutation.mutate()} disabled={!adjustQty || Number(adjustQty) === 0 || adjustMutation.isPending}>
+                {adjustMutation.isPending ? t("common.saving") : t("inventory.adjust_stock")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

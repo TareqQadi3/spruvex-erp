@@ -16,12 +16,15 @@ import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n";
 import { MediaUploadField } from "@/components/MediaUploadField";
 
+import { TranslateButton } from "@/components/TranslateButton";
+
 function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const createCustomer = useCreateCustomer();
-  const { register, handleSubmit, reset } = useForm<any>();
+  const { register, handleSubmit, reset, watch, setValue } = useForm<any>();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const { t } = useTranslation();
+  const customerName = watch("name") ?? "";
 
   const onSubmit = (data: any) => {
     createCustomer.mutate({ data: { ...data, imageUrl } }, {
@@ -50,6 +53,15 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
             <div className="col-span-2 space-y-1.5">
               <Label>{t("customers.full_name_required")}</Label>
               <Input {...register("name", { required: true })} placeholder={t("customers.name_placeholder")} />
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <Label>{t("customers.name_en")}</Label>
+                  <Input {...register("nameEn")} placeholder={t("customers.name_en_placeholder")} />
+                </div>
+                <TranslateButton text={customerName} onTranslated={(t) => setValue("nameEn", t)} />
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>{t("common.phone")}</Label>

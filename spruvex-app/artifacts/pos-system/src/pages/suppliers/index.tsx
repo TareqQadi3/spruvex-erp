@@ -125,6 +125,8 @@ export default function SuppliersPage() {
   );
 }
 
+import { TranslateButton } from "@/components/TranslateButton";
+
 function SupplierDialog({
   supplier, onClose, onSave, isPending,
 }: {
@@ -135,6 +137,7 @@ function SupplierDialog({
 }) {
   const { t } = useTranslation();
   const [name, setName] = useState(supplier?.name ?? "");
+  const [nameEn, setNameEn] = useState((supplier as any)?.nameEn ?? "");
   const [phone, setPhone] = useState(supplier?.phone ?? "");
   const [email, setEmail] = useState(supplier?.email ?? "");
   const [address, setAddress] = useState(supplier?.address ?? "");
@@ -150,6 +153,15 @@ function SupplierDialog({
           <div className="space-y-1.5">
             <Label>{t("suppliers.name")}</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Label>{t("suppliers.name_en")}</Label>
+                <Input value={nameEn} onChange={(e) => setNameEn(e.target.value)} placeholder={t("suppliers.name_en_placeholder")} />
+              </div>
+              <TranslateButton text={name} onTranslated={setNameEn} />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -181,7 +193,8 @@ function SupplierDialog({
               email: email || null,
               address: address || null,
               notes: notes || null,
-            })}
+              nameEn: nameEn.trim() || null,
+            } as any)}
           >
             {isPending ? t("common.saving") : t("common.save")}
           </Button>

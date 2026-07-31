@@ -78,9 +78,35 @@ export default function RepairDetailPage() {
 
   const [showAddPart, setShowAddPart] = useState(false);
   const [addPartName, setAddPartName] = useState("");
+  const [addProductId, setAddProductId] = useState<string | null>(null);
   const [addPartQty, setAddPartQty] = useState("1");
   const [addPartCost, setAddPartCost] = useState("");
   const [addPartFee, setAddPartFee] = useState("");
+  const [productSearch, setProductSearch] = useState("");
+  const [productResults, setProductResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  const searchProducts = async (q: string) => {
+    setProductSearch(q);
+    if (q.length < 2) { setProductResults([]); return; }
+    setSearching(true);
+    try {
+      const res = await authFetch(`/products?search=${encodeURIComponent(q)}&limit=8`);
+      setProductResults(Array.isArray(res) ? res : []);
+    } catch {
+      setProductResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const selectProduct = (p: any) => {
+    setAddProductId(p.id);
+    setAddPartName(p.name);
+    setAddPartCost(p.costPrice ? String(p.costPrice) : "");
+    setProductSearch("");
+    setProductResults([]);
+  };
 
   const addPartMutation = useMutation({
     mutationFn: () => authFetch("/repair-parts", {
@@ -88,6 +114,7 @@ export default function RepairDetailPage() {
       body: JSON.stringify({
         repairId: id,
         partName: addPartName.trim(),
+        productId: addProductId,
         quantity: Number(addPartQty) || 1,
         partCost: Number(addPartCost) || 0,
         laborFee: Number(addPartFee) || 0,
@@ -97,9 +124,11 @@ export default function RepairDetailPage() {
       refetchParts();
       setShowAddPart(false);
       setAddPartName("");
+      setAddProductId(null);
       setAddPartQty("1");
       setAddPartCost("");
       setAddPartFee("");
+      setProductSearch("");
       toast.success(t("repairs.part_added"));
     },
     onError: (err: Error) => toast.error(err.message),
@@ -240,9 +269,30 @@ export default function RepairDetailPage() {
             <CardContent>
               {showAddPart && (
                 <div className="rounded-lg border bg-muted/30 p-3 space-y-2 mb-3">
+                  <div className="space-y-1.5 relative">
+                    <Label className="text-xs">{t("repairs.search_product")}</Label>
+                    <Input value={productSearch} onChange={e => searchProducts(e.target.value)} placeholder={t("repairs.search_product_placeholder")} className="h-8 text-sm" />
+                    {productResults.length > 0 && (
+                      <div className="absolute z-10 top-full mt-1 w-full rounded-md border bg-popover shadow-md max-h-48 overflow-y-auto">
+                        {productResults.map((p: any) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            className="w-full text-start px-3 py-2 text-sm hover:bg-accent flex justify-between"
+                            onClick={() => selectProduct(p)}
+                          >
+                            <span>{p.name}</span>
+                            <span className="text-muted-foreground text-xs">{t("common.stock")}: {p.stock}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {searching && <div className="text-xs text-muted-foreground mt-1">{t("common.searching")}...</div>}
+                  </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">{t("repairs.part_name")}</Label>
-                    <Input value={addPartName} onChange={e => setAddPartName(e.target.value)} placeholder={t("repairs.part_name_placeholder")} className="h-8 text-sm" />
+                    <Input value={addPartName} onChange={e => { setAddPartName(e.target.value); setAddProductId(null); }} placeholder={t("repairs.part_name_placeholder")} className="h-8 text-sm" />
+                    {addProductId && <div className="text-[10px] text-emerald-600">{t("repairs.linked_to_inventory")}</div>}
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <div className="space-y-1.5">

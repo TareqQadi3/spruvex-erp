@@ -4,6 +4,7 @@ import type { DbClient } from "../../accounting/types";
 
 export interface SupplierUpdate {
   name?: string;
+  nameEn?: string | null;
   phone?: string | null;
   email?: string | null;
   address?: string | null;
