@@ -94,8 +94,23 @@ router.put("/:id", async (req: AuthedRequest, res) => {
 
 router.delete("/:id", async (req: AuthedRequest, res) => {
   const id = req.params.id as string;
-  await db.delete(repairPartsTable)
-    .where(and(eq(repairPartsTable.id, id), eq(repairPartsTable.companyId, req.user!.companyId)));
+  const orgId = req.user!.companyId;
+
+  await db.transaction(async (tx) => {
+    const [part] = await tx.select().from(repairPartsTable)
+      .where(and(eq(repairPartsTable.id, id), eq(repairPartsTable.companyId, orgId)));
+    if (!part) throw new ValidationError("Part not found");
+
+    if (part.productId) {
+      await tx.update(productsTable)
+        .set({ stock: sql`${productsTable.stock} + ${part.quantity}` })
+        .where(and(eq(productsTable.id, part.productId), eq(productsTable.companyId, orgId)));
+    }
+
+    await tx.delete(repairPartsTable)
+      .where(and(eq(repairPartsTable.id, id), eq(repairPartsTable.companyId, orgId)));
+  });
+
   res.status(204).send();
 });
 

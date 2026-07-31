@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "wouter";
-import { ArrowLeft, Printer, Phone, CheckCircle, UserCog, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Printer, Phone, CheckCircle, UserCog, ShieldCheck, Wrench, Trash2, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -65,7 +65,50 @@ export default function RepairDetailPage() {
 
   const { data: users } = useQuery<RepairUser[]>({
     queryKey: ["auth-users"],
-    queryFn: () => authFetch("/auth/users"),
+    queryFn: () => authFetch("/auth-users"),
+  });
+
+  interface RepairPart { id: string; repairId: string; productId: string | null; partName: string; quantity: number; partCost: string; laborFee: string; }
+
+  const { data: parts, refetch: refetchParts } = useQuery<RepairPart[]>({
+    queryKey: ["repair-parts", id],
+    queryFn: () => authFetch(`/repair-parts?repairId=${id}`),
+    enabled: !!id,
+  });
+
+  const [showAddPart, setShowAddPart] = useState(false);
+  const [addPartName, setAddPartName] = useState("");
+  const [addPartQty, setAddPartQty] = useState("1");
+  const [addPartCost, setAddPartCost] = useState("");
+  const [addPartFee, setAddPartFee] = useState("");
+
+  const addPartMutation = useMutation({
+    mutationFn: () => authFetch("/repair-parts", {
+      method: "POST",
+      body: JSON.stringify({
+        repairId: id,
+        partName: addPartName.trim(),
+        quantity: Number(addPartQty) || 1,
+        partCost: Number(addPartCost) || 0,
+        laborFee: Number(addPartFee) || 0,
+      }),
+    }),
+    onSuccess: () => {
+      refetchParts();
+      setShowAddPart(false);
+      setAddPartName("");
+      setAddPartQty("1");
+      setAddPartCost("");
+      setAddPartFee("");
+      toast.success(t("repairs.part_added"));
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const deletePart = useMutation({
+    mutationFn: (partId: string) => authFetch(`/repair-parts/${partId}`, { method: "DELETE" }),
+    onSuccess: () => { refetchParts(); toast.success(t("repairs.part_deleted")); },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const assignTechnician = useMutation({
@@ -176,6 +219,75 @@ export default function RepairDetailPage() {
                 <div className="col-span-2">
                   <div className="text-muted-foreground mb-1">{t("repairs.tech_notes_label")}</div>
                   <div className="bg-muted/50 rounded p-3">{repair.technicianNotes}</div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Wrench className="h-4 w-4 text-muted-foreground" />
+                  {t("repairs.parts_used")}
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setShowAddPart(!showAddPart)}>
+                  <Plus className="me-1 h-3.5 w-3.5" />
+                  {t("repairs.parts_add")}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {showAddPart && (
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-2 mb-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">{t("repairs.part_name")}</Label>
+                    <Input value={addPartName} onChange={e => setAddPartName(e.target.value)} placeholder={t("repairs.part_name_placeholder")} className="h-8 text-sm" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">{t("repairs.quantity")}</Label>
+                      <Input type="number" min="1" step="1" value={addPartQty} onChange={e => setAddPartQty(e.target.value)} className="h-8 text-sm" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">{t("repairs.part_cost")}</Label>
+                      <Input type="number" min="0" step="0.01" value={addPartCost} onChange={e => setAddPartCost(e.target.value)} className="h-8 text-sm" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">{t("repairs.labor_fee")}</Label>
+                      <Input type="number" min="0" step="0.01" value={addPartFee} onChange={e => setAddPartFee(e.target.value)} className="h-8 text-sm" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" onClick={() => addPartMutation.mutate()} disabled={!addPartName.trim() || addPartMutation.isPending}>
+                      {addPartMutation.isPending ? t("common.saving") : t("common.add")}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setShowAddPart(false)}>{t("common.cancel")}</Button>
+                  </div>
+                </div>
+              )}
+              {!parts || parts.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">{t("repairs.no_parts")}</p>
+              ) : (
+                <div className="space-y-2">
+                  {parts.map(p => (
+                    <div key={p.id} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium truncate">{p.partName}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {t("pos.items")}: {p.quantity} · {t("repairs.part_cost")}: {Number(p.partCost).toFixed(2)} · {t("repairs.labor_fee")}: {Number(p.laborFee).toFixed(2)}
+                        </div>
+                      </div>
+                      <div className="font-semibold ms-3 shrink-0">
+                        {((Number(p.partCost) + Number(p.laborFee)) * p.quantity).toFixed(2)}
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 ms-1 text-destructive" onClick={() => {
+                        if (window.confirm(t("repairs.part_delete_confirm"))) deletePart.mutate(p.id);
+                      }}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>

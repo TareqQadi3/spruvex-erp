@@ -244,7 +244,18 @@
     "approved_on": "Approved {{date}}",
     "approved_success": "Repair marked as approved",
     "approved_failed": "Failed to mark as approved",
-    "total_cost": "Total Cost (Parts + Labor)"
+    "total_cost": "Total Cost (Parts + Labor)",
+    "parts_used": "Parts Used",
+    "no_parts": "No parts added to this repair yet",
+    "parts_add": "Add parts",
+    "part_cost": "Part cost",
+    "labor_fee": "Labor fee",
+    "part_deleted": "Part removed",
+    "part_delete_confirm": "Remove this part? The stock will be returned to inventory.",
+    "part_name": "Part name",
+    "part_name_placeholder": "e.g. iPhone 14 Screen",
+    "quantity": "Qty",
+    "part_added": "Part added"
   },
   "inventory": {
     "title": "Inventory",
