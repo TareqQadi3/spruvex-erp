@@ -25,6 +25,7 @@ import onboardingRouter from "./onboarding";
 import orderTypesRouter from "./orderTypes";
 import productAttributesRouter from "./productAttributes";
 import unitsRouter from "./units";
+import deviceModelsRouter from "./deviceModels";
 import importRouter from "./import";
 import exportRouter from "./export";
 import auditLogRouter from "./auditLog";
@@ -72,6 +73,7 @@ router.use("/onboarding", requireAuth, requireActiveSubscription, onboardingRout
 router.use("/order-types", requireAuth, requireActiveSubscription, orderTypesRouter);
 router.use("/product-attributes", requireAuth, requireActiveSubscription, productAttributesRouter);
 router.use("/units", requireAuth, requireActiveSubscription, unitsRouter);
+router.use("/device-models", requireAuth, requireActiveSubscription, deviceModelsRouter);
 router.use("/import", requireAuth, requireActiveSubscription, importRouter);
 router.use("/export", requireAuth, requireActiveSubscription, exportRouter);
 router.use("/audit-log", requireAuth, requireActiveSubscription, requirePermission(PERMISSIONS.AUDIT_VIEW), auditLogRouter);

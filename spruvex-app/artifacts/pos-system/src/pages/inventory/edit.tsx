@@ -1,4 +1,7 @@
-import { useCreateProduct, useCreateCategory, useGetCategories, useCreateBrand, useGetBrands, getGetProductsQueryKey, getGetCategoriesQueryKey, getGetBrandsQueryKey } from "@workspace/api-client-react";
+import {
+  useGetProduct, useUpdateProduct, useCreateCategory, useGetCategories,
+  useCreateBrand, useGetBrands, getGetProductsQueryKey, getGetCategoriesQueryKey, getGetBrandsQueryKey, getGetProductQueryKey,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,18 +11,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Info, Plus } from "lucide-react";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useParams } from "wouter";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "@/i18n";
 import { MediaUploadField } from "@/components/MediaUploadField";
 
-export default function NewProductPage() {
+export default function EditProductPage() {
+  const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
-  const createProduct = useCreateProduct();
+  const { data: product, isLoading: isLoadingProduct } = useGetProduct(id! as any);
+  const updateProduct = useUpdateProduct();
   const createCategory = useCreateCategory();
   const { data: categories } = useGetCategories();
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
@@ -29,11 +35,30 @@ export default function NewProductPage() {
   const [isBrandDialogOpen, setIsBrandDialogOpen] = useState(false);
   const [newBrandName, setNewBrandName] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const { t } = useTranslation();
 
-  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<any>({
+  const { register, handleSubmit, control, watch, setValue, reset, formState: { errors } } = useForm<any>({
     defaultValues: { stock: 0, lowStockThreshold: 5, includesTax: false }
   });
-  const { t } = useTranslation();
+
+  useEffect(() => {
+    if (product) {
+      reset({
+        name: product.name,
+        sku: product.sku,
+        barcode: product.barcode ?? "",
+        description: product.description ?? "",
+        costPrice: product.costPrice,
+        sellingPrice: product.sellingPrice,
+        stock: product.stock,
+        lowStockThreshold: product.lowStockThreshold,
+        includesTax: product.includesTax ?? false,
+        categoryId: product.categoryId != null ? String(product.categoryId) : undefined,
+        brandName: (product as any).brand ?? undefined,
+      });
+      setImagePreview((product as any).imageUrl ?? null);
+    }
+  }, [product, reset]);
 
   const handleCreateCategory = () => {
     if (!newCategoryName.trim()) return;
@@ -75,22 +100,33 @@ export default function NewProductPage() {
       stock: Number(data.stock) || 0,
       lowStockThreshold: Number(data.lowStockThreshold) || 5,
       includesTax: data.includesTax ?? false,
+      barcode: data.barcode || null,
+      description: data.description || null,
+      categoryId: data.categoryId || null,
+      brand: data.brandName || null,
+      imageUrl: imagePreview,
     };
-    if (data.barcode) payload.barcode = data.barcode;
-    if (data.description) payload.description = data.description;
-    if (data.categoryId) payload.categoryId = data.categoryId;
-    if (data.brandName) payload.brand = data.brandName;
-    if (imagePreview) payload.imageUrl = imagePreview;
 
-    createProduct.mutate({ data: payload }, {
+    updateProduct.mutate({ id: id! as any, data: payload }, {
       onSuccess: () => {
         toast.success(t("inventory.save_success"));
         queryClient.invalidateQueries({ queryKey: getGetProductsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetProductQueryKey(id! as any) });
         navigate("/inventory");
       },
       onError: () => toast.error(t("inventory.save_failed")),
     });
   };
+
+  if (isLoadingProduct) {
+    return (
+      <div className="space-y-6 max-w-2xl">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -98,7 +134,7 @@ export default function NewProductPage() {
         <Link href="/inventory">
           <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight">{t("inventory.new_title")}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("inventory.edit_title")}</h1>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -151,10 +187,6 @@ export default function NewProductPage() {
                 </div>
               </div>
               <div className="col-span-2 space-y-1.5">
-                <Label>{t("inventory.image")}</Label>
-                <MediaUploadField value={imagePreview} onChange={setImagePreview} />
-              </div>
-              <div className="col-span-2 space-y-1.5">
                 <Label>{t("inventory.category_label")}</Label>
                 <div className="flex gap-2">
                   <Controller
@@ -182,9 +214,10 @@ export default function NewProductPage() {
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
-                {categories?.length === 0 && (
-                  <p className="text-xs text-muted-foreground">{t("inventory.no_categories_hint")}</p>
-                )}
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label>{t("inventory.image")}</Label>
+                <MediaUploadField value={imagePreview} onChange={setImagePreview} />
               </div>
               <div className="col-span-2 space-y-1.5">
                 <Label>{t("inventory.description")}</Label>
@@ -207,7 +240,6 @@ export default function NewProductPage() {
                 </div>
               </div>
 
-              {/* Tax inclusion option */}
               <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
                 <Controller
                   name="includesTax"
@@ -270,8 +302,8 @@ export default function NewProductPage() {
             <Link href="/inventory">
               <Button type="button" variant="outline">{t("common.cancel")}</Button>
             </Link>
-            <Button type="submit" disabled={createProduct.isPending}>
-              {createProduct.isPending ? t("common.saving") : t("inventory.save_product")}
+            <Button type="submit" disabled={updateProduct.isPending}>
+              {updateProduct.isPending ? t("common.saving") : t("inventory.save_changes")}
             </Button>
           </div>
         </div>

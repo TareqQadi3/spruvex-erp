@@ -8,6 +8,7 @@ export * from "./repairParts";
 export * from "./installments";
 export * from "./categories";
 export * from "./brands";
+export * from "./deviceModels";
 export * from "./products";
 export * from "./customers";
 export * from "./cashSessions";

@@ -9,6 +9,7 @@ export const customersTable = pgTable("customers", {
   phone: text("phone"),
   email: text("email"),
   address: text("address"),
+  imageUrl: text("image_url"),
   outstandingBalance: numeric("outstanding_balance", { precision: 10, scale: 2 }).notNull().default("0"),
   totalPurchases: integer("total_purchases").notNull().default(0),
   // Default price tier for this customer (e.g. a "distributor" or "VIP" list

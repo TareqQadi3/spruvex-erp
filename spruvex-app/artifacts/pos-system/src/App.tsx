@@ -28,7 +28,9 @@ const NewRepairPage = lazy(() => import("@/pages/repairs/new"));
 const RepairDetailPage = lazy(() => import("@/pages/repairs/detail"));
 const InventoryPage = lazy(() => import("@/pages/inventory"));
 const NewProductPage = lazy(() => import("@/pages/inventory/new"));
+const EditProductPage = lazy(() => import("@/pages/inventory/edit"));
 const CategoriesPage = lazy(() => import("@/pages/inventory/categories"));
+const BrandsPage = lazy(() => import("@/pages/inventory/brands"));
 const ManageProductPage = lazy(() => import("@/pages/inventory/manage"));
 const ImportExportPage = lazy(() => import("@/pages/settings/import-export"));
 const AuditLogPage = lazy(() => import("@/pages/settings/audit-log"));
@@ -167,7 +169,9 @@ function AuthenticatedApp() {
         <Route path="/repairs/:id"><GuardedPage component={RepairDetailPage} basePath="/repairs" /></Route>
         <Route path="/repairs"><GuardedPage component={RepairsPage} basePath="/repairs" /></Route>
         <Route path="/inventory/new"><GuardedPage component={NewProductPage} basePath="/inventory" /></Route>
+        <Route path="/inventory/:id/edit"><GuardedPage component={EditProductPage} basePath="/inventory" /></Route>
         <Route path="/inventory/categories"><GuardedPage component={CategoriesPage} basePath="/inventory" /></Route>
+        <Route path="/inventory/brands"><GuardedPage component={BrandsPage} basePath="/inventory" /></Route>
         <Route path="/inventory/:id/manage"><GuardedPage component={ManageProductPage} basePath="/inventory" /></Route>
         <Route path="/inventory/movements"><GuardedPage component={StockMovementsPage} basePath="/inventory" /></Route>
         <Route path="/inventory"><GuardedPage component={InventoryPage} basePath="/inventory" /></Route>

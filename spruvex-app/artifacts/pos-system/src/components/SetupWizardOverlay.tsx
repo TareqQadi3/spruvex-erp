@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { CheckCircle2, PartyPopper, Smartphone, Store, UtensilsCrossed, Coffee, Shirt, Wrench, MoreHorizontal } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { TOKEN_KEY } from "@/contexts/AuthContext";
+import { MediaUploadField } from "@/components/MediaUploadField";
 
 type BusinessType = "electronics" | "grocery" | "restaurant" | "cafe" | "clothing" | "repair" | "other";
 
@@ -50,7 +51,7 @@ export function SetupWizardOverlay({
 }) {
   const [step, setStep] = useState<Step>("welcome");
   const [nameEn, setNameEn] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [businessType, setBusinessType] = useState<BusinessType>((initialBusinessType as BusinessType) || "other");
   const [isSaving, setIsSaving] = useState(false);
   const [seededOk, setSeededOk] = useState<boolean | null>(null);
@@ -75,7 +76,7 @@ export function SetupWizardOverlay({
         method: "PUT",
         body: JSON.stringify({
           companyNameEn: nameEn.trim() || undefined,
-          logoUrl: logoUrl.trim() || undefined,
+          logoUrl: logoUrl || undefined,
         }),
       });
       setStep("businessType");
@@ -159,8 +160,8 @@ export function SetupWizardOverlay({
                   <Input id="nameEn" value={nameEn} onChange={e => setNameEn(e.target.value)} placeholder="My Store" disabled={isSaving} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="logoUrl">{t("setupWizard.logo_url")}</Label>
-                  <Input id="logoUrl" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="https://..." disabled={isSaving} />
+                  <Label>{t("setupWizard.logo_url")}</Label>
+                  <MediaUploadField value={logoUrl} onChange={setLogoUrl} />
                 </div>
                 <div className="flex gap-3 pt-2">
                   <Button variant="outline" className="flex-1 h-11" onClick={() => setStep("businessType")} disabled={isSaving}>

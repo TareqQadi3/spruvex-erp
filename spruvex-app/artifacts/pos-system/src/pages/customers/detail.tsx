@@ -21,7 +21,12 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: customer, isLoading } = useGetCustomer(Number(id), { query: { enabled: !!id } as any });
+  // useGetCustomer's generated type says `number`, but customers.id is a
+  // UUID string (the generated client's OpenAPI spec was never updated when
+  // this table moved off integer ids) — Number(uuid) silently produces NaN
+  // and a broken /api/customers/NaN request. Passing the string through
+  // (cast to satisfy the stale type) is correct at runtime.
+  const { data: customer, isLoading } = useGetCustomer(id as any, { query: { enabled: !!id } as any });
   const { t } = useTranslation();
 
   if (isLoading) {

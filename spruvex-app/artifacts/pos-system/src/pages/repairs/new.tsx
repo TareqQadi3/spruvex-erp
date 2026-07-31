@@ -1,27 +1,77 @@
-import { useCreateRepair, useGetCustomers, getGetRepairsQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useCreateRepair, useGetCustomers, useGetBrands, useCreateBrand, getGetRepairsQueryKey, getGetBrandsQueryKey } from "@workspace/api-client-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ArrowLeft, Plus } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "@/i18n";
 import { QuickAddCustomerDialog } from "@/components/QuickAddCustomerDialog";
 import { useState } from "react";
+import { api } from "@/lib/api";
+
+interface DeviceModel { id: string; name: string; brandId: string; }
 
 export default function NewRepairPage() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const createRepair = useCreateRepair();
   const { data: customers, refetch: refetchCustomers } = useGetCustomers();
-  const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<any>();
+  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<any>();
   const { t } = useTranslation();
   const [selectedCustomerName, setSelectedCustomerName] = useState("");
+
+  const { data: brands, refetch: refetchBrands } = useGetBrands();
+  const createBrand = useCreateBrand();
+  const [isBrandDialogOpen, setIsBrandDialogOpen] = useState(false);
+  const [newBrandName, setNewBrandName] = useState("");
+  const [isModelDialogOpen, setIsModelDialogOpen] = useState(false);
+  const [newModelName, setNewModelName] = useState("");
+
+  const selectedBrandId = watch("deviceBrandId");
+  const { data: models, refetch: refetchModels } = useQuery<DeviceModel[]>({
+    queryKey: ["device-models", selectedBrandId],
+    queryFn: () => api(`/device-models?brandId=${selectedBrandId}`),
+    enabled: !!selectedBrandId,
+  });
+
+  const handleCreateBrand = () => {
+    if (!newBrandName.trim()) return;
+    createBrand.mutate({ data: { name: newBrandName.trim() } }, {
+      onSuccess: (created) => {
+        queryClient.invalidateQueries({ queryKey: getGetBrandsQueryKey() });
+        refetchBrands();
+        setValue("deviceBrandId", String((created as any).id));
+        setNewBrandName("");
+        setIsBrandDialogOpen(false);
+        toast.success(t("inventory.brand_created"));
+      },
+      onError: () => toast.error(t("inventory.brand_create_failed")),
+    });
+  };
+
+  const handleCreateModel = async () => {
+    if (!newModelName.trim() || !selectedBrandId) return;
+    try {
+      const created = await api<DeviceModel>("/device-models", {
+        method: "POST",
+        body: JSON.stringify({ brandId: selectedBrandId, name: newModelName.trim() }),
+      });
+      await refetchModels();
+      setValue("deviceModelId", String(created.id));
+      setNewModelName("");
+      setIsModelDialogOpen(false);
+      toast.success(t("repairs.model_created"));
+    } catch {
+      toast.error(t("repairs.model_create_failed"));
+    }
+  };
 
   const DEVICE_TYPES = [
     { value: "mobile", label: t("repairs.device_type_mobile") },
@@ -36,9 +86,15 @@ export default function NewRepairPage() {
       deviceType: data.deviceType,
       problemDescription: data.problemDescription,
     };
-    if (data.customerId) payload.customerId = Number(data.customerId);
-    if (data.deviceBrand) payload.deviceBrand = data.deviceBrand;
-    if (data.deviceModel) payload.deviceModel = data.deviceModel;
+    if (data.customerId) payload.customerId = data.customerId;
+    if (data.deviceBrandId) {
+      const brand = brands?.find(b => String(b.id) === data.deviceBrandId);
+      if (brand) payload.deviceBrand = brand.name;
+    }
+    if (data.deviceModelId) {
+      const model = models?.find(m => String(m.id) === data.deviceModelId);
+      if (model) payload.deviceModel = model.name;
+    }
     if (data.imei) payload.imei = data.imei;
     if (data.estimatedCost) payload.estimatedCost = Number(data.estimatedCost);
     if (data.technicianNotes) payload.technicianNotes = data.technicianNotes;
@@ -134,11 +190,50 @@ export default function NewRepairPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>{t("repairs.brand")}</Label>
-                <Input {...register("deviceBrand")} placeholder={t("repairs.brand_placeholder")} />
+                <div className="flex gap-2">
+                  <Controller
+                    name="deviceBrandId"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={v => { field.onChange(v); setValue("deviceModelId", ""); }}
+                        value={field.value}
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder={t("repairs.select_brand")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {brands?.map(b => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  <Button type="button" variant="outline" size="icon" onClick={() => setIsBrandDialogOpen(true)}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label>{t("repairs.model")}</Label>
-                <Input {...register("deviceModel")} placeholder={t("repairs.model_placeholder")} />
+                <div className="flex gap-2">
+                  <Controller
+                    name="deviceModelId"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value} disabled={!selectedBrandId}>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder={selectedBrandId ? t("repairs.select_model") : t("repairs.select_brand_first")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {models?.map(m => <SelectItem key={m.id} value={String(m.id)}>{m.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  <Button type="button" variant="outline" size="icon" disabled={!selectedBrandId} onClick={() => setIsModelDialogOpen(true)}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <div className="col-span-2 space-y-1.5">
                 <Label>{t("repairs.imei")}</Label>
@@ -180,6 +275,48 @@ export default function NewRepairPage() {
           </div>
         </div>
       </form>
+
+      <Dialog open={isBrandDialogOpen} onOpenChange={setIsBrandDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{t("inventory.new_brand_title")}</DialogTitle></DialogHeader>
+          <div className="space-y-1.5">
+            <Label>{t("inventory.brand_name")}</Label>
+            <Input
+              value={newBrandName}
+              onChange={e => setNewBrandName(e.target.value)}
+              placeholder={t("inventory.brand_placeholder")}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleCreateBrand(); } }}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsBrandDialogOpen(false)}>{t("common.cancel")}</Button>
+            <Button type="button" onClick={handleCreateBrand} disabled={createBrand.isPending || !newBrandName.trim()}>
+              {createBrand.isPending ? t("common.saving") : t("common.add")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isModelDialogOpen} onOpenChange={setIsModelDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{t("repairs.new_model_title")}</DialogTitle></DialogHeader>
+          <div className="space-y-1.5">
+            <Label>{t("repairs.model_name")}</Label>
+            <Input
+              value={newModelName}
+              onChange={e => setNewModelName(e.target.value)}
+              placeholder={t("repairs.model_placeholder")}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleCreateModel(); } }}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsModelDialogOpen(false)}>{t("common.cancel")}</Button>
+            <Button type="button" onClick={handleCreateModel} disabled={!newModelName.trim()}>
+              {t("common.add")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

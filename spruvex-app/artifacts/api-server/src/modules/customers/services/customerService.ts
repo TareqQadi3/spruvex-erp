@@ -7,6 +7,7 @@ export interface CreateCustomerInput {
   phone?: string;
   email?: string;
   address?: string;
+  imageUrl?: string | null;
   outstandingBalance?: number;
 }
 
@@ -32,6 +33,7 @@ export async function createCustomer(db: DbClient, companyId: string, input: Cre
     phone: input.phone,
     email: input.email,
     address: input.address,
+    imageUrl: input.imageUrl,
     outstandingBalance: input.outstandingBalance?.toString() ?? "0",
   });
 }
@@ -42,6 +44,7 @@ export async function updateCustomer(db: DbClient, companyId: string, id: string
     phone: input.phone,
     email: input.email,
     address: input.address,
+    imageUrl: input.imageUrl,
   };
   if (input.outstandingBalance !== undefined) changes.outstandingBalance = input.outstandingBalance.toString();
   return customerRepository.update(db, companyId, id, changes);

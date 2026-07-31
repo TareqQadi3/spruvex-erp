@@ -14,11 +14,13 @@ import { ArrowLeft, Plus, Pencil, Trash2, FolderTree, Folder } from "lucide-reac
 import { Link } from "wouter";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
+import { MediaUploadField } from "@/components/MediaUploadField";
 
 interface CategoryRow {
   id: number;
   name: string;
   parentId: number | null;
+  imageUrl?: string | null;
 }
 
 export default function CategoriesPage() {
@@ -33,6 +35,7 @@ export default function CategoriesPage() {
   const [editing, setEditing] = useState<CategoryRow | null>(null);
   const [name, setName] = useState("");
   const [parentId, setParentId] = useState<string>("__none__");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const mainCategories = (categories ?? []).filter((c: any) => !c.parentId);
   const subCategoriesOf = (id: number) => (categories ?? []).filter((c: any) => c.parentId === id);
@@ -41,6 +44,7 @@ export default function CategoriesPage() {
     setEditing(null);
     setName("");
     setParentId(forParentId ? String(forParentId) : "__none__");
+    setImageUrl(null);
     setDialogOpen(true);
   };
 
@@ -48,6 +52,7 @@ export default function CategoriesPage() {
     setEditing(cat);
     setName(cat.name);
     setParentId(cat.parentId ? String(cat.parentId) : "__none__");
+    setImageUrl(cat.imageUrl ?? null);
     setDialogOpen(true);
   };
 
@@ -55,7 +60,7 @@ export default function CategoriesPage() {
 
   const handleSave = () => {
     if (!name.trim()) return;
-    const payload = { name: name.trim(), parentId: parentId === "__none__" ? null : Number(parentId) };
+    const payload = { name: name.trim(), parentId: parentId === "__none__" ? null : Number(parentId), imageUrl };
     if (editing) {
       updateCategory.mutate({ id: editing.id, data: payload as any }, {
         onSuccess: () => { toast.success(t("inventory.category_updated")); invalidate(); setDialogOpen(false); },
@@ -158,6 +163,10 @@ export default function CategoriesPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t("inventory.image")}</Label>
+              <MediaUploadField value={imageUrl} onChange={setImageUrl} />
             </div>
           </div>
           <DialogFooter>

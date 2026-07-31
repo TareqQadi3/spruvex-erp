@@ -14,18 +14,21 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n";
+import { MediaUploadField } from "@/components/MediaUploadField";
 
 function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const createCustomer = useCreateCustomer();
   const { register, handleSubmit, reset } = useForm<any>();
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const { t } = useTranslation();
 
   const onSubmit = (data: any) => {
-    createCustomer.mutate({ data }, {
+    createCustomer.mutate({ data: { ...data, imageUrl } }, {
       onSuccess: () => {
         toast.success(t("customers.save_success"));
         reset();
+        setImageUrl(null);
         setOpen(false);
         onCreated();
       },
@@ -59,6 +62,10 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
             <div className="col-span-2 space-y-1.5">
               <Label>{t("common.address")}</Label>
               <Input {...register("address")} placeholder={t("customers.address_placeholder")} />
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>{t("customers.photo")}</Label>
+              <MediaUploadField value={imageUrl} onChange={setImageUrl} />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">

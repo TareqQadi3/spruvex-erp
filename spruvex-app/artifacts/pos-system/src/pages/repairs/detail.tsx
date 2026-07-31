@@ -53,7 +53,7 @@ const STATUS_KEYS = [
 export default function RepairDetailPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
-  const { data: repair, isLoading } = useGetRepair(Number(id), { query: { enabled: !!id } as any });
+  const { data: repair, isLoading } = useGetRepair((id as any), { query: { enabled: !!id } as any });
   const updateStatus = useUpdateRepairStatus();
   const updateRepair = useUpdateRepair();
   const { t } = useTranslation();
@@ -73,7 +73,7 @@ export default function RepairDetailPage() {
       authFetch(`/repairs/${id}/technician`, { method: "PATCH", body: JSON.stringify({ technicianId }) }),
     onSuccess: () => {
       toast.success(t("repairs.technician_assigned"));
-      queryClient.invalidateQueries({ queryKey: getGetRepairQueryKey(Number(id)) });
+      queryClient.invalidateQueries({ queryKey: getGetRepairQueryKey((id as any)) });
     },
     onError: () => toast.error(t("repairs.technician_assign_failed")),
   });
@@ -82,7 +82,7 @@ export default function RepairDetailPage() {
     mutationFn: () => authFetch(`/repairs/${id}/approve`, { method: "PATCH" }),
     onSuccess: () => {
       toast.success(t("repairs.approved_success"));
-      queryClient.invalidateQueries({ queryKey: getGetRepairQueryKey(Number(id)) });
+      queryClient.invalidateQueries({ queryKey: getGetRepairQueryKey((id as any)) });
     },
     onError: () => toast.error(t("repairs.approved_failed")),
   });
@@ -94,12 +94,12 @@ export default function RepairDetailPage() {
   const handleStatusUpdate = () => {
     if (!newStatus) return;
     updateStatus.mutate(
-      { id: Number(id), data: { status: newStatus as any, technicianNotes: notes || undefined } },
+      { id: (id as any), data: { status: newStatus as any, technicianNotes: notes || undefined } },
       {
         onSuccess: () => {
           toast.success(t("repairs.status_updated"));
           setNewStatus("");
-          queryClient.invalidateQueries({ queryKey: getGetRepairQueryKey(Number(id)) });
+          queryClient.invalidateQueries({ queryKey: getGetRepairQueryKey((id as any)) });
           queryClient.invalidateQueries({ queryKey: getGetRepairsQueryKey() });
         },
         onError: () => toast.error(t("repairs.status_failed")),
@@ -110,11 +110,11 @@ export default function RepairDetailPage() {
   const handleMarkPaid = () => {
     const cost = repairCost ? Number(repairCost) : undefined;
     updateRepair.mutate(
-      { id: Number(id), data: { isPaid: true, ...(cost ? { repairCost: cost } : {}) } },
+      { id: (id as any), data: { isPaid: true, ...(cost ? { repairCost: cost } : {}) } },
       {
         onSuccess: () => {
           toast.success(t("repairs.mark_paid_success"));
-          queryClient.invalidateQueries({ queryKey: getGetRepairQueryKey(Number(id)) });
+          queryClient.invalidateQueries({ queryKey: getGetRepairQueryKey((id as any)) });
         },
         onError: () => toast.error(t("repairs.mark_paid_failed")),
       }

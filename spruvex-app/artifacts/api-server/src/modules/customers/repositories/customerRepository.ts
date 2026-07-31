@@ -7,6 +7,7 @@ export interface CustomerUpdate {
   phone?: string | null;
   email?: string | null;
   address?: string | null;
+  imageUrl?: string | null;
   outstandingBalance?: string;
 }
 

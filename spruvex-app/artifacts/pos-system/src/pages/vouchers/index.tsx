@@ -6,11 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowDownCircle, ArrowUpCircle, Plus, Trash2 } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
+
+type PartyType = "customer" | "supplier" | "employee" | "other";
+interface PartyOption { id: string; name: string; }
 
 interface Voucher {
   id: number;
@@ -34,8 +38,10 @@ export default function VouchersPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (vars: { type: string; amount: number; party: string; description: string; date: string }) =>
-      api("/vouchers", { method: "POST", body: JSON.stringify(vars) }),
+    mutationFn: (vars: {
+      type: string; amount: number; party: string; description: string; date: string;
+      customerId?: string; supplierId?: string; employeeId?: string;
+    }) => api("/vouchers", { method: "POST", body: JSON.stringify(vars) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vouchers"] });
       setDialogType(null);
@@ -111,14 +117,59 @@ function VoucherDialog({
 }: {
   type: "receipt" | "payment";
   onClose: () => void;
-  onSave: (vars: { type: string; amount: number; party: string; description: string; date: string }) => void;
+  onSave: (vars: {
+    type: string; amount: number; party: string; description: string; date: string;
+    customerId?: string; supplierId?: string; employeeId?: string;
+  }) => void;
   isPending: boolean;
 }) {
   const { t } = useTranslation();
   const [amount, setAmount] = useState("");
-  const [party, setParty] = useState("");
+  const [partyType, setPartyType] = useState<PartyType>("customer");
+  const [partyId, setPartyId] = useState("");
+  const [otherParty, setOtherParty] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+
+  const { data: customers } = useQuery<PartyOption[]>({
+    queryKey: ["customers-for-voucher"],
+    queryFn: () => api("/customers"),
+    enabled: partyType === "customer",
+  });
+  const { data: suppliers } = useQuery<PartyOption[]>({
+    queryKey: ["suppliers-for-voucher"],
+    queryFn: () => api("/suppliers"),
+    enabled: partyType === "supplier",
+  });
+  const { data: employees } = useQuery<Array<{ id: string; username: string }>>({
+    queryKey: ["employees-for-voucher"],
+    queryFn: () => api("/auth/users"),
+    enabled: partyType === "employee",
+  });
+
+  const nameOptions: PartyOption[] =
+    partyType === "customer" ? (customers ?? []) :
+    partyType === "supplier" ? (suppliers ?? []) :
+    partyType === "employee" ? (employees ?? []).map(u => ({ id: String(u.id), name: u.username })) :
+    [];
+
+  const onPartyTypeChange = (v: PartyType) => {
+    setPartyType(v);
+    setPartyId("");
+    setOtherParty("");
+  };
+
+  const resolvedPartyName = partyType === "other" ? otherParty : (nameOptions.find(o => String(o.id) === partyId)?.name ?? "");
+  const isValid = !!amount && (partyType === "other" ? !!otherParty.trim() : !!partyId);
+
+  const handleSave = () => {
+    onSave({
+      type, amount: Number(amount), party: resolvedPartyName, description, date,
+      customerId: partyType === "customer" ? partyId : undefined,
+      supplierId: partyType === "supplier" ? partyId : undefined,
+      employeeId: partyType === "employee" ? partyId : undefined,
+    });
+  };
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -132,8 +183,29 @@ function VoucherDialog({
             <Input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
           </div>
           <div className="space-y-1.5">
+            <Label>{t("vouchers.party_type")}</Label>
+            <Select value={partyType} onValueChange={v => onPartyTypeChange(v as PartyType)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="customer">{t("vouchers.party_type_customer")}</SelectItem>
+                <SelectItem value="supplier">{t("vouchers.party_type_supplier")}</SelectItem>
+                <SelectItem value="employee">{t("vouchers.party_type_employee")}</SelectItem>
+                <SelectItem value="other">{t("vouchers.party_type_other")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
             <Label>{t("vouchers.party")}</Label>
-            <Input value={party} onChange={(e) => setParty(e.target.value)} placeholder={t("vouchers.party_placeholder")} />
+            {partyType === "other" ? (
+              <Input value={otherParty} onChange={(e) => setOtherParty(e.target.value)} placeholder={t("vouchers.party_placeholder")} />
+            ) : (
+              <Select value={partyId} onValueChange={setPartyId}>
+                <SelectTrigger><SelectValue placeholder={t("vouchers.select_party")} /></SelectTrigger>
+                <SelectContent>
+                  {nameOptions.map(o => <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label>{t("vouchers.date")}</Label>
@@ -146,10 +218,7 @@ function VoucherDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
-          <Button
-            disabled={isPending || !amount}
-            onClick={() => onSave({ type, amount: Number(amount), party, description, date })}
-          >
+          <Button disabled={isPending || !isValid} onClick={handleSave}>
             {isPending ? t("common.saving") : t("common.save")}
           </Button>
         </DialogFooter>

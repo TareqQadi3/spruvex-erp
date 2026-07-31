@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Link } from "wouter";
 import { useGetSettings, useUpdateSettings, getGetSettingsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,13 +17,13 @@ import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "@/i18n";
 import type { Lang } from "@/i18n";
 import { useState } from "react";
+import { MediaUploadField } from "@/components/MediaUploadField";
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
   const { data: settings, isLoading } = useGetSettings();
   const updateSettings = useUpdateSettings();
   const { t, setLang } = useTranslation();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   const { register, handleSubmit, reset, control, setValue, watch } = useForm<any>({
@@ -62,22 +62,6 @@ export default function SettingsPage() {
       if (settings.logoUrl) setLogoPreview(settings.logoUrl);
     }
   }, [settings, reset]);
-
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 500 * 1024) {
-      toast.error(t("settings.logo_too_large"));
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      setLogoPreview(dataUrl);
-      setValue("logoUrl", dataUrl);
-    };
-    reader.readAsDataURL(file);
-  };
 
   const onSubmit = (data: any) => {
     updateSettings.mutate({
@@ -173,34 +157,10 @@ export default function SettingsPage() {
             {/* Logo upload */}
             <div className="space-y-2">
               <Label>{t("settings.company_logo")}</Label>
-              <div className="flex items-start gap-4">
-                <div
-                  className="h-20 w-20 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center cursor-pointer hover:border-primary/50 transition-colors bg-muted/30 overflow-hidden shrink-0"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {logoPreview ? (
-                    <img src={logoPreview} alt="Logo" className="h-full w-full object-contain" />
-                  ) : (
-                    <div className="text-center p-2">
-                      <Image className="h-6 w-6 text-muted-foreground/50 mx-auto" />
-                      <span className="text-[10px] text-muted-foreground">{t("settings.logo_upload_hint")}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-2 flex-1">
-                  <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                    {t("settings.upload_logo")}
-                  </Button>
-                  {logoPreview && (
-                    <Button type="button" variant="ghost" size="sm" className="text-destructive ms-2"
-                      onClick={() => { setLogoPreview(null); setValue("logoUrl", ""); }}>
-                      {t("common.delete")}
-                    </Button>
-                  )}
-                  <p className="text-xs text-muted-foreground">{t("settings.logo_size_hint")}</p>
-                </div>
-              </div>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+              <MediaUploadField
+                value={logoPreview}
+                onChange={(url) => { setLogoPreview(url); setValue("logoUrl", url ?? ""); }}
+              />
             </div>
 
             <div className="space-y-1.5">
