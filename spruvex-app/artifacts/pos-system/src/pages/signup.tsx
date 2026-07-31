@@ -16,6 +16,8 @@ import {
   UtensilsCrossed,
   Coffee,
   Shirt,
+  ShoppingBag,
+  ShoppingCart,
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
@@ -25,16 +27,18 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth, type AuthUser } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
-type BusinessType = "electronics" | "grocery" | "restaurant" | "cafe" | "clothing" | "repair" | "other";
+type BusinessType = "retail" | "electronics" | "grocery" | "restaurant" | "cafe" | "clothing" | "repair" | "ecommerce" | "other";
 type CompanyPlan = "erp_business" | "restaurant" | "sales_repair" | "enterprise";
 
 const BUSINESS_TYPES: { value: BusinessType; icon: typeof Store }[] = [
+  { value: "retail", icon: ShoppingBag },
   { value: "electronics", icon: Smartphone },
   { value: "grocery", icon: Store },
   { value: "restaurant", icon: UtensilsCrossed },
   { value: "cafe", icon: Coffee },
   { value: "clothing", icon: Shirt },
   { value: "repair", icon: Wrench },
+  { value: "ecommerce", icon: ShoppingCart },
   { value: "other", icon: MoreHorizontal },
 ];
 
@@ -151,6 +155,10 @@ export default function SignupPage() {
       }
       const { user, tokens } = body.data;
       const sessionUser: AuthUser = { id: user.id, username: user.username, role: user.role };
+      // The first-run Setup Wizard (App.tsx) reads this to pre-fill its
+      // business-type step with the signup choice instead of defaulting to
+      // "other" and silently overwriting it.
+      if (businessType) localStorage.setItem("spruvex_signup_business_type", businessType);
       setSession(tokens.accessToken, sessionUser);
       navigate("/");
     } catch (err: any) {

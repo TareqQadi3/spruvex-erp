@@ -11,7 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Plus, KeyRound } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
+import { ArrowLeft, Plus, KeyRound, Users as UsersIcon } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { TOKEN_KEY } from "@/contexts/AuthContext";
 
@@ -98,6 +99,9 @@ export default function UsersSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {isLoading && [1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full" />)}
+          {!isLoading && users?.length === 0 && (
+            <EmptyState icon={UsersIcon} title={t("users.empty_title")} description={t("users.empty_desc")} />
+          )}
           {users?.map(u => (
             <div key={u.id} className="flex items-center justify-between rounded-lg border p-3">
               <div>

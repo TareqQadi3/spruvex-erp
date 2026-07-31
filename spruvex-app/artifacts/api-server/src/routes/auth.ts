@@ -151,8 +151,27 @@ router.post("/select-branch", requireAuth, async (req: AuthedRequest, res) => {
   res.json({ token, user: payload });
 });
 
-router.get("/me", requireAuth, (req: AuthedRequest, res) => {
-  res.json({ user: req.user });
+// Modular-token sessions (register-company) carry no `username` claim, so the
+// JWT alone can't answer /me — look the row up so a page refresh never shows
+// a blank username until the next full login. Keeps `branchId` from the token
+// so the branch pre-selection semantics stay identical to before.
+router.get("/me", requireAuth, async (req: AuthedRequest, res) => {
+  const [user] = await db
+    .select({
+      id: usersTable.id,
+      username: usersTable.username,
+      email: usersTable.email,
+      role: usersTable.role,
+      companyId: usersTable.companyId,
+    })
+    .from(usersTable)
+    .where(and(eq(usersTable.id, req.user!.id), eq(usersTable.companyId, req.user!.companyId)))
+    .limit(1);
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  res.json({ user: { ...user, branchId: req.user!.branchId } });
 });
 
 router.get("/me/permissions", requireAuth, async (req: AuthedRequest, res) => {

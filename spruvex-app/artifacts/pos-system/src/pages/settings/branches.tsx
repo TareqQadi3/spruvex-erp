@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/EmptyState";
 import { ArrowLeft, Building2, Plus, Users, Star } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
@@ -108,6 +109,9 @@ export default function BranchesSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {isLoading && [1, 2].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+          {!isLoading && branches?.length === 0 && (
+            <EmptyState icon={Building2} title={t("branches.empty_title")} description={t("branches.empty_desc")} />
+          )}
           {branches?.map(b => (
             <div key={b.id} className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex items-center gap-3">

@@ -3,7 +3,7 @@ import { salesRepository, type SaleListFilters } from "../repositories/salesRepo
 import { recordPurchaseOnAccount, settleOutstandingBalance } from "../../customers/services/customerService";
 import { postSaleEntry, postSaleReturnEntry } from "../../accounting";
 import { parseRequiredNumber, parseOptionalNumber, ValidationError } from "../../../lib/validation";
-import { logStockMovement } from "../../../lib/stockMovementLogger";
+import { applyStockDelta } from "../../../lib/stockDelta";
 
 export interface SaleItemInput {
   productId: string;
@@ -189,12 +189,16 @@ export async function createSale(companyId: string, input: CreateSaleInput, crea
         itemNotes: item.itemNotes,
         serialNumber: item.serialNumber,
       });
-      await salesRepository.adjustProductStock(tx, companyId, item.productId, -item.quantity);
-      await logStockMovement(tx, {
-        companyId, productId: item.productId, warehouseId: item.warehouseId,
-        movementType: "sale", quantity: -item.quantity,
+      // Deducts from both the per-warehouse stock table and the legacy
+      // products.stock mirror in one place (see lib/stockDelta.ts) — before
+      // this, sales only touched products.stock and the inventory pages'
+      // per-warehouse numbers drifted stale.
+      const booked = await applyStockDelta(tx, {
+        companyId, productId: item.productId, delta: -item.quantity,
+        warehouseId: item.warehouseId, movementType: "sale",
         referenceType: "sale", referenceId: sale.id,
       });
+      if (booked === null) throw new SaleValidationError(`Insufficient stock for ${item.productName}`);
       cogsTotal += item.costPrice * item.quantity;
     }
 
@@ -270,7 +274,11 @@ export async function createSaleReturn(companyId: string, saleId: string, input:
       const product = await salesRepository.findProduct(tx, companyId, item.productId);
       if (product) cogsReversal += Number(product.costPrice) * ri.quantity;
 
-      await salesRepository.adjustProductStock(tx, companyId, item.productId, ri.quantity);
+      await applyStockDelta(tx, {
+        companyId, productId: item.productId, delta: ri.quantity,
+        warehouseId: product?.warehouseId, movementType: "sale_return",
+        referenceType: "sale_return", referenceId: ret.id,
+      });
       await salesRepository.incrementItemReturnedQuantity(tx, companyId, item.id, ri.quantity);
       await salesRepository.insertReturnItem(tx, {
         companyId, saleReturnId: ret.id, saleItemId: item.id, productId: item.productId,
@@ -291,7 +299,11 @@ export async function createSaleReturn(companyId: string, saleId: string, input:
       exchangeAmount += lineTotal;
       exchangeCogs += Number(product.costPrice) * ei.quantity;
 
-      await salesRepository.adjustProductStock(tx, companyId, ei.productId, -ei.quantity);
+      await applyStockDelta(tx, {
+        companyId, productId: ei.productId, delta: -ei.quantity,
+        warehouseId: product.warehouseId, movementType: "sale",
+        referenceType: "sale_return", referenceId: ret.id,
+      });
       await salesRepository.insertReturnItem(tx, {
         companyId, saleReturnId: ret.id, saleItemId: null, productId: ei.productId,
         quantity: ei.quantity, unitPrice: ei.unitPrice.toString(), subtotal: lineTotal.toString(), isExchange: true,

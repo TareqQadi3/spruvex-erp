@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/EmptyState";
 import { ArrowLeft, ArrowLeftRight, Plus, Trash2, Warehouse } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
@@ -94,6 +95,9 @@ export default function WarehousesSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {isLoading && [1, 2].map(i => <Skeleton key={i} className="h-14 w-full" />)}
+          {!isLoading && warehouses?.length === 0 && (
+            <EmptyState icon={Warehouse} title={t("warehouses.empty_title")} description={t("warehouses.empty_desc")} />
+          )}
           {warehouses?.map(w => (
             <div key={w.id} className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex items-center gap-3">

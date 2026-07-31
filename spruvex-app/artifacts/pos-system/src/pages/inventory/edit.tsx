@@ -19,6 +19,8 @@ import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "@/i18n";
 import { MediaUploadField } from "@/components/MediaUploadField";
+import { TranslateButton } from "@/components/TranslateButton";
+import { AddonManager } from "./AddonManager";
 
 export default function EditProductPage() {
   const { id } = useParams<{ id: string }>();
@@ -45,11 +47,13 @@ export default function EditProductPage() {
     if (product) {
       reset({
         name: product.name,
+        nameEn: (product as any).nameEn ?? "",
         sku: product.sku,
         barcode: product.barcode ?? "",
         description: product.description ?? "",
         costPrice: product.costPrice,
         sellingPrice: product.sellingPrice,
+        minSellingPrice: (product as any).minSellingPrice ?? "",
         stock: product.stock,
         lowStockThreshold: product.lowStockThreshold,
         includesTax: product.includesTax ?? false,
@@ -106,6 +110,9 @@ export default function EditProductPage() {
       brand: data.brandName || null,
       imageUrl: imagePreview,
     };
+    if (data.nameEn) payload.nameEn = data.nameEn;
+    if (data.minSellingPrice) payload.minSellingPrice = Number(data.minSellingPrice);
+    else payload.minSellingPrice = null;
 
     updateProduct.mutate({ id: id! as any, data: payload }, {
       onSuccess: () => {
@@ -144,11 +151,21 @@ export default function EditProductPage() {
             <CardContent className="grid grid-cols-2 gap-4">
               <div className="col-span-2 space-y-1.5">
                 <Label>{t("inventory.product_name_required")}</Label>
-                <Input
-                  {...register("name", { required: true })}
-                  placeholder={t("inventory.product_name_placeholder")}
-                  className={errors.name ? "border-destructive" : ""}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    {...register("name", { required: true })}
+                    placeholder={t("inventory.product_name_placeholder")}
+                    className={errors.name ? "border-destructive flex-1" : "flex-1"}
+                  />
+                  <TranslateButton text={watch("name") ?? ""} onTranslated={v => setValue("nameEn", v)} />
+                </div>
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label>{t("inventory.name_en")}</Label>
+                <div className="flex gap-2">
+                  <Input {...register("nameEn")} placeholder={t("inventory.name_en_placeholder")} className="flex-1" />
+                  <TranslateButton text={watch("nameEn") ?? ""} onTranslated={v => setValue("name", v)} />
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label>{t("inventory.sku_required")}</Label>
@@ -240,6 +257,12 @@ export default function EditProductPage() {
                 </div>
               </div>
 
+              <div className="space-y-1.5">
+                <Label>{t("inventory.min_selling_price")}</Label>
+                <Input type="number" step="0.01" {...register("minSellingPrice")} placeholder="0.00" />
+                <p className="text-xs text-muted-foreground">{t("inventory.min_selling_price_help")}</p>
+              </div>
+
               <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
                 <Controller
                   name="includesTax"
@@ -308,6 +331,8 @@ export default function EditProductPage() {
           </div>
         </div>
       </form>
+
+      <AddonManager productId={id!} />
 
       <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
         <DialogContent>

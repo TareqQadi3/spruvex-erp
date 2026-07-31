@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 export interface AuthUser {
-  id: number;
+  id: string;
   username: string;
   role: string;
   branchId?: string;

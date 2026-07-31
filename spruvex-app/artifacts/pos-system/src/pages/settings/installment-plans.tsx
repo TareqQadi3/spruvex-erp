@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/EmptyState";
 import { ArrowLeft, Plus, Trash2, CalendarClock } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
@@ -71,6 +72,9 @@ export default function InstallmentPlansSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {isLoading && [1, 2].map(i => <Skeleton key={i} className="h-14 w-full" />)}
+          {!isLoading && plans?.length === 0 && (
+            <EmptyState icon={CalendarClock} title={t("installments.empty_title")} description={t("installments.empty_desc")} />
+          )}
           {plans?.map(p => (
             <div key={p.id} className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex items-center gap-3">

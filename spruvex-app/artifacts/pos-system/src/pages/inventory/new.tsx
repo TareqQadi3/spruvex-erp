@@ -15,6 +15,7 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "@/i18n";
 import { MediaUploadField } from "@/components/MediaUploadField";
+import { TranslateButton } from "@/components/TranslateButton";
 
 export default function NewProductPage() {
   const [, navigate] = useLocation();
@@ -76,6 +77,8 @@ export default function NewProductPage() {
       lowStockThreshold: Number(data.lowStockThreshold) || 5,
       includesTax: data.includesTax ?? false,
     };
+    if (data.nameEn) payload.nameEn = data.nameEn;
+    if (data.minSellingPrice) payload.minSellingPrice = Number(data.minSellingPrice);
     if (data.barcode) payload.barcode = data.barcode;
     if (data.description) payload.description = data.description;
     if (data.categoryId) payload.categoryId = data.categoryId;
@@ -108,11 +111,21 @@ export default function NewProductPage() {
             <CardContent className="grid grid-cols-2 gap-4">
               <div className="col-span-2 space-y-1.5">
                 <Label>{t("inventory.product_name_required")}</Label>
-                <Input
-                  {...register("name", { required: true })}
-                  placeholder={t("inventory.product_name_placeholder")}
-                  className={errors.name ? "border-destructive" : ""}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    {...register("name", { required: true })}
+                    placeholder={t("inventory.product_name_placeholder")}
+                    className={errors.name ? "border-destructive flex-1" : "flex-1"}
+                  />
+                  <TranslateButton text={watch("name") ?? ""} onTranslated={v => setValue("nameEn", v)} />
+                </div>
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label>{t("inventory.name_en")}</Label>
+                <div className="flex gap-2">
+                  <Input {...register("nameEn")} placeholder={t("inventory.name_en_placeholder")} className="flex-1" />
+                  <TranslateButton text={watch("nameEn") ?? ""} onTranslated={v => setValue("name", v)} />
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label>{t("inventory.sku_required")}</Label>
@@ -205,6 +218,12 @@ export default function NewProductPage() {
                   <Label>{t("inventory.selling_price_required")}</Label>
                   <Input type="number" step="0.01" {...register("sellingPrice", { required: true })} placeholder="0.00" />
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>{t("inventory.min_selling_price")}</Label>
+                <Input type="number" step="0.01" {...register("minSellingPrice")} placeholder="0.00" />
+                <p className="text-xs text-muted-foreground">{t("inventory.min_selling_price_help")}</p>
               </div>
 
               {/* Tax inclusion option */}

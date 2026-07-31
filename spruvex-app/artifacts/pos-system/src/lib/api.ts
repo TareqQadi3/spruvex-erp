@@ -15,8 +15,12 @@ export async function api<T = any>(path: string, options: RequestInit = {}): Pro
     },
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Request failed" }));
-    throw new Error(err.error ?? "Request failed");
+    const body = await res.json().catch(() => null);
+    const message =
+      typeof body?.error === "string"
+        ? body.error
+        : body?.error?.message ?? body?.message ?? "Request failed";
+    throw new Error(message);
   }
   return (res.status === 204 ? null : await res.json()) as T;
 }

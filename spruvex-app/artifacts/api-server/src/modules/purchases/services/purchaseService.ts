@@ -3,7 +3,7 @@ import { purchaseRepository } from "../repositories/purchaseRepository";
 import { recordPurchaseDebt } from "../../suppliers/services/supplierService";
 import { postPurchaseEntry } from "../../accounting";
 import { parseRequiredNumber, ValidationError } from "../../../lib/validation";
-import { logStockMovement } from "../../../lib/stockMovementLogger";
+import { applyStockDelta } from "../../../lib/stockDelta";
 
 export interface CreatePurchaseInput {
   productId: string;
@@ -56,12 +56,14 @@ export async function createPurchase(companyId: string, input: CreatePurchaseInp
       amountPaid: paid.toString(),
     });
 
-    await purchaseRepository.adjustProductStock(tx, productId, qty, supplierId);
-    await logStockMovement(tx, {
-      companyId, productId, warehouseId: product.warehouseId,
-      movementType: "purchase", quantity: qty,
-      referenceType: "purchase", referenceId: purchase.id,
+    // Stock-in across both stock representations (per-warehouse + legacy
+    // mirror) in one call — see lib/stockDelta.ts. Keeps the purchase from
+    // drifting the inventory pages' numbers stale.
+    await applyStockDelta(tx, {
+      companyId, productId, delta: qty, warehouseId: product.warehouseId,
+      movementType: "purchase", referenceType: "purchase", referenceId: purchase.id,
     });
+    await purchaseRepository.setProductSupplier(tx, productId, supplierId);
     await recordPurchaseDebt(tx, companyId, supplierId, remaining);
 
     await postPurchaseEntry(tx, {

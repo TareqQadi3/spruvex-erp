@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Save, Store, Receipt, Bell, Globe, Image, Printer, Shield, FileSpreadsheet } from "lucide-react";
+import { Save, Store, Receipt, Bell, Globe, Image, Printer, Shield, FileSpreadsheet, Plug } from "lucide-react";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "@/i18n";
@@ -34,6 +34,7 @@ export default function SettingsPage() {
       logoUrl: "", invoiceHeaderText: "", invoiceFooterText: "",
       showBarcode: false, invoiceType: "a4", repairsModuleEnabled: true,
       vatNumber: "", repairInvoiceType: "a4", repairInvoiceSameAsSales: true,
+      posTemplate: "list",
     }
   });
 
@@ -58,6 +59,7 @@ export default function SettingsPage() {
         vatNumber: (settings as any).vatNumber ?? "",
         repairInvoiceType: (settings as any).repairInvoiceType ?? "a4",
         repairInvoiceSameAsSales: (settings as any).repairInvoiceSameAsSales ?? true,
+        posTemplate: settings.posTemplate ?? "list",
       });
       if (settings.logoUrl) setLogoPreview(settings.logoUrl);
     }
@@ -84,6 +86,7 @@ export default function SettingsPage() {
         vatNumber: data.vatNumber || null,
         repairInvoiceType: data.repairInvoiceType,
         repairInvoiceSameAsSales: data.repairInvoiceSameAsSales,
+        posTemplate: data.posTemplate,
       }
     }, {
       onSuccess: () => {
@@ -138,6 +141,50 @@ export default function SettingsPage() {
                 <Label>{t("common.phone")}</Label>
                 <Input {...register("shopPhone")} placeholder={t("settings.phone_placeholder")} />
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* POS Screen */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Printer className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <CardTitle className="text-base">{t("settings.pos_screen")}</CardTitle>
+                <CardDescription className="text-xs mt-0.5">{t("settings.pos_screen_desc")}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1.5">
+              <Label>{t("settings.pos_template")}</Label>
+              <Controller
+                name="posTemplate"
+                control={control}
+                render={({ field }) => {
+                  const posTemplateLabels: Record<string, string> = {
+                    list: t("settings.pos_template_list"),
+                    grid: t("settings.pos_template_grid"),
+                    image: t("settings.pos_template_image"),
+                    mobile: t("settings.pos_template_mobile"),
+                  };
+                  return (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger>
+                        <SelectValue>{posTemplateLabels[field.value] ?? field.value}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="list">{posTemplateLabels.list}</SelectItem>
+                        <SelectItem value="grid">{posTemplateLabels.grid}</SelectItem>
+                        <SelectItem value="image">{posTemplateLabels.image}</SelectItem>
+                        <SelectItem value="mobile">{posTemplateLabels.mobile}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  );
+                }}
+              />
+              <p className="text-xs text-muted-foreground">{t("settings.pos_template_hint")}</p>
             </div>
           </CardContent>
         </Card>
@@ -228,6 +275,10 @@ export default function SettingsPage() {
                 }}
               />
             </div>
+
+            <Link href="/settings/invoice-builder">
+              <Button type="button" variant="outline" size="sm">{t("settings.open_invoice_builder")}</Button>
+            </Link>
 
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
@@ -400,6 +451,24 @@ export default function SettingsPage() {
             </Link>
             <Link href="/settings/audit-log">
               <Button type="button" variant="outline" size="sm">{t("auditLog.title")}</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Integrations */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Plug className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <CardTitle className="text-base">{t("settings.integrations_title")}</CardTitle>
+                <CardDescription className="text-xs mt-0.5">{t("settings.integrations_desc")}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Link href="/settings/integrations">
+              <Button type="button" variant="outline" size="sm">{t("settings.open_integrations")}</Button>
             </Link>
           </CardContent>
         </Card>

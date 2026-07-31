@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
+import { ArrowLeft, Plus, Pencil, Trash2, Wallet } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { TOKEN_KEY } from "@/contexts/AuthContext";
 
@@ -95,6 +96,9 @@ export default function PaymentMethodsSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {isLoading && [1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full" />)}
+          {!isLoading && methods?.length === 0 && (
+            <EmptyState icon={Wallet} title={t("paymentMethods.empty_title")} description={t("paymentMethods.empty_desc")} />
+          )}
           {methods?.map(m => (
             <div key={m.id} className="flex items-center justify-between rounded-lg border p-3">
               <div>

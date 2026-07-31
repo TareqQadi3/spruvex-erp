@@ -1,5 +1,8 @@
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 export const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:5173';
+// SpruVex R (restaurants) is a fully separate product: its own backend,
+// database, and signup flow -- never the ERP's register-company API.
+export const RESTAURANT_APP_URL = import.meta.env.VITE_RESTAURANT_APP_URL || 'http://localhost:5173';
 
 export interface Plan {
   code: string;
@@ -38,4 +41,11 @@ export async function fetchPlanCatalog(): Promise<PlanCatalog> {
 
 export function signupUrl(plan?: string) {
   return plan ? `${APP_URL}/signup?plan=${encodeURIComponent(plan)}` : `${APP_URL}/signup`;
+}
+
+// SpruVex R has its own register page (real tenant + admin + trial creation,
+// same shape as the ERP's register-company) -- no plan query param, it has
+// no plan-tier concept at signup.
+export function restaurantSignupUrl() {
+  return `${RESTAURANT_APP_URL}/register`;
 }

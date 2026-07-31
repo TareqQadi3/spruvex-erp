@@ -17,17 +17,24 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
     return;
   }
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ from, to, subject, html }),
-  });
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ from, to, subject, html }),
+    });
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    logger.error({ to, status: res.status, body }, "Resend send failed");
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      logger.error({ to, status: res.status, body }, "Resend send failed");
+    }
+  } catch (err) {
+    // Network-level failure (DNS, connection reset, Resend outage): log it so
+    // the caller can decide whether the business action should still succeed
+    // (e.g. an already-committed signup), instead of throwing up into a 500.
+    logger.error({ to, subject, err: (err as Error).message }, "Resend send failed (network)");
   }
 }

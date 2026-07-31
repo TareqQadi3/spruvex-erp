@@ -44,6 +44,8 @@ const SettingsPage = lazy(() => import("@/pages/settings"));
 const UsersSettingsPage = lazy(() => import("@/pages/settings/users"));
 const PaymentMethodsSettingsPage = lazy(() => import("@/pages/settings/payment-methods"));
 const WarehousesSettingsPage = lazy(() => import("@/pages/settings/warehouses"));
+const InvoiceBuilderPage = lazy(() => import("@/pages/settings/invoice-builder"));
+const IntegrationsPage = lazy(() => import("@/pages/settings/integrations"));
 const BranchesSettingsPage = lazy(() => import("@/pages/settings/branches"));
 const InstallmentPlansSettingsPage = lazy(() => import("@/pages/settings/installment-plans"));
 const SuppliersPage = lazy(() => import("@/pages/suppliers"));
@@ -145,6 +147,16 @@ function AppRouter() {
 // AppRouter caused a request burst on every navigation in testing — mounting
 // it once here, below the route switch, keeps the settings query's
 // lifecycle tied to "authenticated session", not "current URL".
+// Persisted by signup.tsx right before navigation so the first-run setup
+// wizard can pre-fill its business-type step with what the merchant chose at
+// signup (it would otherwise default to "other" and silently overwrite the
+// real choice). Read-once: removed here so re-renders don't re-apply it.
+function readSignupBusinessType(): string | null {
+  const saved = localStorage.getItem("spruvex_signup_business_type");
+  if (saved) localStorage.removeItem("spruvex_signup_business_type");
+  return saved;
+}
+
 function AuthenticatedApp() {
   const [wizardDismissed, setWizardDismissed] = useState(false);
   const { data: settings } = useGetSettings();
@@ -155,7 +167,7 @@ function AuthenticatedApp() {
   }
 
   if (settings && settings.setupCompleted === false && !wizardDismissed) {
-    return <SetupWizardOverlay initialBusinessType={null} onFinished={() => setWizardDismissed(true)} />;
+    return <SetupWizardOverlay initialBusinessType={readSignupBusinessType()} onFinished={() => setWizardDismissed(true)} />;
   }
 
   return (
@@ -184,6 +196,8 @@ function AuthenticatedApp() {
         <Route path="/reports"><GuardedPage component={ReportsPage} basePath="/reports" /></Route>
         <Route path="/settings/users"><GuardedPage component={UsersSettingsPage} basePath="/settings" adminOnly /></Route>
         <Route path="/settings/payment-methods"><GuardedPage component={PaymentMethodsSettingsPage} basePath="/settings" /></Route>
+        <Route path="/settings/invoice-builder"><GuardedPage component={InvoiceBuilderPage} basePath="/settings" /></Route>
+        <Route path="/settings/integrations"><GuardedPage component={IntegrationsPage} basePath="/settings" /></Route>
         <Route path="/settings/warehouses"><GuardedPage component={WarehousesSettingsPage} basePath="/settings" /></Route>
         <Route path="/settings/branches"><GuardedPage component={BranchesSettingsPage} basePath="/settings" adminOnly /></Route>
         <Route path="/settings/installment-plans"><GuardedPage component={InstallmentPlansSettingsPage} basePath="/settings" /></Route>

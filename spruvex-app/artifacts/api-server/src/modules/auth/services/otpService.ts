@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { registrationOtpsTable } from "@workspace/db";
 import { db } from "../../../core/database/connection";
 import { AppError } from "../../../core/errors/AppError";
+import { logger } from "../../../core/logging/logger";
 import { sendEmail } from "../../../core/email/resendService";
 import { otpEmail } from "../../../core/email/templates";
 
@@ -29,6 +30,14 @@ export async function requestOtp(email: string, purpose: OtpPurpose): Promise<vo
       target: [registrationOtpsTable.email, registrationOtpsTable.purpose],
       set: { codeHash, attempts: 0, expiresAt, createdAt: new Date() },
     });
+
+  // Without a real mail provider (RESEND_API_KEY unset) the code is never
+  // sent anywhere — reveal it in the dev log so local signup/reset testing
+  // stays possible. Guarded on the env var so production (where the key is
+  // set) never logs a live OTP.
+  if (!process.env.RESEND_API_KEY) {
+    logger.warn({ email, purpose }, `[DEV] OTP code for ${email}: ${code}`);
+  }
 
   const { subject, html } = otpEmail(code, purpose);
   await sendEmail(email, subject, html);

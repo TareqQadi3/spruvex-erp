@@ -12,6 +12,7 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from "./tokenSe
 import { resolveBusinessTypeDefaults } from "./businessTypeDefaults";
 import { verifyRegistrationOtp, requestOtp, verifyOtp } from "./otpService";
 import { sendEmail } from "../../../core/email/resendService";
+import { logger } from "../../../core/logging/logger";
 import { accountCreatedEmail } from "../../../core/email/templates";
 import type { AuthResult, LoginInput, RegisterCompanyInput } from "../types/auth.types";
 
@@ -70,8 +71,12 @@ async function toAuthResult(
 }
 
 export async function registerCompany(input: RegisterCompanyInput): Promise<AuthResult> {
-  const existing = await repo.findUserByUsername(input.adminUsername);
-  if (existing) throw AppError.conflict("Username is already taken");
+  const [existingUsername, existingEmail] = await Promise.all([
+    repo.findUserByUsername(input.adminUsername),
+    repo.findUserByEmail(input.adminEmail),
+  ]);
+  if (existingUsername) throw AppError.conflict("Username is already taken");
+  if (existingEmail) throw AppError.conflict("An account with this email already exists");
 
   await verifyRegistrationOtp(input.adminEmail, input.otp);
 
@@ -158,13 +163,16 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Auth
     const result = await toAuthResult(user, tenant, tx);
     return { ...result, branchId: branch.id, enabledModules: moduleDefaults.enabledModules };
   }).then(async (result) => {
-    const { subject, html } = accountCreatedEmail(
-      input.companyName,
-      input.adminUsername,
-      input.adminPassword,
-      dashboardUrl(),
-    );
-    await sendEmail(input.adminEmail, subject, html);
+    // The account is already committed by this point — a broken email provider
+    // must never turn a successful signup into a 500 response (which the
+    // client would report as "signup failed" and a retry would then bounce off
+    // the username/email uniqueness check).
+    try {
+      const { subject, html } = accountCreatedEmail(input.companyName, input.adminUsername, dashboardUrl());
+      await sendEmail(input.adminEmail, subject, html);
+    } catch (err) {
+      logger.warn({ email: input.adminEmail, err: (err as Error).message }, "Welcome email failed to send after signup");
+    }
     return result;
   });
 }

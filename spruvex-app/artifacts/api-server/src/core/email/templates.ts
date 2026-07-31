@@ -72,10 +72,13 @@ export function otpEmail(
   };
 }
 
+// Never include the password in this email: the merchant set it themselves a
+// moment ago, and sending it (a) leaks the plaintext credential into email
+// logs and (b) trains users to accept passwords in email. Point at the
+// self-service reset instead.
 export function accountCreatedEmail(
   companyName: string,
   username: string,
-  password: string,
   loginUrl: string,
 ): { subject: string; html: string } {
   return {
@@ -87,10 +90,10 @@ export function accountCreatedEmail(
       <p style="font-size:15px;color:#333;">شكراً لتسجيلك في نظام إدارة الأعمال SpruVex ERP. تم إنشاء حساب التجربة المجانية لشركة <strong>${companyName}</strong> بنجاح.</p>
       <div style="background:#f6f7f4;border-radius:8px;padding:16px;margin:16px 0;font-size:14px;">
         <div>اسم المستخدم: <strong dir="ltr">${username}</strong></div>
-        <div>كلمة المرور: <strong dir="ltr">${password}</strong></div>
+        <div style="margin-top:6px;font-size:13px;color:#888;">كلمة المرور هي التي اخترتها أثناء التسجيل.</div>
       </div>
       <div style="text-align:center;">${ctaButton("الدخول إلى النظام", loginUrl)}</div>
-      <p style="font-size:13px;color:#888;margin-top:8px;">يُنصح بتغيير كلمة المرور بعد أول دخول.</p>
+      <p style="font-size:13px;color:#888;margin-top:8px;">إذا نسيت كلمة المرور، استخدم رابط "نسيت كلمة المرور" في صفحة تسجيل الدخول.</p>
       <div style="margin-top:20px;padding-top:16px;border-top:1px solid #eee;font-size:13px;color:#555;">
         <p style="margin:0 0 8px;font-weight:600;color:#333;">ماذا يمكنك أن تفعل الآن؟</p>
         <ul style="margin:0;padding-inline-start:18px;line-height:1.9;">

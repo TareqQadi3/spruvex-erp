@@ -33,7 +33,9 @@ function resolve(dict: Record<string, any>, key: string): string {
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => {
     const saved = localStorage.getItem("pos_lang");
-    return (saved === "ar" || saved === "en") ? saved : "en";
+    if (saved === "ar" || saved === "en") return saved;
+    const browserLang = typeof navigator !== "undefined" ? navigator.language : "";
+    return browserLang.toLowerCase().startsWith("ar") ? "ar" : "en";
   });
 
   useEffect(() => {

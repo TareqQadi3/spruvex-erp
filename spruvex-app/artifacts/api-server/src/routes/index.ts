@@ -29,6 +29,7 @@ import deviceModelsRouter from "./deviceModels";
 import importRouter from "./import";
 import exportRouter from "./export";
 import auditLogRouter from "./auditLog";
+import invoiceTemplatesRouter from "./invoiceTemplates";
 import { requireAuth, requireActiveSubscription, requirePermission } from "../lib/auth-middleware";
 import { PERMISSIONS } from "@workspace/db";
 
@@ -77,5 +78,6 @@ router.use("/device-models", requireAuth, requireActiveSubscription, deviceModel
 router.use("/import", requireAuth, requireActiveSubscription, importRouter);
 router.use("/export", requireAuth, requireActiveSubscription, exportRouter);
 router.use("/audit-log", requireAuth, requireActiveSubscription, requirePermission(PERMISSIONS.AUDIT_VIEW), auditLogRouter);
+router.use("/invoice-templates", requireAuth, requireActiveSubscription, invoiceTemplatesRouter);
 
 export default router;

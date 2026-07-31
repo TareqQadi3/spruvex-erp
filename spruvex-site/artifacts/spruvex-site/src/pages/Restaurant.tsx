@@ -1,4 +1,5 @@
 import ModuleTemplate from '../components/ModuleTemplate';
+import { restaurantSignupUrl } from '../lib/api';
 
 export default function Restaurant() {
   return (
@@ -6,7 +7,7 @@ export default function Restaurant() {
       eyebrowKey="restaurant_eyebrow" titleKey="restaurant_title" subKey="restaurant_sub"
       metaTitleKey="restaurant_meta_title" metaDescKey="restaurant_meta_desc"
       ctaTitleKey="restaurant_cta_title" ctaSubKey="restaurant_cta_sub" ctaBtnKey="common_cta_start"
-      plan="restaurant"
+      signupHref={restaurantSignupUrl()}
       features={[
         { icon: '🪑', hKey: 'restaurant_f1_h', pKey: 'restaurant_f1_p' },
         { icon: '🍳', hKey: 'restaurant_f2_h', pKey: 'restaurant_f2_p' },

@@ -11,16 +11,20 @@ export interface ModuleFeature {
 export default function ModuleTemplate({
   eyebrowKey, titleKey, subKey,
   features, ctaTitleKey, ctaSubKey, ctaBtnKey,
-  metaTitleKey, metaDescKey, plan,
+  metaTitleKey, metaDescKey, plan, signupHref,
 }: {
   eyebrowKey: string; titleKey: string; subKey: string;
   features: ModuleFeature[];
   ctaTitleKey: string; ctaSubKey: string; ctaBtnKey: string;
   metaTitleKey: string; metaDescKey: string;
   plan?: string;
+  // Override the computed ERP signup link entirely -- for a product (e.g.
+  // SpruVex R) whose signup lives on a completely separate app/backend.
+  signupHref?: string;
 }) {
   const { t } = useLang();
   useDocumentMeta(t(metaTitleKey), t(metaDescKey));
+  const href = signupHref ?? signupUrl(plan);
 
   return (
     <>
@@ -31,7 +35,7 @@ export default function ModuleTemplate({
             <h1 className="section-title">{t(titleKey)}</h1>
             <p className="section-sub">{t(subKey)}</p>
             <div className="hero-ctas" style={{ justifyContent: 'center', marginTop: 24 }}>
-              <a href={signupUrl(plan)} className="btn btn-gradient">{t('common_cta_start')}</a>
+              <a href={href} className="btn btn-gradient">{t('common_cta_start')}</a>
               <a href="/pricing" className="btn btn-ghost">{t('common_cta_pricing')}</a>
             </div>
           </div>
@@ -56,7 +60,7 @@ export default function ModuleTemplate({
               <p>{t(ctaSubKey)}</p>
             </div>
             <div className="trial-card">
-              <a href={signupUrl(plan)} className="btn btn-gradient" style={{ width: '100%' }}>{t(ctaBtnKey)}</a>
+              <a href={href} className="btn btn-gradient" style={{ width: '100%' }}>{t(ctaBtnKey)}</a>
             </div>
           </div>
         </div>

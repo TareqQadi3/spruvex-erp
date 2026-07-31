@@ -1,0 +1,21 @@
+app = "spruvex-site"
+primary_region = "fra"
+
+[build]
+  dockerfile = "artifacts/spruvex-site/Dockerfile"
+
+  [build.args]
+    VITE_API_URL = "https://spruvex-api.fly.dev"
+    VITE_APP_URL = "https://spruvex-pos.fly.dev"
+    VITE_RESTAURANT_APP_URL = "https://spruvex-r-dashboard.fly.dev"
+
+[http_service]
+  internal_port = 80
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

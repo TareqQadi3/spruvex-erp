@@ -33,6 +33,9 @@ ARG BASE_PATH=/
 # build args, so these must be real, working defaults, not placeholders.
 ARG VITE_API_URL=https://spruvex-api.onrender.com
 ARG VITE_APP_URL=https://spruvex-pos.onrender.com
+# SpruVex R (restaurants) is a separate product/backend/database -- its own
+# signup lives on its own app, never the ERP's.
+ARG VITE_RESTAURANT_APP_URL=https://spruvex-r-dashboard.onrender.com
 # Client-bundled (Vite bakes VITE_* into the public JS — view-source can
 # always recover this), so it only gates casual access to the ?admin route,
 # never a real secret. Trial-only default; change before any real use.
@@ -40,6 +43,7 @@ ARG VITE_ADMIN_PANEL_PASSWORD=spruvex-trial-2026
 ENV BASE_PATH=${BASE_PATH} \
     VITE_API_URL=${VITE_API_URL} \
     VITE_APP_URL=${VITE_APP_URL} \
+    VITE_RESTAURANT_APP_URL=${VITE_RESTAURANT_APP_URL} \
     VITE_ADMIN_PANEL_PASSWORD=${VITE_ADMIN_PANEL_PASSWORD}
 RUN pnpm --filter @workspace/spruvex-site run build
 

@@ -49,6 +49,12 @@ export const purchaseRepository = {
       .where(eq(productsTable.id, productId));
   },
 
+  async setProductSupplier(db: DbClient, productId: string, supplierId: string): Promise<void> {
+    await db.update(productsTable)
+      .set({ supplierId })
+      .where(eq(productsTable.id, productId));
+  },
+
   async findById(db: DbClient, companyId: string, id: string): Promise<Purchase | undefined> {
     const [purchase] = await db.select().from(purchasesTable)
       .where(and(eq(purchasesTable.id, id), eq(purchasesTable.companyId, companyId)));

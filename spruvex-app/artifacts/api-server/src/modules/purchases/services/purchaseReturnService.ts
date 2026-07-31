@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { purchaseRepository } from "../repositories/purchaseRepository";
 import { settleOutstandingBalance } from "../../suppliers/services/supplierService";
 import { postPurchaseReturnEntry } from "../../accounting";
+import { applyStockDelta } from "../../../lib/stockDelta";
 
 export class PurchaseReturnValidationError extends Error {}
 
@@ -33,7 +34,11 @@ export async function createPurchaseReturn(companyId: string, purchaseId: string
     const unitCost = Number(purchase.totalCost) / purchase.quantity;
     const amount = unitCost * quantity;
 
-    await purchaseRepository.adjustProductStock(tx, purchase.productId, -quantity, purchase.supplierId);
+    await applyStockDelta(tx, {
+      companyId, productId: purchase.productId, delta: -quantity,
+      movementType: "purchase",
+      referenceType: "purchase_return", referenceId: purchaseId,
+    });
     await purchaseRepository.incrementReturnedQuantity(tx, companyId, purchaseId, quantity);
 
     if (refundMethod === "credit_note") {

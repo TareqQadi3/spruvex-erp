@@ -10,11 +10,13 @@ const router = Router();
 const PRODUCT_SELECT = {
   id: productsTable.id,
   name: productsTable.name,
+  nameEn: productsTable.nameEn,
   sku: productsTable.sku,
   barcode: productsTable.barcode,
   description: productsTable.description,
   costPrice: productsTable.costPrice,
   sellingPrice: productsTable.sellingPrice,
+  minSellingPrice: productsTable.minSellingPrice,
   stock: productsTable.stock,
   lowStockThreshold: productsTable.lowStockThreshold,
   categoryId: productsTable.categoryId,
@@ -75,7 +77,7 @@ router.get("/", async (req: AuthedRequest, res) => {
 });
 
 router.post("/", requirePermission(PERMISSIONS.PRODUCTS_CREATE), async (req: AuthedRequest, res) => {
-  const { name, sku, barcode, description, costPrice, sellingPrice, stock, lowStockThreshold, categoryId, brand, imageUrl, warehouseId, sectionId, supplierId, includesTax, parentProductId, variantAttributes } = req.body;
+  const { name, nameEn, sku, barcode, description, costPrice, sellingPrice, minSellingPrice, stock, lowStockThreshold, categoryId, brand, imageUrl, warehouseId, sectionId, supplierId, includesTax, parentProductId, variantAttributes } = req.body;
   if (!name || !sku) {
     res.status(400).json({ error: "name and sku are required" });
     return;
@@ -83,9 +85,12 @@ router.post("/", requirePermission(PERMISSIONS.PRODUCTS_CREATE), async (req: Aut
   try {
     const [product] = await db.insert(productsTable).values({
       companyId: req.user!.companyId,
-      name, sku, barcode: barcode || undefined, description,
+      name, nameEn, sku, barcode: barcode || undefined, description,
       costPrice: (parseOptionalNumber(costPrice, "costPrice") ?? 0).toString(),
       sellingPrice: (parseOptionalNumber(sellingPrice, "sellingPrice") ?? 0).toString(),
+      minSellingPrice: minSellingPrice !== undefined && minSellingPrice !== null && minSellingPrice !== ""
+        ? (parseOptionalNumber(minSellingPrice, "minSellingPrice") ?? 0).toString()
+        : undefined,
       stock: parseOptionalNumber(stock, "stock") ?? 0,
       lowStockThreshold: parseOptionalNumber(lowStockThreshold, "lowStockThreshold") ?? 5,
       categoryId,
@@ -190,15 +195,18 @@ router.get("/:id", async (req: AuthedRequest, res) => {
 
 router.put("/:id", requirePermission(PERMISSIONS.PRODUCTS_UPDATE), async (req: AuthedRequest, res) => {
   const id = req.params.id as string;
-  const { name, sku, barcode, description, costPrice, sellingPrice, stock, lowStockThreshold, categoryId, brand, imageUrl, warehouseId, sectionId, supplierId, includesTax } = req.body;
+  const { name, nameEn, sku, barcode, description, costPrice, sellingPrice, minSellingPrice, stock, lowStockThreshold, categoryId, brand, imageUrl, warehouseId, sectionId, supplierId, includesTax } = req.body;
   try {
     const [before] = await db.select({ costPrice: productsTable.costPrice, sellingPrice: productsTable.sellingPrice, stock: productsTable.stock })
       .from(productsTable).where(and(eq(productsTable.id, id), eq(productsTable.companyId, req.user!.companyId)));
 
     const [updated] = await db.update(productsTable).set({
-      name, sku, barcode: barcode || null, description,
+      name, nameEn: nameEn !== undefined ? (nameEn ?? null) : undefined, sku, barcode: barcode || null, description,
       ...(costPrice !== undefined ? { costPrice: parseRequiredNumber(costPrice, "costPrice").toString() } : {}),
       ...(sellingPrice !== undefined ? { sellingPrice: parseRequiredNumber(sellingPrice, "sellingPrice").toString() } : {}),
+      ...(minSellingPrice !== undefined
+        ? { minSellingPrice: minSellingPrice === null || minSellingPrice === "" ? null : parseOptionalNumber(minSellingPrice, "minSellingPrice")?.toString() ?? null }
+        : {}),
       ...(stock !== undefined ? { stock: parseRequiredNumber(stock, "stock") } : {}),
       ...(lowStockThreshold !== undefined ? { lowStockThreshold: parseRequiredNumber(lowStockThreshold, "lowStockThreshold") } : {}),
       categoryId,
@@ -424,6 +432,122 @@ router.post("/:id/addon-groups", async (req: AuthedRequest, res) => {
   await db.update(productsTable).set({ hasAddons: true })
     .where(and(eq(productsTable.id, productId), eq(productsTable.companyId, req.user!.companyId)));
   res.status(201).json({ ...group, options: insertedOptions });
+});
+
+router.put("/:id/addon-groups/:groupId", async (req: AuthedRequest, res) => {
+  const groupId = req.params.groupId as string;
+  const { name, nameEn, required, minSelect, maxSelect } = req.body;
+  if (!name) {
+    res.status(400).json({ error: "name is required" });
+    return;
+  }
+  const [updated] = await db.update(productAddonGroupsTable).set({
+    name,
+    ...(nameEn !== undefined ? { nameEn: nameEn ?? null } : {}),
+    ...(required !== undefined ? { required: !!required } : {}),
+    ...(minSelect !== undefined ? { minSelect: parseRequiredNumber(minSelect, "minSelect") } : {}),
+    ...(maxSelect !== undefined ? { maxSelect: parseRequiredNumber(maxSelect, "maxSelect") } : {}),
+  })
+    .where(and(eq(productAddonGroupsTable.id, groupId), eq(productAddonGroupsTable.companyId, req.user!.companyId)))
+    .returning();
+  if (!updated) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  res.json(updated);
+});
+
+router.delete("/:id/addon-groups/:groupId", async (req: AuthedRequest, res) => {
+  const id = req.params.id as string;
+  const groupId = req.params.groupId as string;
+  const [group] = await db.select().from(productAddonGroupsTable)
+    .where(and(eq(productAddonGroupsTable.id, groupId), eq(productAddonGroupsTable.companyId, req.user!.companyId)));
+  if (!group) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  await db.delete(productAddonOptionsTable)
+    .where(eq(productAddonOptionsTable.groupId, groupId));
+  await db.delete(productAddonGroupsTable)
+    .where(and(eq(productAddonGroupsTable.id, groupId), eq(productAddonGroupsTable.companyId, req.user!.companyId)));
+  const remaining = await db.select({ id: productAddonGroupsTable.id }).from(productAddonGroupsTable)
+    .where(and(eq(productAddonGroupsTable.productId, id), eq(productAddonGroupsTable.companyId, req.user!.companyId)));
+  if (remaining.length === 0) {
+    await db.update(productsTable).set({ hasAddons: false })
+      .where(and(eq(productsTable.id, id), eq(productsTable.companyId, req.user!.companyId)));
+  }
+  res.status(204).send();
+});
+
+router.post("/:id/addon-groups/:groupId/options", async (req: AuthedRequest, res) => {
+  const groupId = req.params.groupId as string;
+  const { name, nameEn, priceDelta } = req.body;
+  if (!name) {
+    res.status(400).json({ error: "name is required" });
+    return;
+  }
+  const [group] = await db.select().from(productAddonGroupsTable)
+    .where(and(eq(productAddonGroupsTable.id, groupId), eq(productAddonGroupsTable.companyId, req.user!.companyId)));
+  if (!group) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  const [option] = await db.insert(productAddonOptionsTable).values({
+    groupId, name, nameEn,
+    priceDelta: (parseOptionalNumber(priceDelta, "priceDelta") ?? 0).toString(),
+  }).returning();
+  res.status(201).json(option);
+});
+
+router.put("/:id/addon-groups/:groupId/options/:optionId", async (req: AuthedRequest, res) => {
+  const optionId = req.params.optionId as string;
+  const { name, nameEn, priceDelta } = req.body;
+  if (!name) {
+    res.status(400).json({ error: "name is required" });
+    return;
+  }
+  const [option] = await db.select({
+    id: productAddonOptionsTable.id,
+    groupId: productAddonOptionsTable.groupId,
+  }).from(productAddonOptionsTable)
+    .where(eq(productAddonOptionsTable.id, optionId));
+  if (!option) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  const [group] = await db.select({ id: productAddonGroupsTable.id }).from(productAddonGroupsTable)
+    .where(and(eq(productAddonGroupsTable.id, option.groupId), eq(productAddonGroupsTable.companyId, req.user!.companyId)));
+  if (!group) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  const [updated] = await db.update(productAddonOptionsTable).set({
+    name,
+    ...(nameEn !== undefined ? { nameEn: nameEn ?? null } : {}),
+    ...(priceDelta !== undefined ? { priceDelta: (parseOptionalNumber(priceDelta, "priceDelta") ?? 0).toString() } : {}),
+  }).where(eq(productAddonOptionsTable.id, optionId)).returning();
+  res.json(updated);
+});
+
+router.delete("/:id/addon-groups/:groupId/options/:optionId", async (req: AuthedRequest, res) => {
+  const optionId = req.params.optionId as string;
+  const [option] = await db.select({
+    id: productAddonOptionsTable.id,
+    groupId: productAddonOptionsTable.groupId,
+  }).from(productAddonOptionsTable)
+    .where(eq(productAddonOptionsTable.id, optionId));
+  if (!option) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  const [group] = await db.select({ id: productAddonGroupsTable.id }).from(productAddonGroupsTable)
+    .where(and(eq(productAddonGroupsTable.id, option.groupId), eq(productAddonGroupsTable.companyId, req.user!.companyId)));
+  if (!group) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  await db.delete(productAddonOptionsTable).where(eq(productAddonOptionsTable.id, optionId));
+  res.status(204).send();
 });
 
 export default router;

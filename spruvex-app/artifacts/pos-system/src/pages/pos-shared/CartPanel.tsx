@@ -143,6 +143,9 @@ export function CartPanel({
                   {item.itemNotes && (
                     <div className="text-xs text-muted-foreground italic">{item.itemNotes}</div>
                   )}
+                  {item.serialNumber && (
+                    <div className="text-xs text-muted-foreground font-mono">{item.serialNumber}</div>
+                  )}
                   {item.selectedAddons && item.selectedAddons.length > 0 && (
                     <div className="text-xs text-muted-foreground">
                       {item.selectedAddons.map(a => a.optionName).join(", ")}

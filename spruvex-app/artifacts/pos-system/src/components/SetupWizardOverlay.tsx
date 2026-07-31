@@ -6,20 +6,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, PartyPopper, Smartphone, Store, UtensilsCrossed, Coffee, Shirt, Wrench, MoreHorizontal } from "lucide-react";
+import {
+  CheckCircle2,
+  PartyPopper,
+  Smartphone,
+  Store,
+  UtensilsCrossed,
+  Coffee,
+  Shirt,
+  Wrench,
+  ShoppingBag,
+  ShoppingCart,
+  MoreHorizontal,
+  AlertCircle,
+} from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { TOKEN_KEY } from "@/contexts/AuthContext";
 import { MediaUploadField } from "@/components/MediaUploadField";
 
-type BusinessType = "electronics" | "grocery" | "restaurant" | "cafe" | "clothing" | "repair" | "other";
+type BusinessType = "retail" | "electronics" | "grocery" | "restaurant" | "cafe" | "clothing" | "repair" | "ecommerce" | "other";
 
 const BUSINESS_TYPES: { value: BusinessType; icon: typeof Store }[] = [
+  { value: "retail", icon: ShoppingBag },
   { value: "electronics", icon: Smartphone },
   { value: "grocery", icon: Store },
   { value: "restaurant", icon: UtensilsCrossed },
   { value: "cafe", icon: Coffee },
   { value: "clothing", icon: Shirt },
   { value: "repair", icon: Wrench },
+  { value: "ecommerce", icon: ShoppingCart },
   { value: "other", icon: MoreHorizontal },
 ];
 
@@ -52,25 +67,35 @@ export function SetupWizardOverlay({
   const [step, setStep] = useState<Step>("welcome");
   const [nameEn, setNameEn] = useState("");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [businessType, setBusinessType] = useState<BusinessType>((initialBusinessType as BusinessType) || "other");
+  const [businessType, setBusinessType] = useState<BusinessType>(
+    (() => {
+      const valid = (initialBusinessType ?? "") as BusinessType;
+      return BUSINESS_TYPES.some(bt => bt.value === valid) ? valid : "other";
+    })(),
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [seededOk, setSeededOk] = useState<boolean | null>(null);
+  const [error, setError] = useState("");
   const queryClient = useQueryClient();
   const { t } = useTranslation();
 
   const finish = async () => {
     setIsSaving(true);
+    setError("");
     try {
       await authFetch("/settings", { method: "PUT", body: JSON.stringify({ setupCompleted: true }) });
       queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+      onFinished();
+    } catch (err: any) {
+      setError(err.message ?? t("setupWizard.save_failed"));
     } finally {
       setIsSaving(false);
-      onFinished();
     }
   };
 
   const saveIdentity = async () => {
     setIsSaving(true);
+    setError("");
     try {
       await authFetch("/settings", {
         method: "PUT",
@@ -80,6 +105,8 @@ export function SetupWizardOverlay({
         }),
       });
       setStep("businessType");
+    } catch (err: any) {
+      setError(err.message ?? t("setupWizard.save_failed"));
     } finally {
       setIsSaving(false);
     }
@@ -87,9 +114,12 @@ export function SetupWizardOverlay({
 
   const saveBusinessType = async () => {
     setIsSaving(true);
+    setError("");
     try {
       await authFetch("/settings", { method: "PUT", body: JSON.stringify({ businessType }) });
       setStep("catalog");
+    } catch (err: any) {
+      setError(err.message ?? t("setupWizard.save_failed"));
     } finally {
       setIsSaving(false);
     }
@@ -101,6 +131,7 @@ export function SetupWizardOverlay({
       return;
     }
     setIsSaving(true);
+    setError("");
     try {
       await authFetch("/onboarding/seed-catalog", { method: "POST" });
       setSeededOk(true);
@@ -132,6 +163,12 @@ export function SetupWizardOverlay({
         </div>
 
         <Card className="border-border/60 shadow-lg">
+          {error && (
+            <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
           {step === "welcome" && (
             <CardContent className="pt-10 pb-8 px-8 flex flex-col items-center text-center gap-4">
               <PartyPopper className="h-14 w-14 text-primary" />

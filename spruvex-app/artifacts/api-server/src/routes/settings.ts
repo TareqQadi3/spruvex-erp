@@ -2,6 +2,8 @@ import { Router } from "express";
 import { db, settingsTable, companiesTable, PERMISSIONS } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requirePermission, type AuthedRequest } from "../lib/auth-middleware";
+import { resolveBusinessTypeDefaults } from "../modules/auth/services/businessTypeDefaults";
+import type { BusinessType } from "../modules/auth/types/auth.types";
 
 const router = Router();
 
@@ -66,9 +68,18 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
   const repairInvoiceTypeValue = nonBlank(repairInvoiceType);
   const themeColorValue = nonBlank(themeColor);
   const shopNameValue = nonBlank(shopName);
+  const companyNameEnValue = nonBlank(companyNameEn);
+  const businessTypeValue = typeof businessType === "string" && BUSINESS_TYPES.has(businessType) ? businessType : undefined;
   const POS_TEMPLATES = new Set(["list", "grid", "image", "mobile"]);
   const posTemplateValue = typeof posTemplate === "string" && POS_TEMPLATES.has(posTemplate) ? posTemplate : undefined;
-  const settingsPatch = {
+
+  // Changing the line of business must keep the module gates, module flags
+  // and POS layout coherent with the newly-selected type — otherwise the
+  // setup wizard's "other" default would silently override the signup choice
+  // while enabledModules still describes the old business. Explicit values in
+  // the same request always win over the recomputed defaults.
+  const businessDefaults = businessTypeValue !== undefined ? resolveBusinessTypeDefaults(businessTypeValue as BusinessType) : null;
+  const settingsPatch: Record<string, unknown> = {
     ...(shopNameValue !== undefined ? { shopName: shopNameValue } : {}),
     ...(shopAddress !== undefined ? { shopAddress } : {}),
     ...(shopPhone !== undefined ? { shopPhone } : {}),
@@ -93,6 +104,9 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
     ...(setupCompleted !== undefined ? { setupCompleted } : {}),
     ...(posTemplateValue !== undefined ? { posTemplate: posTemplateValue } : {}),
     ...(expiryAlertDays !== undefined ? { expiryAlertDays: Number(expiryAlertDays) } : {}),
+    ...(businessDefaults && repairsModuleEnabled === undefined ? { repairsModuleEnabled: businessDefaults.repairsModuleEnabled } : {}),
+    ...(businessDefaults && req.body.ecommerceModuleEnabled === undefined ? { ecommerceModuleEnabled: businessDefaults.ecommerceModuleEnabled } : {}),
+    ...(businessDefaults && posTemplateValue === undefined ? { posTemplate: businessDefaults.posTemplate } : {}),
   };
   // An empty SET clause is invalid SQL — a request that only touches company
   // fields (e.g. the setup wizard's business-type-only step) legitimately
@@ -101,13 +115,14 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
     ? (await db.update(settingsTable).set(settingsPatch).where(eq(settingsTable.id, settings.id)).returning())[0]
     : settings;
 
-  const companyNameEnValue = nonBlank(companyNameEn);
-  const businessTypeValue = typeof businessType === "string" && BUSINESS_TYPES.has(businessType) ? businessType : undefined;
-  if (companyNameEnValue !== undefined || businessTypeValue !== undefined) {
-    await db.update(companiesTable).set({
-      ...(companyNameEnValue !== undefined ? { nameEn: companyNameEnValue } : {}),
-      ...(businessTypeValue !== undefined ? { businessType: businessTypeValue } : {}),
-    }).where(eq(companiesTable.id, req.user!.companyId));
+  const companyPatch: Record<string, string> = {};
+  if (companyNameEnValue !== undefined) companyPatch.nameEn = companyNameEnValue;
+  if (businessTypeValue !== undefined) {
+    companyPatch.businessType = businessTypeValue;
+    companyPatch.enabledModules = JSON.stringify(businessDefaults!.enabledModules);
+  }
+  if (Object.keys(companyPatch).length > 0) {
+    await db.update(companiesTable).set(companyPatch).where(eq(companiesTable.id, req.user!.companyId));
   }
 
   res.json(updated);
