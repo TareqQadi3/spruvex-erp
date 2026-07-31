@@ -363,13 +363,13 @@ export default function SettingsPage() {
                         <SelectValue placeholder={t("settings.select_currency")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="SAR">SAR — Saudi Riyal ﷼</SelectItem>
-                        <SelectItem value="AED">AED — UAE Dirham</SelectItem>
-                        <SelectItem value="USD">USD — US Dollar</SelectItem>
-                        <SelectItem value="EUR">EUR — Euro</SelectItem>
-                        <SelectItem value="GBP">GBP — British Pound</SelectItem>
-                        <SelectItem value="KWD">KWD — Kuwaiti Dinar</SelectItem>
-                        <SelectItem value="QAR">QAR — Qatari Riyal</SelectItem>
+                        <SelectItem value="SAR">{t("settings.currency_sar")}</SelectItem>
+                        <SelectItem value="AED">{t("settings.currency_aed")}</SelectItem>
+                        <SelectItem value="USD">{t("settings.currency_usd")}</SelectItem>
+                        <SelectItem value="EUR">{t("settings.currency_eur")}</SelectItem>
+                        <SelectItem value="GBP">{t("settings.currency_gbp")}</SelectItem>
+                        <SelectItem value="KWD">{t("settings.currency_kwd")}</SelectItem>
+                        <SelectItem value="QAR">{t("settings.currency_qar")}</SelectItem>
                       </SelectContent>
                     </Select>
                   )}

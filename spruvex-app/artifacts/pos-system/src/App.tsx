@@ -95,7 +95,7 @@ function GuardedPage({ component: Component, basePath, adminOnly }: { component:
   const { user } = useAuth();
   if (!user) return <Redirect to="/login" />;
   if (!canAccess(user.role, basePath)) return <AccessDenied />;
-  if (adminOnly && user.role !== "admin") return <AccessDenied />;
+  if (adminOnly && user.role !== "admin" && user.role !== "owner") return <AccessDenied />;
   return <Component />;
 }
 

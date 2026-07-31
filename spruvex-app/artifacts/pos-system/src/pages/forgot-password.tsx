@@ -66,7 +66,7 @@ export default function ForgotPasswordPage() {
         className="absolute top-4 end-4 flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
       >
         <Globe className="h-4 w-4" />
-        {lang === "ar" ? "English" : "العربية"}
+        {lang === "ar" ? t("common.language_en") : t("common.language_ar")}
       </button>
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-3">

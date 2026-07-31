@@ -118,10 +118,16 @@ app.use("/api/public", publicRouter);
 app.use("/api/ecommerce/webhooks", ecommerceWebhooksRouter);
 app.use("/api/payments/webhooks", paymentWebhooksRouter);
 
+// NOTE: /api/auth's login+me endpoints are shadowed by the legacy auth router
+// (mounted at /api/auth via legacyRouter line 105). The modular versions are
+// kept as the migration target — remove legacy auth.ts duplicates when migrating.
 app.use("/api/auth", authRouter);
 app.use("/api/roles", rolesRouter);
 app.use("/api/permissions", permissionsRouter);
 app.use("/api", userRolesRouter); // exposes /users/:userId/roles and /user-roles/:id
+// NOTE: /api/sales POST / is shadowed by the legacy sales router (mounted via
+// legacyRouter line 105). This modular router is a partial migration stub —
+// complete it (GET, returns, approve, payments, DELETE) before removing legacy.
 app.use("/api/sales", salesRouter);
 app.use("/api/inventory", inventoryRouter);
 app.use("/api/zatca", zatcaRouter);

@@ -140,9 +140,12 @@ export function useAuth() {
 // Role-based permission helpers
 export const ROLE_PAGES: Record<string, string[]> = {
   admin: ["*"],
+  owner: ["*"],
   store_manager: ["/", "/pos", "/sales", "/ecommerce", "/repairs", "/inventory", "/customers", "/suppliers", "/purchases", "/vouchers", "/accounting", "/reports", "/settings"],
+  manager: ["/", "/pos", "/sales", "/ecommerce", "/repairs", "/inventory", "/customers", "/suppliers", "/purchases", "/vouchers", "/accounting", "/reports", "/settings"],
   cashier: ["/", "/pos", "/sales", "/customers", "/repairs"],
   warehouse_staff: ["/", "/inventory", "/suppliers", "/purchases"],
+  inventory_staff: ["/", "/inventory", "/purchases"],
   accountant: ["/", "/accounting", "/reports", "/vouchers"],
 };
 

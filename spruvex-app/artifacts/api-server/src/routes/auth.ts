@@ -14,7 +14,7 @@ import { ensureSeeded as ensureChartOfAccountsSeeded } from "../modules/accounti
 // the modular requireAuth alongside the legacy one just re-derives the same
 // identity into req.tenant without changing legacy behavior.
 import { requireAuth as requireAuthModular } from "../core/middleware/auth.middleware";
-import { requireWithinLimit } from "../core/middleware/subscription.middleware";
+import { requireWithinLimit, requireActiveSubscription } from "../core/middleware/subscription.middleware";
 import { countCurrentUsersForCompany } from "../modules/subscriptions/services/planLimitsService";
 import { rateLimitAuth } from "../core/middleware/rateLimit.middleware";
 import { logAudit } from "../modules/auditLog/auditLogService";
@@ -184,7 +184,7 @@ router.get("/me/permissions", requireAuth, async (req: AuthedRequest, res) => {
   res.json({ role: req.user!.role, permissions });
 });
 
-router.get("/users", requireAuth, requireRole("admin"), async (req: AuthedRequest, res) => {
+router.get("/users", requireAuth, requireRole("admin"), requireAuthModular, requireActiveSubscription(), async (req: AuthedRequest, res) => {
   const users = await db
     .select({
       id: usersTable.id,
@@ -206,6 +206,7 @@ router.post(
   requireRole("admin"),
   requireAuthModular,
   requireWithinLimit("maxUsers", countCurrentUsersForCompany),
+  requireActiveSubscription(),
   async (req: AuthedRequest, res) => {
   const { username, password, role, permissions } = req.body;
   if (!username || !password || !role) {
@@ -239,7 +240,7 @@ router.post(
 },
 );
 
-router.put("/users/:id", requireAuth, requireRole("admin"), async (req: AuthedRequest, res) => {
+router.put("/users/:id", requireAuth, requireRole("admin"), requireAuthModular, requireActiveSubscription(), async (req: AuthedRequest, res) => {
   const id = req.params.id as string;
   const { role, permissions, isActive, password } = req.body;
   const updates: Record<string, unknown> = {};

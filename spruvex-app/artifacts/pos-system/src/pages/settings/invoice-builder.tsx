@@ -367,25 +367,25 @@ function TemplatePreview({
             <FileText className="h-4 w-4" style={{ color: accentColor }} />
           </div>
         )}
-        <div className="font-bold text-xs">My Shop</div>
+        <div className="font-bold text-xs">{t("invoiceBuilder.preview_shop_name")}</div>
         {headerText && <div className="text-[9px] text-gray-500 mt-0.5 line-clamp-1">{headerText}</div>}
       </div>
       <div className="flex justify-between text-[9px] py-1.5">
-        <span>{language === "ar" ? "رقم الفاتورة" : "Invoice #"}</span>
+        <span>{language === "ar" ? t("invoiceBuilder.preview_invoice_no_ar") : t("invoiceBuilder.preview_invoice_no")}</span>
         <span>000001</span>
       </div>
       <table className="w-full text-[9px] my-1">
         <thead>
           <tr style={{ backgroundColor: accentColor }} className="text-white">
-            <th className="text-start px-1 py-1">{language === "ar" ? "الصنف" : "Item"}</th>
-            <th className="px-1 py-1">{language === "ar" ? "الكمية" : "Qty"}</th>
-            <th className="text-end px-1 py-1">{language === "ar" ? "السعر" : "Price"}</th>
+            <th className="text-start px-1 py-1">{language === "ar" ? t("invoiceBuilder.preview_item_ar") : t("invoiceBuilder.preview_item")}</th>
+            <th className="px-1 py-1">{language === "ar" ? t("invoiceBuilder.preview_qty_ar") : t("invoiceBuilder.preview_qty")}</th>
+            <th className="text-end px-1 py-1">{language === "ar" ? t("invoiceBuilder.preview_price_ar") : t("invoiceBuilder.preview_price")}</th>
           </tr>
         </thead>
         <tbody>
           {[1, 2].map(i => (
             <tr key={i} className="border-b border-gray-100">
-              <td className="px-1 py-1">{language === "ar" ? "منتج مثال" : "Sample item"}</td>
+              <td className="px-1 py-1">{language === "ar" ? t("invoiceBuilder.preview_sample_item_ar") : t("invoiceBuilder.preview_sample_item")}</td>
               <td className="text-center">1</td>
               <td className="text-end">10.00</td>
             </tr>
@@ -393,7 +393,7 @@ function TemplatePreview({
         </tbody>
       </table>
       <div className="flex justify-between text-[10px] font-bold pt-1.5 border-t-2" style={{ borderColor: accentColor }}>
-        <span>{language === "ar" ? "الإجمالي" : "Total"}</span>
+        <span>{language === "ar" ? t("invoiceBuilder.preview_total_ar") : t("invoiceBuilder.preview_total")}</span>
         <span>20.00</span>
       </div>
       {footerText && <div className="text-[8px] text-gray-500 text-center mt-1.5 line-clamp-1">{footerText}</div>}
