@@ -6,72 +6,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Undo2, CalendarClock, Check, Printer, Wallet, Pencil, Trash2, CheckCircle2 } from "lucide-react";
+import { Undo2, CalendarClock, Printer, Wallet, Trash2, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
 import { openServerPrint } from "@/utils/openServerPrint";
 import { useGetSettings } from "@workspace/api-client-react";
-
-interface Sale {
-  id: string;
-  customerId: string | null;
-  customerName: string | null;
-  total: string;
-  amountPaid: string;
-  outstanding: string;
-  paymentMethod: string;
-  status: string;
-  createdAt: string;
-}
-
-interface SaleItem {
-  id: string;
-  productId: string;
-  productName: string;
-  quantity: number;
-  returnedQuantity: number;
-  subtotal: string;
-}
-
-interface SaleDetails extends Sale {
-  items: SaleItem[];
-}
-
-interface InstallmentPlan {
-  id: string;
-  months: number;
-  interestPercent: string;
-  isActive: boolean;
-}
-
-interface InstallmentPayment {
-  id: string;
-  installmentSaleId: string;
-  amount: string;
-  dueDate: string;
-  paidDate: string | null;
-  isPaid: boolean;
-}
-
-interface InstallmentSale {
-  id: string;
-  saleId: string | null;
-  customerId: string | null;
-  principal: string;
-  interestPercent: string;
-  totalAmount: string;
-  months: number;
-  monthlyAmount: string;
-  downPayment: string;
-  status: string;
-  startDate: string;
-}
+import { StatusBadge } from "./components/StatusBadge";
+import { SaleInstallmentDialog } from "./components/SaleInstallmentDialog";
+import { SaleReturnDialog } from "./components/SaleReturnDialog";
+import { RecordPaymentDialog } from "./components/RecordPaymentDialog";
+import { ApproveDraftDialog } from "./components/ApproveDraftDialog";
+import type { Sale } from "./components/types";
 
 export default function SalesPage() {
   const { t } = useTranslation();
@@ -95,18 +41,10 @@ export default function SalesPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const handleDeleteDraft = (sale: Sale) => {
-    if (window.confirm(t("sales.draft_delete_confirm"))) {
-      deleteDraftMutation.mutate(sale.id);
-    }
-  };
-
-  // Invoicing is on-demand: most sales never need a formal ZATCA invoice
-  // printed, so one isn't created at checkout time — this creates it (or
-  // reuses the existing one, idempotently) only when the user asks to print.
   const { data: settings } = useGetSettings();
   const printType = settings?.invoiceType ?? "a4";
   const [printingSaleId, setPrintingSaleId] = useState<string | null>(null);
+
   const handlePrintInvoice = async (sale: Sale) => {
     setPrintingSaleId(sale.id);
     try {
@@ -162,9 +100,7 @@ export default function SalesPage() {
                     <TableCell className="text-end">
                       {Number(sale.outstanding) > 0.005 ? (
                         <span className="font-medium text-amber-600 dark:text-amber-400">{Number(sale.outstanding).toFixed(2)}</span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
+                      ) : <span className="text-muted-foreground">—</span>}
                     </TableCell>
                     <TableCell><Badge variant="outline" className="capitalize">{sale.paymentMethod}</Badge></TableCell>
                     <TableCell><StatusBadge status={sale.status} t={t} /></TableCell>
@@ -173,39 +109,28 @@ export default function SalesPage() {
                         {sale.status === "draft" ? (
                           <>
                             <Button variant="ghost" size="sm" onClick={() => setApproveDraft(sale)}>
-                              <CheckCircle2 className="me-2 h-3.5 w-3.5 text-green-600" />
-                              {t("sales.approve")}
+                              <CheckCircle2 className="me-2 h-3.5 w-3.5 text-green-600" />{t("sales.approve")}
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDeleteDraft(sale)}>
-                              <Trash2 className="me-2 h-3.5 w-3.5" />
-                              {t("common.delete")}
+                            <Button variant="ghost" size="sm" onClick={() => { if (window.confirm(t("sales.draft_delete_confirm"))) deleteDraftMutation.mutate(sale.id); }}>
+                              <Trash2 className="me-2 h-3.5 w-3.5" />{t("common.delete")}
                             </Button>
                           </>
                         ) : (
                           <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={printingSaleId === sale.id}
-                              onClick={() => handlePrintInvoice(sale)}
-                            >
-                              <Printer className="me-2 h-3.5 w-3.5" />
-                              {t("sales.print_invoice")}
+                            <Button variant="ghost" size="sm" disabled={printingSaleId === sale.id} onClick={() => handlePrintInvoice(sale)}>
+                              <Printer className="me-2 h-3.5 w-3.5" />{t("sales.print_invoice")}
                             </Button>
                             <Button variant="ghost" size="sm" onClick={() => setInstallmentSale(sale)}>
-                              <CalendarClock className="me-2 h-3.5 w-3.5" />
-                              {t("installments.sale_action")}
+                              <CalendarClock className="me-2 h-3.5 w-3.5" />{t("installments.sale_action")}
                             </Button>
                             <Button variant="ghost" size="sm" onClick={() => setReturnSale(sale)}>
-                              <Undo2 className="me-2 h-3.5 w-3.5" />
-                              {t("sales.return")}
+                              <Undo2 className="me-2 h-3.5 w-3.5" />{t("sales.return")}
                             </Button>
                           </>
                         )}
                         {Number(sale.outstanding) > 0.005 && sale.status !== "draft" && (
                           <Button variant="ghost" size="sm" onClick={() => setPaySale(sale)}>
-                            <Wallet className="me-2 h-3.5 w-3.5 text-amber-600" />
-                            {t("sales.record_payment")}
+                            <Wallet className="me-2 h-3.5 w-3.5 text-amber-600" />{t("sales.record_payment")}
                           </Button>
                         )}
                       </div>
@@ -218,505 +143,10 @@ export default function SalesPage() {
         </CardContent>
       </Card>
 
-      {returnSale && (
-        <SaleReturnDialog sale={returnSale} onClose={() => setReturnSale(null)} />
-      )}
-
-      {installmentSale && (
-        <SaleInstallmentDialog sale={installmentSale} onClose={() => setInstallmentSale(null)} />
-      )}
-
-      {paySale && (
-        <RecordPaymentDialog sale={paySale} onClose={() => setPaySale(null)} />
-      )}
-
-      {approveDraft && (
-        <ApproveDraftDialog sale={approveDraft} onClose={() => setApproveDraft(null)} />
-      )}
+      {returnSale && <SaleReturnDialog sale={returnSale} onClose={() => setReturnSale(null)} />}
+      {installmentSale && <SaleInstallmentDialog sale={installmentSale} onClose={() => setInstallmentSale(null)} />}
+      {paySale && <RecordPaymentDialog sale={paySale} onClose={() => setPaySale(null)} />}
+      {approveDraft && <ApproveDraftDialog sale={approveDraft} onClose={() => setApproveDraft(null)} />}
     </div>
-  );
-}
-
-function StatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
-  const variants: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
-    completed: "default",
-    draft: "outline",
-    partially_paid: "secondary",
-    returned: "destructive",
-  };
-  const labels: Record<string, string> = {
-    completed: t("sales.status_completed"),
-    draft: t("sales.status_draft"),
-    partially_paid: t("sales.status_partially_paid"),
-    returned: t("sales.status_returned"),
-  };
-  const variant = variants[status] ?? "outline";
-  const label = labels[status] ?? status;
-  return (
-    <Badge variant={variant} className={status === "draft" ? "text-muted-foreground" : "capitalize"}>
-      {status === "draft" && <Pencil className="me-1 h-3 w-3" />}
-      {label}
-    </Badge>
-  );
-}
-
-function SaleInstallmentDialog({ sale, onClose }: { sale: Sale; onClose: () => void }) {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const [planId, setPlanId] = useState("");
-  const [downPayment, setDownPayment] = useState("");
-
-  const { data: existing, isLoading: isLoadingExisting } = useQuery<InstallmentSale[]>({
-    queryKey: ["installment-sales", { saleId: sale.id }],
-    queryFn: () => api(`/installment-sales?saleId=${sale.id}`),
-  });
-  const installmentSale = existing?.[0];
-
-  const { data: plans } = useQuery<InstallmentPlan[]>({
-    queryKey: ["installment-plans"],
-    queryFn: () => api("/installment-plans"),
-    enabled: !installmentSale,
-  });
-
-  const { data: details, isLoading: isLoadingDetails } = useQuery<InstallmentSale & { payments: InstallmentPayment[] }>({
-    queryKey: ["installment-sales", installmentSale?.id],
-    queryFn: () => api(`/installment-sales/${installmentSale!.id}`),
-    enabled: !!installmentSale,
-  });
-
-  const createMutation = useMutation({
-    mutationFn: () => api("/installment-sales", {
-      method: "POST",
-      body: JSON.stringify({
-        saleId: sale.id,
-        customerId: sale.customerId,
-        planId,
-        principal: sale.total,
-        downPayment: downPayment || 0,
-      }),
-    }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["installment-sales"] });
-      toast.success(t("installments.sale_create_success"));
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const payMutation = useMutation({
-    mutationFn: (paymentId: string) => api(`/installment-sales/${installmentSale!.id}/payments/${paymentId}/pay`, { method: "POST" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["installment-sales"] });
-      toast.success(t("installments.payment_success"));
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const isLoading = isLoadingExisting || (!!installmentSale && isLoadingDetails);
-
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t("installments.sale_title")}</DialogTitle>
-        </DialogHeader>
-
-        {isLoading ? (
-          <div className="space-y-2">
-            {[1, 2].map(i => <Skeleton key={i} className="h-10 w-full" />)}
-          </div>
-        ) : installmentSale ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <div className="text-muted-foreground">{t("installments.total_amount")}</div>
-                <div className="font-medium">{Number(installmentSale.totalAmount).toFixed(2)}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">{t("installments.monthly_amount")}</div>
-                <div className="font-medium">{Number(installmentSale.monthlyAmount).toFixed(2)}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">{t("common.status")}</div>
-                <Badge variant={installmentSale.status === "completed" ? "default" : "outline"} className="capitalize">
-                  {installmentSale.status}
-                </Badge>
-              </div>
-            </div>
-
-            <div className="space-y-2 max-h-72 overflow-y-auto">
-              {details?.payments.map((p) => (
-                <div key={p.id} className="flex items-center justify-between gap-3 border-b pb-2 last:border-0">
-                  <div>
-                    <div className="text-sm font-medium">{format(new Date(p.dueDate), "MMM d, yyyy")}</div>
-                    <div className="text-xs text-muted-foreground">{Number(p.amount).toFixed(2)}</div>
-                  </div>
-                  {p.isPaid ? (
-                    <Badge variant="default">
-                      <Check className="me-1 h-3 w-3" />
-                      {t("installments.paid")}
-                    </Badge>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={payMutation.isPending}
-                      onClick={() => payMutation.mutate(p.id)}
-                    >
-                      {t("installments.record_payment")}
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>{t("installments.title")}</Label>
-              <Select value={planId} onValueChange={setPlanId}>
-                <SelectTrigger><SelectValue placeholder={t("installments.select_plan")} /></SelectTrigger>
-                <SelectContent>
-                  {plans?.filter(p => p.isActive).map(p => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {t("installments.months_label", { months: p.months })} · {t("installments.interest_label", { percent: p.interestPercent })}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t("installments.down_payment")}</Label>
-              <Input type="number" step="0.01" min={0} value={downPayment} onChange={(e) => setDownPayment(e.target.value)} placeholder="0" />
-            </div>
-          </div>
-        )}
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
-          {!isLoading && !installmentSale && (
-            <Button disabled={createMutation.isPending || !planId} onClick={() => createMutation.mutate()}>
-              {createMutation.isPending ? t("common.saving") : t("installments.sale_create")}
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function SaleReturnDialog({ sale, onClose }: { sale: Sale; onClose: () => void }) {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const { data: settings } = useGetSettings();
-  const printType = settings?.invoiceType ?? "a4";
-  const [quantities, setQuantities] = useState<Record<string, string>>({});
-  const [reason, setReason] = useState("");
-  const [refundMethod, setRefundMethod] = useState<"cash" | "store_credit">("cash");
-
-  const { data: details, isLoading } = useQuery<SaleDetails>({
-    queryKey: ["sales", sale.id],
-    queryFn: () => api(`/sales/${sale.id}`),
-  });
-
-  const returnMutation = useMutation({
-    mutationFn: (items: { saleItemId: string; quantity: number }[]) =>
-      api<{ id: string }>(`/sales/${sale.id}/returns`, {
-        method: "POST",
-        body: JSON.stringify({ items, reason: reason || undefined, refundMethod }),
-      }),
-    onSuccess: async (ret) => {
-      queryClient.invalidateQueries({ queryKey: ["sales"] });
-      toast.success(t("sales.return_success"));
-      onClose();
-      // Best-effort: issue and print the ZATCA credit note for this return.
-      // A 409 here (e.g. the original sale was never invoiced) is expected
-      // and not a failure of the return itself, which already succeeded —
-      // surface it as an informational toast, not an error.
-      try {
-        const creditNote = await api<{ id: string }>("/zatca/invoices/from-return", {
-          method: "POST",
-          body: JSON.stringify({ saleReturnId: ret.id }),
-        });
-        await openServerPrint(`/invoicing/print/sales/${creditNote.id}?printType=${printType}`);
-      } catch (err) {
-        toast.info(err instanceof Error ? err.message : t("sales.credit_note_skipped"));
-      }
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const handleSubmit = () => {
-    const items = Object.entries(quantities)
-      .map(([saleItemId, qty]) => ({ saleItemId, quantity: Number(qty) }))
-      .filter(i => i.quantity > 0);
-    if (items.length === 0) {
-      toast.error(t("sales.return_no_items"));
-      return;
-    }
-    returnMutation.mutate(items);
-  };
-
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t("sales.return_title")}</DialogTitle>
-        </DialogHeader>
-
-        {isLoading ? (
-          <div className="space-y-2">
-            {[1, 2].map(i => <Skeleton key={i} className="h-10 w-full" />)}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {details?.items.map((item) => {
-                const available = item.quantity - (item.returnedQuantity ?? 0);
-                return (
-                  <div key={item.id} className="flex items-center justify-between gap-3 border-b pb-2 last:border-0">
-                    <div className="min-w-0">
-                      <div className="font-medium text-sm truncate">{item.productName}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {t("sales.available_to_return", { count: available })}
-                      </div>
-                    </div>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={available}
-                      step={1}
-                      className="w-20"
-                      disabled={available <= 0}
-                      value={quantities[item.id] ?? ""}
-                      onChange={(e) => setQuantities(prev => ({ ...prev, [item.id]: e.target.value }))}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>{t("sales.refund_method")}</Label>
-              <Select value={refundMethod} onValueChange={(v) => setRefundMethod(v as "cash" | "store_credit")}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">{t("sales.refund_cash")}</SelectItem>
-                  <SelectItem value="store_credit">{t("sales.refund_store_credit")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>{t("sales.return_reason")}</Label>
-              <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} />
-            </div>
-          </div>
-        )}
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
-          <Button disabled={returnMutation.isPending || isLoading} onClick={handleSubmit}>
-            {returnMutation.isPending ? t("common.saving") : t("sales.return_submit")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-interface PaymentMethodOption {
-  id: number;
-  name: string;
-  percentFee: string;
-  fixedFee: string;
-  isActive: boolean;
-}
-
-function usePaymentMethods() {
-  return useQuery<PaymentMethodOption[]>({
-    queryKey: ["payment-methods"],
-    queryFn: () => api("/payment-methods"),
-  });
-}
-
-// Collect a late/partial payment against a sale with a remaining balance.
-function RecordPaymentDialog({ sale, onClose }: { sale: Sale; onClose: () => void }) {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const { data: methods } = usePaymentMethods();
-  const [amount, setAmount] = useState(Number(sale.outstanding).toFixed(2));
-  const [methodId, setMethodId] = useState("");
-
-  const outstanding = Number(sale.outstanding);
-  const amountNum = Math.max(parseFloat(amount) || 0, 0);
-
-  const mutation = useMutation({
-    mutationFn: () => {
-      const method = methods?.find(m => m.id === Number(methodId));
-      return api(`/sales/${sale.id}/payments`, {
-        method: "POST",
-        body: JSON.stringify({
-          payments: [{ methodName: method?.name ?? "cash", paymentMethodId: method?.id, amount: amountNum }],
-        }),
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sales"] });
-      toast.success(t("sales.payment_recorded"));
-      onClose();
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const handleSubmit = () => {
-    if (amountNum <= 0) {
-      toast.error(t("sales.payment_invalid"));
-      return;
-    }
-    if (amountNum > outstanding + 0.005) {
-      toast.error(t("sales.payment_exceeds"));
-      return;
-    }
-    mutation.mutate();
-  };
-
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{t("sales.payment_title")}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">{t("sales.outstanding")}</span>
-            <span className="font-semibold text-amber-600 dark:text-amber-400">{Number(sale.outstanding).toFixed(2)}</span>
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t("common.amount")}</Label>
-            <Input type="number" step="0.01" min={0} value={amount} onChange={e => setAmount(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t("customers.payment_method")}</Label>
-            <Select value={methodId} onValueChange={setMethodId}>
-              <SelectTrigger><SelectValue placeholder={t("pos.cash")} /></SelectTrigger>
-              <SelectContent>
-                {methods?.filter(m => m.isActive).map(m => (
-                  <SelectItem key={m.id} value={String(m.id)}>{m.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
-          <Button disabled={mutation.isPending || amountNum <= 0} onClick={handleSubmit}>
-            {mutation.isPending ? t("common.saving") : t("sales.payment_submit")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Turn a saved draft into a live sale: pick a payment method + amount, or run
-// it entirely on the customer's account.
-function ApproveDraftDialog({ sale, onClose }: { sale: Sale; onClose: () => void }) {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const { data: methods } = usePaymentMethods();
-  const [methodId, setMethodId] = useState("");
-  const [amount, setAmount] = useState(Number(sale.total).toFixed(2));
-  const [onAccount, setOnAccount] = useState(false);
-
-  const total = Number(sale.total);
-  const amountNum = onAccount ? 0 : Math.max(parseFloat(amount) || 0, 0);
-
-  const mutation = useMutation({
-    mutationFn: () => {
-      const method = methods?.find(m => m.id === Number(methodId));
-      return api(`/sales/${sale.id}/approve`, {
-        method: "POST",
-        body: JSON.stringify(onAccount
-          ? { paymentMethod: "on_account", amountPaid: 0 }
-          : { paymentMethod: method?.name ?? "cash", paymentMethodId: method?.id, amountPaid: amountNum }),
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sales"] });
-      toast.success(t("sales.draft_approved"));
-      onClose();
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const handleSubmit = () => {
-    if (!onAccount && amountNum <= 0) {
-      toast.error(t("sales.payment_invalid"));
-      return;
-    }
-    mutation.mutate();
-  };
-
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{t("sales.approve_title")}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">{t("common.amount")}</span>
-            <span className="font-semibold">{Number(sale.total).toFixed(2)}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant={onAccount ? "outline" : "default"}
-              className="flex-1"
-              onClick={() => setOnAccount(false)}
-            >
-              <Wallet className="me-2 h-4 w-4" />
-              {t("sales.approve_pay_now")}
-            </Button>
-            <Button
-              variant={onAccount ? "default" : "outline"}
-              className="flex-1"
-              onClick={() => setOnAccount(true)}
-            >
-              {t("sales.approve_on_account")}
-            </Button>
-          </div>
-          {!onAccount && (
-            <>
-              <div className="space-y-1.5">
-                <Label>{t("common.amount")}</Label>
-                <Input type="number" step="0.01" min={0} value={amount} onChange={e => setAmount(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t("customers.payment_method")}</Label>
-                <Select value={methodId} onValueChange={setMethodId}>
-                  <SelectTrigger><SelectValue placeholder={t("pos.cash")} /></SelectTrigger>
-                  <SelectContent>
-                    {methods?.filter(m => m.isActive).map(m => (
-                      <SelectItem key={m.id} value={String(m.id)}>{m.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          )}
-          {onAccount && (
-            <p className="text-xs text-muted-foreground">
-              {sale.customerId ? t("sales.approve_on_account_hint") : t("pos.customer_required_for_balance")}
-            </p>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
-          <Button disabled={mutation.isPending || (onAccount && !sale.customerId)} onClick={handleSubmit}>
-            {mutation.isPending ? t("common.saving") : t("sales.approve_submit")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
