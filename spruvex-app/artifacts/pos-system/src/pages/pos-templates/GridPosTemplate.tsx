@@ -1,23 +1,21 @@
 import { useEffect, useState } from "react";
 import {
-  useGetProducts, useGetCustomers, useCreateSale,
-  useGetSettings, useGetCategories, getGetDashboardStatsQueryKey,
+  useGetProducts, useGetCustomers,
+  useGetSettings, useGetCategories,
 } from "@workspace/api-client-react";
-import { printInvoice } from "@/utils/printInvoice";
-import { emailInvoice, whatsappInvoice } from "@/utils/shareInvoice";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Search, Printer, ShoppingBag, CheckCircle2, Save, Mail, MessageCircle } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/i18n";
 import { TOKEN_KEY } from "@/contexts/AuthContext";
 import { PosLayoutShell } from "../pos-shared/PosLayoutShell";
 import { CartPanel } from "../pos-shared/CartPanel";
+import { PosSuccessScreen } from "../pos-shared/PosSuccessScreen";
 import { AddonPickerDialog, type SelectedAddon } from "../pos-shared/AddonPickerDialog";
-import type { CartItem, CompletedSale, PosCustomer } from "../pos-shared/types";
+import { usePosSale } from "../pos-shared/usePosSale";
+import type { CartItem, PosCustomer, CheckoutPayload } from "../pos-shared/types";
 
 interface OrderType { id: string; key: string; name: string; nameEn?: string | null }
 
@@ -38,8 +36,6 @@ export default function GridPosTemplate() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [editingPrice, setEditingPrice] = useState<number | null>(null);
   const [editPriceValue, setEditPriceValue] = useState("");
-  const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [addonProduct, setAddonProduct] = useState<{ id: number; name: string; sellingPrice: number; includesTax: boolean } | null>(null);
 
   const { data: products } = useGetProducts(
@@ -49,8 +45,6 @@ export default function GridPosTemplate() {
   const { data: customers } = useGetCustomers();
   const customerList = (customers ?? []) as unknown as PosCustomer[];
   const { data: settings } = useGetSettings();
-  const createSale = useCreateSale();
-  const queryClient = useQueryClient();
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -67,6 +61,8 @@ export default function GridPosTemplate() {
   const getItemFinalPrice = (item: CartItem) =>
     item.includesTax ? item.unitPrice : item.unitPrice * (1 + taxRate / 100);
   const getItemTotal = (item: CartItem) => getItemFinalPrice(item) * item.quantity - item.discount;
+
+  const sale = usePosSale({ getItemFinalPrice, getItemTotal });
 
   const addLineToCart = (product: { id: number; name: string; sellingPrice: any; includesTax?: boolean }, addons: SelectedAddon[] = [], notes = "") => {
     const addonTotal = addons.reduce((s, a) => s + a.priceDelta, 0);
@@ -116,94 +112,41 @@ export default function GridPosTemplate() {
   const subtotalBeforeTax = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity - item.discount, 0);
   const total = cart.reduce((sum, item) => sum + getItemTotal(item), 0);
 
-  const handleCheckout = (method: "cash" | "card") => {
-    if (cart.length === 0 || isProcessing) return;
-    setIsProcessing(true);
-    const items = cart.map(i => ({
-      productId: i.productId,
-      productName: i.productName,
-      unitPrice: getItemFinalPrice(i),
-      quantity: i.quantity,
-      discount: i.discount,
-      selectedAddons: i.selectedAddons,
-      itemNotes: i.itemNotes,
-    }));
-    const customerName = selectedCustomerName || t("pos.walk_in");
-    const customerPhone = customerList.find(c => c.id === selectedCustomerId)?.phone ?? null;
-    const cartSnapshot = [...cart];
-    const totalSnapshot = total;
+  const selectedCustomer = customerList.find(c => c.id === selectedCustomerId) ?? null;
 
-    createSale.mutate(
-      { data: { items, paymentMethod: method, amountPaid: total, discount: 0, customerId: selectedCustomerId ?? undefined, orderType: selectedOrderType ?? undefined } as any },
-      {
-        onSuccess: (sale: any) => {
-          setCart([]);
-          setSelectedCustomerId(null);
-          setSelectedCustomerName("");
-          queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
-          setCompletedSale({
-            id: sale.id, total: totalSnapshot, paymentMethod: method, customerName, customerPhone,
-            itemCount: cartSnapshot.reduce((s, i) => s + i.quantity, 0),
-            cartItems: cartSnapshot.map(i => ({ productName: i.productName, quantity: i.quantity, unitPrice: getItemFinalPrice(i), subtotal: getItemTotal(i) })),
-            createdAt: new Date().toISOString(),
-          });
-          setIsProcessing(false);
-        },
-        onError: (err: any) => {
-          const msg = err?.response?.data?.error ?? err?.message ?? t("pos.sale_failed");
-          setCompletedSale(null);
-          setIsProcessing(false);
-          alert(`${t("pos.sale_failed")}: ${msg}`);
-        },
-      },
-    );
+  const resetAfterSale = () => {
+    setCart([]);
+    setSelectedCustomerId(null);
+    setSelectedCustomerName("");
   };
 
-  if (completedSale) {
-    const invoiceSettings = {
-      shopName: settings?.shopName, shopAddress: settings?.shopAddress, shopPhone: settings?.shopPhone,
-      logoUrl: settings?.logoUrl, invoiceHeaderText: settings?.invoiceHeaderText, invoiceFooterText: settings?.invoiceFooterText,
-      currency: settings?.currency, taxRate: settings?.taxRate, vatNumber: (settings as any)?.vatNumber,
-    };
-    return (
-      <div className="h-[calc(100vh-6rem)] flex items-center justify-center">
-        <Card className="w-full max-w-md border-2 border-green-500/40 bg-background">
-          <CardContent className="pt-10 pb-8 px-8 flex flex-col items-center text-center gap-6">
-            <div className="h-20 w-20 rounded-full bg-green-500/15 flex items-center justify-center">
-              <CheckCircle2 className="h-10 w-10 text-green-500" />
-            </div>
-            <div className="space-y-1">
-              <h2 className="text-2xl font-bold text-green-500">{t("pos.transaction_complete")}</h2>
-              <p className="text-muted-foreground text-sm">{t("pos.saved_in_database")}</p>
-            </div>
-            <div className="w-full rounded-lg bg-muted/50 border divide-y text-sm">
-              <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">{t("pos.transaction_id")}</span><span className="font-mono font-medium">#{completedSale.id}</span></div>
-              <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">{t("pos.customer")}</span><span className="font-medium">{completedSale.customerName}</span></div>
-              <div className="flex justify-between px-4 py-2.5 bg-green-500/5"><span className="font-bold">{t("pos.total")}</span><span className="font-bold text-green-500">{fmt(completedSale.total)}</span></div>
-            </div>
-            <div className="w-full space-y-3">
-              <div className="grid grid-cols-4 gap-2">
-                <Button variant="outline" className="h-16 flex-col gap-1" onClick={() => printInvoice({ sale: { id: completedSale.id, total: completedSale.total, paymentMethod: completedSale.paymentMethod, createdAt: completedSale.createdAt, customerName: completedSale.customerName }, items: completedSale.cartItems, settings: invoiceSettings })}>
-                  <Save className="h-5 w-5" /><span className="text-xs">{t("pos.save")}</span>
-                </Button>
-                <Button variant="outline" className="h-16 flex-col gap-1" onClick={() => printInvoice({ sale: { id: completedSale.id, total: completedSale.total, paymentMethod: completedSale.paymentMethod, createdAt: completedSale.createdAt, customerName: completedSale.customerName }, items: completedSale.cartItems, settings: invoiceSettings })}>
-                  <Printer className="h-5 w-5" /><span className="text-xs">{t("pos.print")}</span>
-                </Button>
-                <Button variant="outline" className="h-16 flex-col gap-1" onClick={() => emailInvoice({ invoiceNo: completedSale.id, shopName: settings?.shopName, customerName: completedSale.customerName, items: completedSale.cartItems, total: completedSale.total, currency: settings?.currency })}>
-                  <Mail className="h-5 w-5" /><span className="text-xs">{t("pos.email")}</span>
-                </Button>
-                <Button variant="outline" className="h-16 flex-col gap-1" onClick={() => whatsappInvoice({ invoiceNo: completedSale.id, shopName: settings?.shopName, customerName: completedSale.customerName, items: completedSale.cartItems, total: completedSale.total, currency: settings?.currency, phone: completedSale.customerPhone })}>
-                  <MessageCircle className="h-5 w-5" /><span className="text-xs">{t("pos.whatsapp")}</span>
-                </Button>
-              </div>
-              <Button size="lg" className="h-14 w-full bg-primary" onClick={() => setCompletedSale(null)}>
-                <ShoppingBag className="me-2 h-5 w-5" /><span className="font-bold">{t("pos.new_sale")}</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  const handleCheckout = (payload: CheckoutPayload) => {
+    sale.submitSale({
+      cart,
+      customer: selectedCustomer,
+      discount: 0,
+      orderType: selectedOrderType ?? undefined,
+      payload,
+      onSuccess: resetAfterSale,
+    });
+  };
+
+  const handleSuspend = () => {
+    sale.suspendCart("", cart, 0);
+    resetAfterSale();
+  };
+
+  const handleRestoreHeld = (id: string) => {
+    const held = sale.restoreHeldCart(id);
+    if (held) {
+      setCart(held.items);
+      setSelectedCustomerId(null);
+      setSelectedCustomerName("");
+    }
+  };
+
+  if (sale.completedSale) {
+    return <PosSuccessScreen completedSale={sale.completedSale} fmt={fmt} onNewSale={() => sale.setCompletedSale(null)} />;
   }
 
   return (
@@ -302,7 +245,12 @@ export default function GridPosTemplate() {
             subtotalBeforeTax={subtotalBeforeTax}
             taxAmount={taxAmount}
             total={total}
-            isProcessing={isProcessing}
+            isProcessing={sale.isProcessing}
+            paymentMethods={sale.paymentMethods}
+            heldCarts={sale.heldCarts}
+            onRestoreHeld={handleRestoreHeld}
+            onRemoveHeld={sale.removeHeldCart}
+            onSuspend={handleSuspend}
             onCheckout={handleCheckout}
           />
         }

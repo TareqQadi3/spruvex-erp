@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { printInvoice } from "@/utils/printInvoice";
+import { openServerPrint } from "@/utils/openServerPrint";
 import { emailInvoice, whatsappInvoice } from "@/utils/shareInvoice";
+import { toast } from "sonner";
+import { api } from "@/lib/api";
+import { useGetSettings } from "@workspace/api-client-react";
 import { CheckCircle2, Save, Printer, Mail, MessageCircle, ShoppingBag } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import type { CompletedSale } from "./types";
@@ -9,25 +13,35 @@ import type { CompletedSale } from "./types";
 /**
  * Post-checkout completion screen shared by every POS template: shows the
  * saved sale summary and the print/email/WhatsApp/save action bar, with a
- * "New Sale" button to start over. Templates pass their own settings + money
- * formatter so invoices stay consistent with the tenant's branding.
+ * "New Sale" button to start over. Printing is on-demand: the ZATCA invoice is
+ * created (or reused, idempotently) at print time, then rendered server-side
+ * via the Invoice Builder's /api/invoicing/print/sales/:invoiceId so the
+ * tenant's chosen thermal/A4 template applies.
  */
 export function PosSuccessScreen({
   completedSale,
-  settings,
   fmt,
   onNewSale,
 }: {
   completedSale: CompletedSale;
-  settings: any;
   fmt: (n: number) => string;
   onNewSale: () => void;
 }) {
   const { t } = useTranslation();
-  const invoiceSettings = {
-    shopName: settings?.shopName, shopAddress: settings?.shopAddress, shopPhone: settings?.shopPhone,
-    logoUrl: settings?.logoUrl, invoiceHeaderText: settings?.invoiceHeaderText, invoiceFooterText: settings?.invoiceFooterText,
-    currency: settings?.currency, taxRate: settings?.taxRate, vatNumber: (settings as any)?.vatNumber,
+  const { data: settings } = useGetSettings();
+  const [printing, setPrinting] = useState(false);
+  const printType = settings?.invoiceType ?? "a4";
+  const print = async () => {
+    if (printing) return;
+    setPrinting(true);
+    try {
+      const invoice = await api<{ id: string }>(`/zatca/invoices/for-sale/${completedSale.id}`, { method: "POST" });
+      await openServerPrint(`/invoicing/print/sales/${invoice.id}?printType=${printType}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("common.error"));
+    } finally {
+      setPrinting(false);
+    }
   };
   return (
     <div className="h-[calc(100vh-6rem)] flex items-center justify-center">
@@ -43,20 +57,24 @@ export function PosSuccessScreen({
           <div className="w-full rounded-lg bg-muted/50 border divide-y text-sm">
             <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">{t("pos.transaction_id")}</span><span className="font-mono font-medium">#{completedSale.id}</span></div>
             <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">{t("pos.customer")}</span><span className="font-medium">{completedSale.customerName}</span></div>
+            <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">{t("pos.payment_method")}</span><span className="font-medium capitalize">{completedSale.paymentMethod}</span></div>
+            {completedSale.outstanding > 0.005 && (
+              <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">{t("pos.outstanding_balance")}</span><span className="font-medium text-amber-600 dark:text-amber-400">{fmt(completedSale.outstanding)}</span></div>
+            )}
             <div className="flex justify-between px-4 py-2.5 bg-green-500/5"><span className="font-bold">{t("pos.total")}</span><span className="font-bold text-green-500">{fmt(completedSale.total)}</span></div>
           </div>
           <div className="w-full space-y-3">
             <div className="grid grid-cols-4 gap-2">
-              <Button variant="outline" className="h-16 flex-col gap-1" onClick={() => printInvoice({ sale: { id: completedSale.id, total: completedSale.total, paymentMethod: completedSale.paymentMethod, createdAt: completedSale.createdAt, customerName: completedSale.customerName }, items: completedSale.cartItems, settings: invoiceSettings })}>
+              <Button variant="outline" className="h-16 flex-col gap-1" onClick={print}>
                 <Save className="h-5 w-5" /><span className="text-xs">{t("pos.save")}</span>
               </Button>
-              <Button variant="outline" className="h-16 flex-col gap-1" onClick={() => printInvoice({ sale: { id: completedSale.id, total: completedSale.total, paymentMethod: completedSale.paymentMethod, createdAt: completedSale.createdAt, customerName: completedSale.customerName }, items: completedSale.cartItems, settings: invoiceSettings })}>
+              <Button variant="outline" className="h-16 flex-col gap-1" onClick={print}>
                 <Printer className="h-5 w-5" /><span className="text-xs">{t("pos.print")}</span>
               </Button>
-              <Button variant="outline" className="h-16 flex-col gap-1" onClick={() => emailInvoice({ invoiceNo: completedSale.id, shopName: settings?.shopName, customerName: completedSale.customerName, items: completedSale.cartItems, total: completedSale.total, currency: settings?.currency })}>
+              <Button variant="outline" className="h-16 flex-col gap-1" onClick={() => emailInvoice({ invoiceNo: completedSale.id, shopName: settings?.shopName ?? undefined, customerName: completedSale.customerName, items: completedSale.cartItems, total: completedSale.total, currency: settings?.currency ?? undefined })}>
                 <Mail className="h-5 w-5" /><span className="text-xs">{t("pos.email")}</span>
               </Button>
-              <Button variant="outline" className="h-16 flex-col gap-1" onClick={() => whatsappInvoice({ invoiceNo: completedSale.id, shopName: settings?.shopName, customerName: completedSale.customerName, items: completedSale.cartItems, total: completedSale.total, currency: settings?.currency, phone: completedSale.customerPhone })}>
+              <Button variant="outline" className="h-16 flex-col gap-1" onClick={() => whatsappInvoice({ invoiceNo: completedSale.id, shopName: settings?.shopName ?? undefined, customerName: completedSale.customerName, items: completedSale.cartItems, total: completedSale.total, currency: settings?.currency ?? undefined, phone: completedSale.customerPhone })}>
                 <MessageCircle className="h-5 w-5" /><span className="text-xs">{t("pos.whatsapp")}</span>
               </Button>
             </div>

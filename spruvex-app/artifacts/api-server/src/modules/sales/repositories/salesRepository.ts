@@ -11,6 +11,8 @@ export interface SaleListFilters {
   from?: string;
   to?: string;
   customerId?: string;
+  status?: string;
+  cashSessionId?: string;
 }
 
 const SALE_SELECT = {
@@ -26,6 +28,7 @@ const SALE_SELECT = {
   status: salesTable.status,
   notes: salesTable.notes,
   cashSessionId: salesTable.cashSessionId,
+  outstanding: sql<number>`cast(${salesTable.total} as real) - cast(coalesce(${salesTable.amountPaid}, 0) as real)`,
   createdAt: salesTable.createdAt,
 };
 
@@ -39,6 +42,8 @@ export const salesRepository = {
       conditions.push(lte(salesTable.createdAt, toDate));
     }
     if (filters.customerId) conditions.push(eq(salesTable.customerId, filters.customerId));
+    if (filters.status) conditions.push(eq(salesTable.status, filters.status));
+    if (filters.cashSessionId) conditions.push(eq(salesTable.cashSessionId, filters.cashSessionId));
 
     return db.select(SALE_SELECT).from(salesTable)
       .leftJoin(customersTable, eq(salesTable.customerId, customersTable.id))
@@ -116,6 +121,36 @@ export const salesRepository = {
       .where(and(eq(salesTable.id, id), eq(salesTable.companyId, companyId)))
       .returning();
     return sale;
+  },
+
+  async updateHeader(db: DbClient, companyId: string, id: string, changes: {
+    customerId?: string | null;
+    notes?: string | null;
+    subtotal?: string;
+    discount?: string;
+    total?: string;
+    amountPaid?: string;
+    change?: string;
+    paymentMethod?: string;
+    paymentMethodId?: string | null;
+    status?: string;
+    cashSessionId?: string | null;
+    paymentFee?: string;
+  }): Promise<Sale | undefined> {
+    const [sale] = await db.update(salesTable).set(changes)
+      .where(and(eq(salesTable.id, id), eq(salesTable.companyId, companyId)))
+      .returning();
+    return sale;
+  },
+
+  async deleteItems(db: DbClient, companyId: string, saleId: string): Promise<void> {
+    await db.delete(saleItemsTable)
+      .where(and(eq(saleItemsTable.saleId, saleId), eq(saleItemsTable.companyId, companyId)));
+  },
+
+  async deleteSale(db: DbClient, companyId: string, id: string): Promise<void> {
+    await db.delete(salesTable)
+      .where(and(eq(salesTable.id, id), eq(salesTable.companyId, companyId)));
   },
 
   // --- cross-domain reads/writes this domain legitimately owns the call site for

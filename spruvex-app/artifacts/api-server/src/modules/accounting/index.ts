@@ -10,5 +10,5 @@ router.use("/trial-balance", trialBalanceRouter);
 
 export default router;
 
-export { postSaleEntry, postPurchaseEntry, postExpenseEntry, postVoucherEntry, postSaleReturnEntry, postPurchaseReturnEntry } from "./services/postingService";
+export { postSaleEntry, postPurchaseEntry, postExpenseEntry, postVoucherEntry, postSaleReturnEntry, postPurchaseReturnEntry, postSalePaymentEntry } from "./services/postingService";
 export { ensureSeeded } from "./services/chartOfAccountsService";

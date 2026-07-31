@@ -53,6 +53,32 @@ export async function postSaleEntry(db: DbClient, params: {
 }
 
 /**
+ * A late/partial payment collected against an existing sale: Dr Cash (amount
+ * received) ; Cr Accounts Receivable. This reverses the receivable booked by the
+ * original sale entry for the shortfall, so AR only stays on the books for what
+ * is genuinely still owed.
+ */
+export async function postSalePaymentEntry(db: DbClient, params: {
+  companyId: string; saleId: string; date: string; amount: number;
+}): Promise<JournalEntry> {
+  const accounts = await getAccountsByCode(db, params.companyId);
+  const cash = accounts.get("1000")!;
+  const ar = accounts.get("1100")!;
+
+  return postEntry(db, {
+    companyId: params.companyId,
+    date: params.date,
+    sourceType: "sale_payment",
+    sourceId: params.saleId,
+    memo: `Sale #${params.saleId} payment`,
+    lines: [
+      { accountId: cash.id, debit: params.amount },
+      { accountId: ar.id, credit: params.amount },
+    ],
+  });
+}
+
+/**
  * Reverses the original sale's revenue/COGS for the returned units, and — if items
  * were exchanged in the same transaction — books a normal sale entry for them. The
  * two are netted on the cash/AR side so only the actual money/credit movement posts:

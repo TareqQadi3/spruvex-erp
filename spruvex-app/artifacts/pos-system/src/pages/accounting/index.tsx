@@ -4,7 +4,7 @@ import {
   useGetActiveCashSession, useOpenCashSession, useCloseCashSession,
   getGetActiveCashSessionQueryKey, getGetCashSessionsQueryKey,
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,11 +16,12 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, LockOpen, Lock, TrendingDown } from "lucide-react";
+import { Plus, Trash2, LockOpen, Lock, TrendingDown, History, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "@/i18n";
+import { api } from "@/lib/api";
 import ChartOfAccounts from "./chart-of-accounts";
 import JournalEntries from "./journal-entries";
 import TrialBalance from "./trial-balance";
@@ -35,6 +36,24 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 const EXPENSE_CATEGORY_KEYS = ["rent", "salary", "utilities", "supplies", "maintenance", "other"];
+
+interface CashSession {
+  id: string;
+  openedAt: string;
+  closedAt: string | null;
+  openingBalance: number;
+  closingBalance: number | null;
+  expectedBalance: number;
+  totalSales: number;
+  discrepancy: number | null;
+  status: string;
+  notes: string | null;
+}
+
+interface CashSessionReport extends CashSession {
+  sales: Array<{ id: string; total: string; amountPaid: string; status: string }>;
+  paidTotal: number;
+}
 
 function AddExpenseDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
@@ -133,6 +152,18 @@ export default function AccountingPage() {
   const [openingBalance, setOpeningBalance] = useState("");
   const [closingBalance, setClosingBalance] = useState("");
 
+  // Live summary + history from the cash-sessions route (enriched with sales
+  // totals and the counted-vs-expected discrepancy).
+  const { data: sessions } = useQuery<CashSession[]>({
+    queryKey: ["cash-sessions"],
+    queryFn: () => api("/cash-sessions"),
+  });
+  const { data: sessionReport } = useQuery<CashSessionReport>({
+    queryKey: ["cash-sessions", (activeSession as any)?.id],
+    queryFn: () => api(`/cash-sessions/${(activeSession as any).id}`),
+    enabled: !!activeSession,
+  });
+
   const totalExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) ?? 0;
 
   const handleOpenSession = () => {
@@ -142,6 +173,7 @@ export default function AccountingPage() {
         setOpeningBalance("");
         queryClient.invalidateQueries({ queryKey: getGetActiveCashSessionQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetCashSessionsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: ["cash-sessions"] });
       },
       onError: (e: any) => toast.error(e?.data?.error || t("accounting.session_failed")),
     });
@@ -155,6 +187,7 @@ export default function AccountingPage() {
         setClosingBalance("");
         queryClient.invalidateQueries({ queryKey: getGetActiveCashSessionQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetCashSessionsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: ["cash-sessions"] });
       },
       onError: () => toast.error(t("accounting.close_failed")),
     });
@@ -210,6 +243,24 @@ export default function AccountingPage() {
                           date: format(new Date(activeSession.openedAt), "MMM d, HH:mm"),
                           balance: Number(activeSession.openingBalance).toFixed(2)
                         })}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="rounded-lg border p-2.5">
+                        <div className="text-xs text-muted-foreground">{t("accounting.session_sales_count")}</div>
+                        <div className="font-semibold mt-0.5">{sessionReport?.sales.length ?? 0}</div>
+                      </div>
+                      <div className="rounded-lg border p-2.5">
+                        <div className="text-xs text-muted-foreground">{t("accounting.session_sales_total")}</div>
+                        <div className="font-semibold mt-0.5">{(sessionReport?.totalSales ?? 0).toFixed(2)}</div>
+                      </div>
+                      <div className="rounded-lg border p-2.5">
+                        <div className="text-xs text-muted-foreground">{t("accounting.session_paid_total")}</div>
+                        <div className="font-semibold mt-0.5">{(sessionReport?.paidTotal ?? 0).toFixed(2)}</div>
+                      </div>
+                      <div className="rounded-lg border p-2.5">
+                        <div className="text-xs text-muted-foreground">{t("accounting.session_expected")}</div>
+                        <div className="font-semibold mt-0.5">{(sessionReport?.expectedBalance ?? Number(activeSession.openingBalance)).toFixed(2)}</div>
                       </div>
                     </div>
                     <div className="space-y-1.5">
@@ -306,6 +357,53 @@ export default function AccountingPage() {
                           <Button variant="ghost" size="icon" onClick={() => handleDeleteExpense(expense.id)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5 text-muted-foreground" />
+                {t("accounting.session_history")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("common.date")}</TableHead>
+                    <TableHead className="text-end">{t("accounting.session_sales_total")}</TableHead>
+                    <TableHead className="text-end">{t("accounting.session_expected")}</TableHead>
+                    <TableHead className="text-end">{t("accounting.closing_balance")}</TableHead>
+                    <TableHead className="text-end">{t("accounting.discrepancy")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sessions?.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t("accounting.no_sessions")}</TableCell>
+                    </TableRow>
+                  ) : (
+                    sessions?.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell className="text-sm">{format(new Date(s.openedAt), "MMM d, yyyy HH:mm")}</TableCell>
+                        <TableCell className="text-end">{(s.totalSales ?? 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-end">{(s.expectedBalance ?? 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-end">{s.closingBalance != null ? Number(s.closingBalance).toFixed(2) : "—"}</TableCell>
+                        <TableCell className="text-end">
+                          {s.discrepancy != null ? (
+                            <Badge variant={Math.abs(s.discrepancy) > 0.005 ? "destructive" : "default"} className="capitalize">
+                              {Math.abs(s.discrepancy) > 0.005 ? `${s.discrepancy > 0 ? "+" : ""}${s.discrepancy.toFixed(2)}` : "0.00"}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))

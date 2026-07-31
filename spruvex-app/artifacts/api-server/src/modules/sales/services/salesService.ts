@@ -1,7 +1,7 @@
 import { db, type Sale } from "@workspace/db";
 import { salesRepository, type SaleListFilters } from "../repositories/salesRepository";
 import { recordPurchaseOnAccount, settleOutstandingBalance } from "../../customers/services/customerService";
-import { postSaleEntry, postSaleReturnEntry } from "../../accounting";
+import { postSaleEntry, postSaleReturnEntry, postSalePaymentEntry } from "../../accounting";
 import { parseRequiredNumber, parseOptionalNumber, ValidationError } from "../../../lib/validation";
 import { applyStockDelta } from "../../../lib/stockDelta";
 
@@ -33,6 +33,7 @@ export interface CreateSaleInput {
   cashSessionId?: string;
   orderType?: string;
   tableId?: string;
+  status?: "draft" | "completed";
 }
 
 class SaleValidationError extends Error {}
@@ -90,7 +91,9 @@ export async function createSale(companyId: string, input: CreateSaleInput, crea
 
       const product = await salesRepository.findProduct(tx, companyId, item.productId);
       if (!product) throw new SaleValidationError(`Product ${item.productId} not found`);
-      if (product.stock < quantity) throw new SaleValidationError(`Insufficient stock for ${product.name}`);
+      // Drafts reserve nothing: stock is only checked and deducted when the draft is
+      // approved/paid. Approving a stale draft re-validates every line anyway.
+      if (input.status !== "draft" && product.stock < quantity) throw new SaleValidationError(`Insufficient stock for ${product.name}`);
       const itemSubtotal = unitPrice * quantity - discount;
       subtotal += itemSubtotal;
       resolvedItems.push({
@@ -141,26 +144,47 @@ export async function createSale(companyId: string, input: CreateSaleInput, crea
     }
 
     const change = Math.max(paidTotal - total, 0);
+    const isDraft = input.status === "draft";
+    const saleStatus = isDraft ? "draft" : (shortfall > 0.005 ? "partially_paid" : "completed");
 
     const sale = await salesRepository.insertSale(tx, {
       companyId,
       customerId: input.customerId,
-      cashSessionId: input.cashSessionId,
+      cashSessionId: isDraft ? null : input.cashSessionId,
       subtotal: subtotal.toString(),
       discount: (input.discount ?? 0).toString(),
       total: total.toString(),
       paymentFee: paymentFee.toString(),
-      amountPaid: paidTotal.toString(),
-      change: change.toString(),
-      paymentMethod: isSplit ? "mixed" : input.paymentMethod,
-      paymentMethodId: input.paymentMethodId,
-      status: "completed",
+      amountPaid: isDraft ? "0" : paidTotal.toString(),
+      change: isDraft ? "0" : change.toString(),
+      paymentMethod: isDraft ? "draft" : (isSplit ? "mixed" : input.paymentMethod),
+      paymentMethodId: isDraft ? null : input.paymentMethodId,
+      status: saleStatus,
       notes: input.notes,
       createdByUserId,
       branchId,
       orderType: input.orderType,
       tableId: input.tableId,
     });
+
+    if (isDraft) {
+      for (const item of resolvedItems) {
+        await salesRepository.insertItem(tx, {
+          companyId,
+          saleId: sale.id,
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice.toString(),
+          discount: item.discount.toString(),
+          subtotal: item.subtotal.toString(),
+          selectedAddons: item.selectedAddons,
+          itemNotes: item.itemNotes,
+          serialNumber: item.serialNumber,
+        });
+      }
+      return { ...sale, customerName: null, outstandingAdded: 0 };
+    }
 
     if (isSplit) {
       for (const p of input.payments!) {
@@ -226,6 +250,313 @@ export async function createSale(companyId: string, input: CreateSaleInput, crea
 
 export interface SaleReturnItemInput { saleItemId: string; quantity: number }
 export interface SaleExchangeItemInput { productId: string; quantity: number; unitPrice: number }
+
+export interface UpdateDraftSaleInput {
+  customerId?: string;
+  items?: SaleItemInput[];
+  discount?: number;
+  notes?: string;
+}
+
+export interface ApproveSaleInput {
+  payments?: SalePaymentInput[];
+  paymentMethod?: string;
+  paymentMethodId?: string;
+  amountPaid?: number;
+  cashSessionId?: string;
+  notes?: string;
+}
+
+// Edit a saved draft: replace the header fields given and, when items are supplied,
+// swap the whole line set and recompute the totals. Drafts hold no stock, so no
+// stock movements, journal entries, or balances are touched here — those all happen
+// (once) when the draft is approved.
+export async function updateDraftSale(companyId: string, saleId: string, input: UpdateDraftSaleInput) {
+  return db.transaction(async (tx) => {
+    const sale = await salesRepository.findRawById(tx, companyId, saleId);
+    if (!sale) throw new SaleValidationError("Sale not found");
+    if (sale.status !== "draft") throw new SaleValidationError("Only draft sales can be edited");
+
+    let subtotal = Number(sale.subtotal);
+    if (input.items && input.items.length > 0) {
+      subtotal = 0;
+      const resolvedItems: Array<{
+        productId: string; productName: string; quantity: number; unitPrice: number; discount: number;
+        subtotal: number; selectedAddons?: SaleItemInput["selectedAddons"]; itemNotes?: string; serialNumber?: string;
+      }> = [];
+      for (const item of input.items) {
+        let quantity: number, unitPrice: number, discount: number;
+        try {
+          quantity = parseRequiredNumber(item.quantity, "quantity");
+          unitPrice = parseRequiredNumber(item.unitPrice, "unitPrice");
+          discount = parseOptionalNumber(item.discount, "discount") ?? 0;
+        } catch (err) {
+          if (err instanceof ValidationError) throw new SaleValidationError(err.message);
+          throw err;
+        }
+        if (quantity <= 0) throw new SaleValidationError("quantity must be greater than zero");
+        const product = await salesRepository.findProduct(tx, companyId, item.productId);
+        if (!product) throw new SaleValidationError(`Product ${item.productId} not found`);
+        const itemSubtotal = unitPrice * quantity - discount;
+        subtotal += itemSubtotal;
+        resolvedItems.push({
+          productId: item.productId,
+          productName: product.name,
+          quantity,
+          unitPrice,
+          discount,
+          subtotal: itemSubtotal,
+          selectedAddons: item.selectedAddons,
+          itemNotes: item.itemNotes,
+          serialNumber: item.serialNumber,
+        });
+      }
+      await salesRepository.deleteItems(tx, companyId, saleId);
+      for (const item of resolvedItems) {
+        await salesRepository.insertItem(tx, {
+          companyId,
+          saleId,
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice.toString(),
+          discount: item.discount.toString(),
+          subtotal: item.subtotal.toString(),
+          selectedAddons: item.selectedAddons,
+          itemNotes: item.itemNotes,
+          serialNumber: item.serialNumber,
+        });
+      }
+    }
+
+    const discount = input.discount ?? Number(sale.discount);
+    const total = Math.max(subtotal - discount, 0);
+
+    await salesRepository.updateHeader(tx, companyId, saleId, {
+      subtotal: subtotal.toString(),
+      discount: discount.toString(),
+      total: total.toString(),
+      ...(input.customerId !== undefined ? { customerId: input.customerId || null } : {}),
+      ...(input.notes !== undefined ? { notes: input.notes } : {}),
+    });
+
+    const [updated, updatedItems] = await Promise.all([
+      salesRepository.findById(tx, companyId, saleId),
+      salesRepository.getItems(tx, companyId, saleId),
+    ]);
+    return { ...updated, items: updatedItems, payments: [] };
+  });
+}
+
+// Turn a draft into a live sale in one transaction: re-validate and book stock,
+// collect the payment (or record the on-account balance), bump the cash session,
+// and post the journal entry. Everything rolls back together on any failure.
+export async function approveSale(companyId: string, saleId: string, input: ApproveSaleInput) {
+  return db.transaction(async (tx) => {
+    const sale = await salesRepository.findRawById(tx, companyId, saleId);
+    if (!sale) throw new SaleValidationError("Sale not found");
+    if (sale.status !== "draft") throw new SaleValidationError("Only draft sales can be approved");
+
+    const items = await salesRepository.getItems(tx, companyId, saleId);
+    if (items.length === 0) throw new SaleValidationError("Draft has no items to approve");
+
+    const isSplit = Array.isArray(input.payments) && input.payments.length > 0;
+    if (isSplit) {
+      for (const p of input.payments!) {
+        if (typeof p.amount !== "number" || p.amount < 0 || !p.methodName) {
+          throw new SaleValidationError("Each payment requires a methodName and a non-negative amount");
+        }
+      }
+    }
+
+    const subtotal = items.reduce((sum, it) => sum + Number(it.subtotal), 0);
+    const discount = Number(sale.discount);
+    const goodsTotal = subtotal - discount;
+
+    let totalFee = 0;
+    if (isSplit) {
+      for (const p of input.payments!) {
+        if (!p.paymentMethodId) continue;
+        const method = await salesRepository.findPaymentMethod(tx, companyId, p.paymentMethodId);
+        if (method) totalFee += p.amount * (parseFloat(method.percentFee) / 100) + parseFloat(method.fixedFee);
+      }
+    } else if (input.paymentMethodId) {
+      const method = await salesRepository.findPaymentMethod(tx, companyId, input.paymentMethodId);
+      if (method) totalFee = goodsTotal * (parseFloat(method.percentFee) / 100) + parseFloat(method.fixedFee);
+    }
+    const total = goodsTotal + totalFee;
+
+    let paidTotal = input.amountPaid ?? total;
+    if (isSplit) paidTotal = input.payments!.reduce((sum, p) => sum + p.amount, 0);
+    const shortfall = Math.max(total - paidTotal, 0);
+    if (shortfall > 0.005 && !sale.customerId) {
+      throw new SaleValidationError("A customer must be selected to record the unpaid balance of this sale");
+    }
+    const change = Math.max(paidTotal - total, 0);
+
+    let cogsTotal = 0;
+    for (const item of items) {
+      const product = await salesRepository.findProduct(tx, companyId, item.productId);
+      if (!product) throw new SaleValidationError(`Product ${item.productId} not found`);
+      const available = item.quantity - (item.returnedQuantity ?? 0);
+      if (product.stock < available) throw new SaleValidationError(`Insufficient stock for ${product.name}`);
+      const booked = await applyStockDelta(tx, {
+        companyId, productId: item.productId, delta: -available,
+        warehouseId: product.warehouseId, movementType: "sale",
+        referenceType: "sale", referenceId: saleId,
+      });
+      if (booked === null) throw new SaleValidationError(`Insufficient stock for ${product.name}`);
+      cogsTotal += Number(product.costPrice) * available;
+    }
+
+    await salesRepository.updateHeader(tx, companyId, saleId, {
+      subtotal: subtotal.toString(),
+      discount: discount.toString(),
+      total: total.toString(),
+      paymentFee: totalFee.toString(),
+      amountPaid: paidTotal.toString(),
+      change: change.toString(),
+      paymentMethod: isSplit ? "mixed" : (input.paymentMethod ?? "cash"),
+      paymentMethodId: input.paymentMethodId ?? null,
+      status: shortfall > 0.005 ? "partially_paid" : "completed",
+      cashSessionId: input.cashSessionId ?? sale.cashSessionId,
+      notes: input.notes ?? sale.notes,
+    });
+
+    if (isSplit) {
+      for (const p of input.payments!) {
+        await salesRepository.insertPayment(tx, {
+          companyId,
+          saleId,
+          paymentMethodId: p.paymentMethodId ?? null,
+          methodName: p.methodName,
+          amount: p.amount.toString(),
+        });
+      }
+    } else if (paidTotal > 0.005) {
+      await salesRepository.insertPayment(tx, {
+        companyId,
+        saleId,
+        paymentMethodId: input.paymentMethodId ?? null,
+        methodName: input.paymentMethod ?? "cash",
+        amount: paidTotal.toString(),
+      });
+    }
+
+    if (sale.customerId) {
+      await recordPurchaseOnAccount(tx, companyId, sale.customerId, shortfall);
+    }
+
+    const sessionId = input.cashSessionId ?? sale.cashSessionId;
+    if (sessionId) {
+      await salesRepository.incrementCashSessionTotal(tx, companyId, sessionId, total);
+    }
+
+    await postSaleEntry(tx, {
+      companyId,
+      saleId,
+      date: new Date().toISOString().split("T")[0],
+      total,
+      shortfall,
+      cogsTotal,
+      paymentFee: totalFee,
+    });
+
+    const [updated, updatedItems, updatedPayments] = await Promise.all([
+      salesRepository.findById(tx, companyId, saleId),
+      salesRepository.getItems(tx, companyId, saleId),
+      salesRepository.getPayments(tx, companyId, saleId),
+    ]);
+    return { ...updated, items: updatedItems, payments: updatedPayments };
+  });
+}
+
+// Collect a late/partial payment on a sale that still has an outstanding balance
+// (from an on-account or under-paid checkout). Reduces the customer's receivable,
+// posts the cash/AR journal entry, and re-derives the sale status.
+export async function recordSalePayment(companyId: string, saleId: string, input: { payments: SalePaymentInput[] }) {
+  if (!input.payments || input.payments.length === 0) {
+    throw new SaleValidationError("At least one payment is required");
+  }
+  for (const p of input.payments) {
+    if (typeof p.amount !== "number" || p.amount <= 0 || !p.methodName) {
+      throw new SaleValidationError("Each payment requires a methodName and a positive amount");
+    }
+  }
+
+  return db.transaction(async (tx) => {
+    const sale = await salesRepository.findRawById(tx, companyId, saleId);
+    if (!sale) throw new SaleValidationError("Sale not found");
+    if (sale.status === "draft" || sale.status === "returned") {
+      throw new SaleValidationError("This sale cannot accept payments in its current state");
+    }
+    if (!sale.customerId) {
+      throw new SaleValidationError("Recording a payment requires a customer on the sale");
+    }
+
+    const total = Number(sale.total);
+    const amountPaid = Number(sale.amountPaid);
+    const outstanding = Math.max(total - amountPaid, 0);
+    if (outstanding <= 0.005) throw new SaleValidationError("This sale has no outstanding balance");
+    const paying = input.payments.reduce((sum, p) => sum + p.amount, 0);
+    if (paying > outstanding + 0.005) {
+      throw new SaleValidationError(`Payment exceeds the outstanding balance of ${outstanding.toFixed(2)}`);
+    }
+
+    let totalFee = 0;
+    for (const p of input.payments) {
+      if (!p.paymentMethodId) continue;
+      const method = await salesRepository.findPaymentMethod(tx, companyId, p.paymentMethodId);
+      if (method) totalFee += p.amount * (parseFloat(method.percentFee) / 100) + parseFloat(method.fixedFee);
+    }
+
+    const newTotal = total + totalFee;
+    const newPaid = amountPaid + paying;
+    const newOutstanding = Math.max(newTotal - newPaid, 0);
+    const change = Math.max(newPaid - newTotal, 0);
+
+    for (const p of input.payments) {
+      await salesRepository.insertPayment(tx, {
+        companyId,
+        saleId,
+        paymentMethodId: p.paymentMethodId ?? null,
+        methodName: p.methodName,
+        amount: p.amount.toString(),
+      });
+    }
+
+    await salesRepository.updateHeader(tx, companyId, saleId, {
+      total: newTotal.toString(),
+      paymentFee: (Number(sale.paymentFee) + totalFee).toString(),
+      amountPaid: newPaid.toString(),
+      change: change.toString(),
+      status: newOutstanding <= 0.005 ? "completed" : "partially_paid",
+      paymentMethod: input.payments.length > 1 ? "mixed" : input.payments[0].methodName,
+    });
+
+    await settleOutstandingBalance(tx, companyId, sale.customerId, paying);
+
+    await postSalePaymentEntry(tx, {
+      companyId,
+      saleId,
+      date: new Date().toISOString().split("T")[0],
+      amount: paying,
+    });
+
+    return salesRepository.findById(tx, companyId, saleId);
+  });
+}
+
+export async function deleteDraftSale(companyId: string, saleId: string): Promise<void> {
+  return db.transaction(async (tx) => {
+    const sale = await salesRepository.findRawById(tx, companyId, saleId);
+    if (!sale) throw new SaleValidationError("Sale not found");
+    if (sale.status !== "draft") throw new SaleValidationError("Only draft sales can be deleted");
+    await salesRepository.deleteItems(tx, companyId, saleId);
+    await salesRepository.deleteSale(tx, companyId, saleId);
+  });
+}
+
 export interface CreateSaleReturnInput {
   items: SaleReturnItemInput[];
   exchangeItems?: SaleExchangeItemInput[];

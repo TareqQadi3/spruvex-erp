@@ -17,15 +17,57 @@ export interface PosCustomer {
   id: string;
   name: string;
   phone?: string | null;
+  outstandingBalance?: number | null;
+}
+
+// A tenant-configured payment method (from /api/payment-methods). Cash/card are
+// the built-in fallbacks when a company hasn't configured any methods yet.
+export interface PaymentMethodOption {
+  id: number;
+  name: string;
+  percentFee: string;
+  fixedFee: string;
+  showFeeToCustomer: boolean;
+  isActive: boolean;
+}
+
+// One payment line in a split payment (or the single line of a plain checkout).
+export interface CheckoutPaymentLine {
+  methodName: string;
+  paymentMethodId?: number;
+  amount: number;
+}
+
+// What the PaymentPanel hands back to the template on checkout. The template
+// maps this onto the createSale payload (paymentMethod/amountPaid/payments).
+export interface CheckoutPayload {
+  kind: "single" | "split" | "on_account";
+  paymentMethod: string;
+  paymentMethodId?: number;
+  amountPaid: number;
+  tendered?: number;
+  payments?: CheckoutPaymentLine[];
 }
 
 export interface CompletedSale {
   id: number;
   total: number;
-  paymentMethod: "cash" | "card";
+  amountPaid: number;
+  outstanding: number;
+  paymentMethod: string;
+  paymentMethodId?: number | null;
   customerName: string;
   customerPhone?: string | null;
   itemCount: number;
   cartItems: Array<{ productName: string; quantity: number; unitPrice: number; subtotal: number }>;
+  createdAt: string;
+}
+
+// A cart put on hold (suspend) — persisted to localStorage so a refresh keeps it.
+export interface HeldCart {
+  id: string;
+  label: string;
+  items: CartItem[];
+  discount: number;
   createdAt: string;
 }

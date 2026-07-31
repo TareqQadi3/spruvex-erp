@@ -11,14 +11,18 @@ export function CustomerPanel({
   selectedCustomerName,
   onSelect,
   onCreated,
+  fmt,
 }: {
   customers: PosCustomer[] | undefined;
   selectedCustomerId: string | null;
   selectedCustomerName: string;
   onSelect: (id: string | null, name: string) => void;
   onCreated: (customer: { id: string; name: string }) => void;
+  fmt: (n: number) => string;
 }) {
   const { t } = useTranslation();
+  const selectedCustomer = customers?.find(c => c.id === selectedCustomerId);
+  const outstanding = selectedCustomer?.outstandingBalance ? Number(selectedCustomer.outstandingBalance) : 0;
   return (
     <div className="px-4 py-3 border-b bg-muted/30 space-y-2">
       <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t("pos.customer")}</div>
@@ -57,6 +61,11 @@ export function CustomerPanel({
       </div>
       {selectedCustomerName && (
         <div className="text-xs text-primary font-medium">{selectedCustomerName}</div>
+      )}
+      {selectedCustomer && outstanding > 0.005 && (
+        <div className="text-xs font-medium text-amber-600 dark:text-amber-400">
+          {t("pos.outstanding_balance")}: {fmt(outstanding)}
+        </div>
       )}
     </div>
   );

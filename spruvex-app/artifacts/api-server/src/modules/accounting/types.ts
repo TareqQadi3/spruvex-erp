@@ -8,7 +8,7 @@ export type DbClient = typeof db | Parameters<Parameters<typeof db.transaction>[
 
 export type AccountType = "asset" | "liability" | "equity" | "revenue" | "expense";
 export type NormalBalance = "debit" | "credit";
-export type JournalSourceType = "sale" | "purchase" | "expense" | "voucher_receipt" | "voucher_payment" | "manual" | "sale_return" | "purchase_return";
+export type JournalSourceType = "sale" | "purchase" | "expense" | "voucher_receipt" | "voucher_payment" | "manual" | "sale_return" | "purchase_return" | "sale_payment";
 
 export interface JournalLineInput {
   accountId: string;

@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
 import {
-  useGetProducts, useGetCustomers, useCreateSale,
-  useGetSettings, useGetCategories, getGetDashboardStatsQueryKey,
+  useGetProducts, useGetCustomers,
+  useGetSettings, useGetCategories,
 } from "@workspace/api-client-react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Search, X, ShoppingCart } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -17,7 +15,8 @@ import { PosLayoutShell } from "../pos-shared/PosLayoutShell";
 import { CartPanel } from "../pos-shared/CartPanel";
 import { PosSuccessScreen } from "../pos-shared/PosSuccessScreen";
 import { AddonPickerDialog, type SelectedAddon } from "../pos-shared/AddonPickerDialog";
-import type { CartItem, CompletedSale, PosCustomer } from "../pos-shared/types";
+import { usePosSale } from "../pos-shared/usePosSale";
+import type { CartItem, PosCustomer, CheckoutPayload } from "../pos-shared/types";
 
 interface OrderType { id: string; key: string; name: string; nameEn?: string | null }
 
@@ -44,8 +43,6 @@ export function ImagePosTemplate({ onUseListTemplate }: { onUseListTemplate: () 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [editingPrice, setEditingPrice] = useState<number | null>(null);
   const [editPriceValue, setEditPriceValue] = useState("");
-  const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [detailProduct, setDetailProduct] = useState<any | null>(null);
   const [addonProduct, setAddonProduct] = useState<{ id: number; name: string; sellingPrice: number; includesTax: boolean } | null>(null);
 
@@ -56,8 +53,6 @@ export function ImagePosTemplate({ onUseListTemplate }: { onUseListTemplate: () 
   const { data: customers } = useGetCustomers();
   const customerList = (customers ?? []) as unknown as PosCustomer[];
   const { data: settings } = useGetSettings();
-  const createSale = useCreateSale();
-  const queryClient = useQueryClient();
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -74,6 +69,8 @@ export function ImagePosTemplate({ onUseListTemplate }: { onUseListTemplate: () 
   const getItemFinalPrice = (item: CartItem) =>
     item.includesTax ? item.unitPrice : item.unitPrice * (1 + taxRate / 100);
   const getItemTotal = (item: CartItem) => getItemFinalPrice(item) * item.quantity - item.discount;
+
+  const sale = usePosSale({ getItemFinalPrice, getItemTotal });
 
   const addLineToCart = (product: { id: number; name: string; sellingPrice: any; includesTax?: boolean }, addons: SelectedAddon[] = [], notes = "") => {
     const addonTotal = addons.reduce((s, a) => s + a.priceDelta, 0);
@@ -122,51 +119,41 @@ export function ImagePosTemplate({ onUseListTemplate }: { onUseListTemplate: () 
   const subtotalBeforeTax = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity - item.discount, 0);
   const total = cart.reduce((sum, item) => sum + getItemTotal(item), 0);
 
-  const handleCheckout = (method: "cash" | "card") => {
-    if (cart.length === 0 || isProcessing) return;
-    setIsProcessing(true);
-    const items = cart.map(i => ({
-      productId: i.productId,
-      productName: i.productName,
-      unitPrice: getItemFinalPrice(i),
-      quantity: i.quantity,
-      discount: i.discount,
-      selectedAddons: i.selectedAddons,
-      itemNotes: i.itemNotes,
-    }));
-    const customerName = selectedCustomerName || t("pos.walk_in");
-    const customerPhone = customerList.find(c => c.id === selectedCustomerId)?.phone ?? null;
-    const cartSnapshot = [...cart];
-    const totalSnapshot = total;
+  const selectedCustomer = customerList.find(c => c.id === selectedCustomerId) ?? null;
 
-    createSale.mutate(
-      { data: { items, paymentMethod: method, amountPaid: total, discount: 0, customerId: selectedCustomerId ?? undefined, orderType: selectedOrderType ?? undefined } as any },
-      {
-        onSuccess: (sale: any) => {
-          setCart([]);
-          setSelectedCustomerId(null);
-          setSelectedCustomerName("");
-          queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
-          setCompletedSale({
-            id: sale.id, total: totalSnapshot, paymentMethod: method, customerName, customerPhone,
-            itemCount: cartSnapshot.reduce((s, i) => s + i.quantity, 0),
-            cartItems: cartSnapshot.map(i => ({ productName: i.productName, quantity: i.quantity, unitPrice: getItemFinalPrice(i), subtotal: getItemTotal(i) })),
-            createdAt: new Date().toISOString(),
-          });
-          setIsProcessing(false);
-        },
-        onError: (err: any) => {
-          const msg = err?.response?.data?.error ?? err?.message ?? t("pos.sale_failed");
-          setCompletedSale(null);
-          setIsProcessing(false);
-          alert(`${t("pos.sale_failed")}: ${msg}`);
-        },
-      },
-    );
+  const resetAfterSale = () => {
+    setCart([]);
+    setSelectedCustomerId(null);
+    setSelectedCustomerName("");
   };
 
-  if (completedSale) {
-    return <PosSuccessScreen completedSale={completedSale} settings={settings} fmt={fmt} onNewSale={() => setCompletedSale(null)} />;
+  const handleCheckout = (payload: CheckoutPayload) => {
+    sale.submitSale({
+      cart,
+      customer: selectedCustomer,
+      discount: 0,
+      orderType: selectedOrderType ?? undefined,
+      payload,
+      onSuccess: resetAfterSale,
+    });
+  };
+
+  const handleSuspend = () => {
+    sale.suspendCart("", cart, 0);
+    resetAfterSale();
+  };
+
+  const handleRestoreHeld = (id: string) => {
+    const held = sale.restoreHeldCart(id);
+    if (held) {
+      setCart(held.items);
+      setSelectedCustomerId(null);
+      setSelectedCustomerName("");
+    }
+  };
+
+  if (sale.completedSale) {
+    return <PosSuccessScreen completedSale={sale.completedSale} fmt={fmt} onNewSale={() => sale.setCompletedSale(null)} />;
   }
 
   return (
@@ -278,7 +265,12 @@ export function ImagePosTemplate({ onUseListTemplate }: { onUseListTemplate: () 
             subtotalBeforeTax={subtotalBeforeTax}
             taxAmount={taxAmount}
             total={total}
-            isProcessing={isProcessing}
+            isProcessing={sale.isProcessing}
+            paymentMethods={sale.paymentMethods}
+            heldCarts={sale.heldCarts}
+            onRestoreHeld={handleRestoreHeld}
+            onRemoveHeld={sale.removeHeldCart}
+            onSuspend={handleSuspend}
             onCheckout={handleCheckout}
           />
         }

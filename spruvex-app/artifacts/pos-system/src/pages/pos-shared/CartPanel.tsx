@@ -1,21 +1,23 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Check, Pencil, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Check, Pencil, X, RotateCcw, Trash2, PauseCircle } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { CustomerPanel } from "./CustomerPanel";
 import { PaymentPanel } from "./PaymentPanel";
 import { QuantityControl } from "./QuantityControl";
-import type { CartItem, PosCustomer } from "./types";
+import type { CartItem, PosCustomer, CheckoutPayload, PaymentMethodOption, HeldCart } from "./types";
 
 /**
  * The full right-hand cart card every POS template shares: customer picker,
- * line items (with inline price edit + qty), totals, and cash/card checkout.
- * Templates differ only in how a product gets *into* this cart (List search,
- * Grid buttons, Image tiles, Mobile variant picker) — this component and its
- * callback contract stay identical across all of them.
+ * line items (with inline price edit + qty), totals, and the payment panel
+ * (methods/split/on-account/suspend). Templates differ only in how a product
+ * gets *into* this cart (List search, Grid buttons, Image tiles, Mobile variant
+ * picker) — this component and its callback contract stay identical across all.
  */
 export function CartPanel({
   customers,
@@ -39,6 +41,11 @@ export function CartPanel({
   taxAmount,
   total,
   isProcessing,
+  paymentMethods,
+  heldCarts,
+  onRestoreHeld,
+  onRemoveHeld,
+  onSuspend,
   onCheckout,
 }: {
   customers: PosCustomer[] | undefined;
@@ -62,13 +69,27 @@ export function CartPanel({
   taxAmount: number;
   total: number;
   isProcessing: boolean;
-  onCheckout: (method: "cash" | "card") => void;
+  paymentMethods: PaymentMethodOption[];
+  heldCarts: HeldCart[];
+  onRestoreHeld: (id: string) => void;
+  onRemoveHeld: (id: string) => void;
+  onSuspend: () => void;
+  onCheckout: (payload: CheckoutPayload) => void;
 }) {
   const { t } = useTranslation();
+  const [heldOpen, setHeldOpen] = useState(false);
+
   return (
     <Card className="w-96 flex flex-col bg-background/50 border-sidebar-border shrink-0">
       <CardHeader className="py-3 px-4 border-b bg-card">
-        <CardTitle className="text-base">{t("pos.current_sale")}</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">{t("pos.current_sale")}</CardTitle>
+          <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => setHeldOpen(true)} disabled={heldCarts.length === 0}>
+            <PauseCircle className="h-3.5 w-3.5" />
+            {t("pos.held")}
+            {heldCarts.length > 0 && <Badge className="h-4 min-w-4 px-1 text-[9px]">{heldCarts.length}</Badge>}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
         <CustomerPanel
@@ -77,6 +98,7 @@ export function CartPanel({
           selectedCustomerName={selectedCustomerName}
           onSelect={onSelectCustomer}
           onCreated={onCustomerCreated}
+          fmt={fmt}
         />
 
         <ScrollArea className="flex-1 px-4 py-3">
@@ -163,10 +185,43 @@ export function CartPanel({
           total={total}
           isProcessing={isProcessing}
           cartEmpty={cart.length === 0}
+          selectedCustomerId={selectedCustomerId}
+          paymentMethods={paymentMethods}
           fmt={fmt}
           onCheckout={onCheckout}
+          onSuspend={onSuspend}
         />
       </CardContent>
+
+      <Dialog open={heldOpen} onOpenChange={setHeldOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base">{t("pos.held_sales")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {heldCarts.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">{t("pos.no_held_sales")}</p>
+            ) : (
+              heldCarts.map(hc => (
+                <div key={hc.id} className="flex items-center gap-2 rounded-lg border p-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">{hc.label}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {hc.items.reduce((s, i) => s + i.quantity, 0)} {t("pos.items")} — {fmt(hc.items.reduce((s, i) => s + (i.unitPrice * i.quantity - i.discount), 0))}
+                    </div>
+                  </div>
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => { onRestoreHeld(hc.id); setHeldOpen(false); }}>
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onRemoveHeld(hc.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
