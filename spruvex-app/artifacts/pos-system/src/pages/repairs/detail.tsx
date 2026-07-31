@@ -65,7 +65,7 @@ export default function RepairDetailPage() {
 
   const { data: users } = useQuery<RepairUser[]>({
     queryKey: ["auth-users"],
-    queryFn: () => authFetch("/auth-users"),
+    queryFn: () => authFetch("/auth/users"),
   });
 
   interface RepairPart { id: string; repairId: string; productId: string | null; partName: string; quantity: number; partCost: string; laborFee: string; }
