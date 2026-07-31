@@ -14,11 +14,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTranslation } from "@/i18n";
 import { PosLayoutShell } from "../pos-shared/PosLayoutShell";
 import { CartPanel } from "../pos-shared/CartPanel";
-import type { CartItem, CompletedSale } from "../pos-shared/types";
+import type { CartItem, CompletedSale, PosCustomer } from "../pos-shared/types";
 
 export default function ListPosTemplate() {
   const [search, setSearch] = useState("");
-  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [selectedCustomerName, setSelectedCustomerName] = useState<string>("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [editingPrice, setEditingPrice] = useState<number | null>(null);
@@ -28,6 +28,7 @@ export default function ListPosTemplate() {
 
   const { data: products } = useGetProducts(search ? { search } : undefined);
   const { data: customers } = useGetCustomers();
+  const customerList = (customers ?? []) as unknown as PosCustomer[];
   const { data: settings } = useGetSettings();
   const createSale = useCreateSale();
   const queryClient = useQueryClient();
@@ -116,7 +117,7 @@ export default function ListPosTemplate() {
       discount: i.discount,
     }));
     const customerName = selectedCustomerName || t("pos.walk_in");
-    const customerPhone = customers?.find(c => c.id === selectedCustomerId)?.phone ?? null;
+    const customerPhone = customerList.find(c => c.id === selectedCustomerId)?.phone ?? null;
     const cartSnapshot = [...cart];
     const totalSnapshot = total;
 
@@ -128,7 +129,7 @@ export default function ListPosTemplate() {
           amountPaid: total,
           discount: 0,
           customerId: selectedCustomerId ?? undefined,
-        }
+        } as any
       },
       {
         onSuccess: (sale: any) => {
@@ -298,7 +299,7 @@ export default function ListPosTemplate() {
       }
       cartPanel={
         <CartPanel
-          customers={customers}
+          customers={customerList}
           selectedCustomerId={selectedCustomerId}
           selectedCustomerName={selectedCustomerName}
           onSelectCustomer={(id, name) => { setSelectedCustomerId(id); setSelectedCustomerName(name); }}

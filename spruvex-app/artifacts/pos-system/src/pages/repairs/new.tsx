@@ -141,7 +141,7 @@ export default function NewRepairPage() {
                   <Select
                     onValueChange={val => {
                       field.onChange(val);
-                      const c = customers?.find(c => c.id === Number(val));
+                      const c = customers?.find((c: any) => c.id === val);
                       setSelectedCustomerName(c?.name ?? "");
                     }}
                     value={field.value}

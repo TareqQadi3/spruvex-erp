@@ -17,7 +17,7 @@ import { CartPanel } from "../pos-shared/CartPanel";
 import { PosSuccessScreen } from "../pos-shared/PosSuccessScreen";
 import { AddonPickerDialog, type SelectedAddon } from "../pos-shared/AddonPickerDialog";
 import { VariantPickerDialog } from "../pos-shared/VariantPickerDialog";
-import type { CartItem, CompletedSale } from "../pos-shared/types";
+import type { CartItem, CompletedSale, PosCustomer } from "../pos-shared/types";
 
 interface OrderType { id: string; key: string; name: string; nameEn?: string | null }
 
@@ -39,7 +39,7 @@ export function MobilePosTemplate({ onUseListTemplate }: { onUseListTemplate: ()
   const [search, setSearch] = useState("");
   const [orderTypes, setOrderTypes] = useState<OrderType[]>([]);
   const [selectedOrderType, setSelectedOrderType] = useState<string | null>(null);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [selectedCustomerName, setSelectedCustomerName] = useState<string>("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [editingPrice, setEditingPrice] = useState<number | null>(null);
@@ -56,6 +56,7 @@ export function MobilePosTemplate({ onUseListTemplate }: { onUseListTemplate: ()
   );
   const { data: categories } = useGetCategories();
   const { data: customers } = useGetCustomers();
+  const customerList = (customers ?? []) as unknown as PosCustomer[];
   const { data: settings } = useGetSettings();
   const createSale = useCreateSale();
   const queryClient = useQueryClient();
@@ -164,7 +165,7 @@ export function MobilePosTemplate({ onUseListTemplate }: { onUseListTemplate: ()
       serialNumber: i.serialNumber,
     }));
     const customerName = selectedCustomerName || t("pos.walk_in");
-    const customerPhone = customers?.find(c => c.id === selectedCustomerId)?.phone ?? null;
+    const customerPhone = customerList.find(c => c.id === selectedCustomerId)?.phone ?? null;
     const cartSnapshot = [...cart];
     const totalSnapshot = total;
 
@@ -293,7 +294,7 @@ export function MobilePosTemplate({ onUseListTemplate }: { onUseListTemplate: ()
         }
         cartPanel={
           <CartPanel
-            customers={customers}
+            customers={customerList}
             selectedCustomerId={selectedCustomerId}
             selectedCustomerName={selectedCustomerName}
             onSelectCustomer={(id, name) => { setSelectedCustomerId(id); setSelectedCustomerName(name); }}

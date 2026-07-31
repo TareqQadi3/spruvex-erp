@@ -61,7 +61,7 @@ export default function RepairDetailPage() {
   // totalCost/technicianId/approvedAt aren't in the generated OpenAPI client yet — the API
   // route already returns them (see artifacts/api-server/src/routes/repairs.ts), so read
   // them off the same response the generated hook already fetched.
-  const repairExtra = repair as unknown as { totalCost?: number; technicianId?: number | null; approvedAt?: string | null } | undefined;
+  const repairExtra = repair as unknown as { totalCost?: number; technicianId?: string | null; approvedAt?: string | null } | undefined;
 
   const { data: users } = useQuery<RepairUser[]>({
     queryKey: ["auth-users"],
@@ -69,7 +69,7 @@ export default function RepairDetailPage() {
   });
 
   const assignTechnician = useMutation({
-    mutationFn: (technicianId: number | null) =>
+    mutationFn: (technicianId: string | null) =>
       authFetch(`/repairs/${id}/technician`, { method: "PATCH", body: JSON.stringify({ technicianId }) }),
     onSuccess: () => {
       toast.success(t("repairs.technician_assigned"));
@@ -234,7 +234,7 @@ export default function RepairDetailPage() {
             <CardContent>
               <Select
                 value={repairExtra?.technicianId ? String(repairExtra.technicianId) : "unassigned"}
-                onValueChange={(value) => assignTechnician.mutate(value === "unassigned" ? null : Number(value))}
+                onValueChange={(value) => assignTechnician.mutate(value === "unassigned" ? null : value)}
                 disabled={assignTechnician.isPending}
               >
                 <SelectTrigger>

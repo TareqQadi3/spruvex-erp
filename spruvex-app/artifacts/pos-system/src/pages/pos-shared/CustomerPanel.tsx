@@ -3,12 +3,7 @@ import { Button } from "@/components/ui/button";
 import { UserPlus } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { QuickAddCustomerDialog } from "@/components/QuickAddCustomerDialog";
-
-interface Customer {
-  id: number;
-  name: string;
-  phone?: string | null;
-}
+import type { PosCustomer } from "./types";
 
 export function CustomerPanel({
   customers,
@@ -17,11 +12,11 @@ export function CustomerPanel({
   onSelect,
   onCreated,
 }: {
-  customers: Customer[] | undefined;
-  selectedCustomerId: number | null;
+  customers: PosCustomer[] | undefined;
+  selectedCustomerId: string | null;
   selectedCustomerName: string;
-  onSelect: (id: number | null, name: string) => void;
-  onCreated: (customer: { id: number; name: string }) => void;
+  onSelect: (id: string | null, name: string) => void;
+  onCreated: (customer: { id: string; name: string }) => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -34,8 +29,8 @@ export function CustomerPanel({
             if (val === "__walk_in__") {
               onSelect(null, "");
             } else {
-              const c = customers?.find(c => c.id === Number(val));
-              onSelect(Number(val), c?.name ?? "");
+              const c = customers?.find(c => c.id === val);
+              onSelect(val, c?.name ?? "");
             }
           }}
         >

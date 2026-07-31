@@ -11,7 +11,7 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "@/i18n";
 
 interface Props {
-  onCreated: (customer: { id: number; name: string; phone?: string | null }) => void;
+  onCreated: (customer: { id: string; name: string; phone?: string | null }) => void;
   trigger?: React.ReactNode;
 }
 

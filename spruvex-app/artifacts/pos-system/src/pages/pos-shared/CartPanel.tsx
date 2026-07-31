@@ -8,13 +8,7 @@ import { useTranslation } from "@/i18n";
 import { CustomerPanel } from "./CustomerPanel";
 import { PaymentPanel } from "./PaymentPanel";
 import { QuantityControl } from "./QuantityControl";
-import type { CartItem } from "./types";
-
-interface Customer {
-  id: number;
-  name: string;
-  phone?: string | null;
-}
+import type { CartItem, PosCustomer } from "./types";
 
 /**
  * The full right-hand cart card every POS template shares: customer picker,
@@ -47,11 +41,11 @@ export function CartPanel({
   isProcessing,
   onCheckout,
 }: {
-  customers: Customer[] | undefined;
-  selectedCustomerId: number | null;
+  customers: PosCustomer[] | undefined;
+  selectedCustomerId: string | null;
   selectedCustomerName: string;
-  onSelectCustomer: (id: number | null, name: string) => void;
-  onCustomerCreated: (customer: { id: number; name: string }) => void;
+  onSelectCustomer: (id: string | null, name: string) => void;
+  onCustomerCreated: (customer: { id: string; name: string }) => void;
   cart: CartItem[];
   editingPriceId: number | null;
   editPriceValue: string;

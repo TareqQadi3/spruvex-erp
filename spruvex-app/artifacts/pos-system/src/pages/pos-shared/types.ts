@@ -13,6 +13,12 @@ export interface CartItem {
   serialNumber?: string;
 }
 
+export interface PosCustomer {
+  id: string;
+  name: string;
+  phone?: string | null;
+}
+
 export interface CompletedSale {
   id: number;
   total: number;

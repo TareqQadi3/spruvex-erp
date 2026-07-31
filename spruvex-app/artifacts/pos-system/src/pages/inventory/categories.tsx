@@ -17,9 +17,9 @@ import { useTranslation } from "@/i18n";
 import { MediaUploadField } from "@/components/MediaUploadField";
 
 interface CategoryRow {
-  id: number;
+  id: string;
   name: string;
-  parentId: number | null;
+  parentId: string | null;
   imageUrl?: string | null;
 }
 
@@ -38,9 +38,9 @@ export default function CategoriesPage() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const mainCategories = (categories ?? []).filter((c: any) => !c.parentId);
-  const subCategoriesOf = (id: number) => (categories ?? []).filter((c: any) => c.parentId === id);
+  const subCategoriesOf = (id: string) => (categories ?? []).filter((c: any) => c.parentId === id);
 
-  const openCreate = (forParentId?: number) => {
+  const openCreate = (forParentId?: string) => {
     setEditing(null);
     setName("");
     setParentId(forParentId ? String(forParentId) : "__none__");
@@ -60,9 +60,9 @@ export default function CategoriesPage() {
 
   const handleSave = () => {
     if (!name.trim()) return;
-    const payload = { name: name.trim(), parentId: parentId === "__none__" ? null : Number(parentId), imageUrl };
+    const payload = { name: name.trim(), parentId: parentId === "__none__" ? null : parentId, imageUrl };
     if (editing) {
-      updateCategory.mutate({ id: editing.id, data: payload as any }, {
+      updateCategory.mutate({ id: editing.id as any, data: payload as any }, {
         onSuccess: () => { toast.success(t("inventory.category_updated")); invalidate(); setDialogOpen(false); },
         onError: () => toast.error(t("inventory.category_update_failed")),
       });
@@ -74,9 +74,9 @@ export default function CategoriesPage() {
     }
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     if (!window.confirm(t("inventory.category_delete_confirm"))) return;
-    deleteCategory.mutate({ id }, {
+    deleteCategory.mutate({ id } as any, {
       onSuccess: () => { toast.success(t("inventory.category_deleted")); invalidate(); },
       onError: () => toast.error(t("inventory.category_delete_failed")),
     });
