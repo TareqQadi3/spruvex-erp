@@ -161,7 +161,13 @@
     "items": "items",
     "mixed": "Mixed",
     "outstanding_balance": "Outstanding balance",
-    "draft_saved": "Sale saved as a draft"
+    "draft_saved": "Sale saved as a draft",
+    "online_payment": "Online",
+    "gateway_title": "Online payment link",
+    "gateway_ready": "A payment link will be generated for this sale after checkout and opened for the customer.",
+    "gateway_none": "No active payment gateways. Configure Tabby, Tamara, or Moyasar in Settings → Integrations.",
+    "gateway_failed": "Could not create the payment link",
+    "gateway_no_link": "The gateway did not return a checkout link. The sale is saved on the customer's balance."
   },
   "repairs": {
     "title": "Repairs",

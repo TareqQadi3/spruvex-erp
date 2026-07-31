@@ -139,7 +139,7 @@ export function usePosSale(options: {
         } as any,
       },
       {
-        onSuccess: (sale: any) => {
+        onSuccess: async (sale: any) => {
           invalidate();
           const total = Number(sale.total) || totalSnapshot;
           const paid = Number(sale.amountPaid) || args.payload.amountPaid;
@@ -169,6 +169,30 @@ export function usePosSale(options: {
           });
           args.onSuccess?.(sale);
           setIsProcessing(false);
+
+          // Online-gateway checkout: after the sale is saved (with the full
+          // amount on the customer's balance), generate a payment link for the
+          // outstanding balance and open it so the customer can pay online.
+          if (args.payload.kind === "gateway" && args.payload.gatewayProvider) {
+            try {
+              const checkout = await api<{ data: { checkoutUrl?: string } }>("/payments/checkout", {
+                method: "POST",
+                body: JSON.stringify({
+                  provider: args.payload.gatewayProvider,
+                  source: "sale",
+                  sourceId: sale.id,
+                  successUrl: `${window.location.origin}/pos`,
+                  cancelUrl: `${window.location.origin}/pos`,
+                }),
+              });
+              const url = checkout?.data?.checkoutUrl;
+              if (url) window.open(url, "_blank");
+              else alert(`${t("pos.gateway_ready")}: ${t("pos.gateway_no_link")}`);
+            } catch (err: any) {
+              const msg = err?.response?.data?.error ?? err?.message ?? t("pos.gateway_failed");
+              alert(`${t("pos.gateway_failed")}: ${msg}`);
+            }
+          }
         },
         onError: (err: any) => {
           setIsProcessing(false);

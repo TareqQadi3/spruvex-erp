@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Banknote, CreditCard, Plus, X, Wallet, PauseCircle, UserCheck } from "lucide-react";
+import { Banknote, CreditCard, Plus, X, Wallet, PauseCircle, UserCheck, Globe, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
 import { useTranslation } from "@/i18n";
 import type { CheckoutPayload, PaymentMethodOption } from "./types";
 
@@ -13,7 +15,19 @@ const FALLBACK_METHODS: PaymentMethodOption[] = [
   { id: -2, name: "card", percentFee: "0", fixedFee: "0", showFeeToCustomer: false, isActive: true },
 ];
 
+interface GatewayOption {
+  id: string;
+  provider: string;
+  mode: string;
+  isActive: boolean;
+  hasCredentials: boolean;
+}
+
+const GATEWAY_LABELS: Record<string, string> = { tabby: "Tabby", tamara: "Tamara", moyasar: "Moyasar", mock: "Mock" };
+
 interface SplitLine { methodId: number | null; amount: string }
+
+type PayMode = "single" | "split" | "on_account" | "gateway";
 
 /**
  * Payment panel shared by every POS template. Supports single-method checkout
@@ -49,10 +63,18 @@ export function PaymentPanel({
 }) {
   const { t } = useTranslation();
   const methods = paymentMethods.length > 0 ? paymentMethods : FALLBACK_METHODS;
-  const [mode, setMode] = useState<"single" | "split" | "on_account">("single");
+  const [mode, setMode] = useState<PayMode>("single");
   const [selectedMethodId, setSelectedMethodId] = useState<number | null>(null);
+  const [selectedGateway, setSelectedGateway] = useState<string | null>(null);
   const [tendered, setTendered] = useState("");
   const [splitLines, setSplitLines] = useState<SplitLine[]>([]);
+
+  const { data: gateways = [] } = useQuery<GatewayOption[]>({
+    queryKey: ["payment-gateways"],
+    queryFn: () => api<{ data: GatewayOption[] }>("/payments/gateways").then(r => r.data),
+    staleTime: 60_000,
+  });
+  const activeGateways = gateways.filter(g => g.isActive && g.hasCredentials);
 
   const activeMethods = methods.filter(m => m.isActive);
   const selectedMethod = activeMethods.find(m => m.id === selectedMethodId) ?? activeMethods[0] ?? null;
@@ -62,7 +84,7 @@ export function PaymentPanel({
     if (splitLines.length === 0) setSplitLines([{ methodId: selectedMethod?.id ?? null, amount: total.toFixed(2) }]);
   };
 
-  const setModeSafe = (next: typeof mode) => {
+  const setModeSafe = (next: PayMode) => {
     setMode(next);
     if (next === "split") ensureSplitLines();
     if (next === "single") setTendered("");
@@ -104,6 +126,16 @@ export function PaymentPanel({
     } else if (mode === "split") {
       const payload = buildSplitPayload();
       if (payload) onCheckout(payload);
+    } else if (mode === "gateway") {
+      if (!hasCustomer || !selectedGateway) return;
+      const gw = gateways.find(g => g.provider === selectedGateway);
+      if (!gw) return;
+      onCheckout({
+        kind: "gateway",
+        paymentMethod: GATEWAY_LABELS[gw.provider] ?? gw.provider,
+        amountPaid: 0,
+        gatewayProvider: gw.provider,
+      });
     } else {
       if (!hasCustomer) return;
       onCheckout({ kind: "on_account", paymentMethod: "on_account", amountPaid: 0 });
@@ -111,6 +143,7 @@ export function PaymentPanel({
   };
 
   const needsCustomer = mode === "on_account"
+    || mode === "gateway"
     || (mode === "single" && tenderedNum > 0 && tenderedNum < total - 0.005)
     || (mode === "split" && splitTotal > 0 && splitRemaining > 0.005);
 
@@ -141,8 +174,8 @@ export function PaymentPanel({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
-            {(["single", "split", "on_account"] as const).map(m => (
+          <div className="grid grid-cols-4 gap-1 rounded-lg bg-muted p-1">
+            {(["single", "split", "on_account", "gateway"] as const).map(m => (
               <button
                 key={m}
                 type="button"
@@ -152,7 +185,7 @@ export function PaymentPanel({
                   mode === m ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {m === "single" ? t("pos.pay_full") : m === "split" ? t("pos.pay_split") : t("pos.on_account")}
+                {m === "single" ? t("pos.pay_full") : m === "split" ? t("pos.pay_split") : m === "on_account" ? t("pos.on_account") : t("pos.online_payment")}
               </button>
             ))}
           </div>
@@ -316,6 +349,51 @@ export function PaymentPanel({
               <Button size="lg" className="h-12 w-full" disabled={cartEmpty || !hasCustomer} onClick={handlePay}>
                 <Wallet className="me-2 h-5 w-5" />
                 {t("pos.charge_to_account")} — {fmt(total)}
+              </Button>
+            </div>
+          )}
+
+          {mode === "gateway" && (
+            <div className="space-y-2">
+              <div className={cn(
+                "rounded-lg border p-3 text-sm flex items-start gap-2",
+                hasCustomer ? "border-blue-500/40 bg-blue-500/5" : "border-destructive/40 bg-destructive/5",
+              )}>
+                <Globe className={cn("h-4 w-4 mt-0.5 shrink-0", hasCustomer ? "text-blue-600" : "text-destructive")} />
+                <div>
+                  <div className="font-medium">{t("pos.gateway_title")}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {hasCustomer ? t("pos.gateway_ready") : t("pos.customer_required_for_balance")}
+                  </div>
+                </div>
+              </div>
+              {activeGateways.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-2">{t("pos.gateway_none")}</p>
+              ) : (
+                <div className="space-y-2">
+                  {activeGateways.map(gw => {
+                    const active = selectedGateway === gw.provider;
+                    return (
+                      <Button
+                        key={gw.id}
+                        size="lg"
+                        variant={active ? "default" : "outline"}
+                        className={cn("h-11 w-full justify-start")}
+                        onClick={() => setSelectedGateway(gw.provider)}
+                      >
+                        <LinkIcon className="me-2 h-4 w-4" />
+                        {GATEWAY_LABELS[gw.provider] ?? gw.provider}
+                        {gw.mode === "test" && (
+                          <span className="ms-auto text-[10px] text-muted-foreground border rounded px-1.5 py-0.5">test</span>
+                        )}
+                      </Button>
+                    );
+                  })}
+                </div>
+              )}
+              <Button size="lg" className="h-12 w-full" disabled={cartEmpty || !hasCustomer || !selectedGateway} onClick={handlePay}>
+                <Globe className="me-2 h-5 w-5" />
+                {t("pos.pay")} — {fmt(total)}
               </Button>
             </div>
           )}

@@ -41,12 +41,15 @@ export interface CheckoutPaymentLine {
 // What the PaymentPanel hands back to the template on checkout. The template
 // maps this onto the createSale payload (paymentMethod/amountPaid/payments).
 export interface CheckoutPayload {
-  kind: "single" | "split" | "on_account";
+  kind: "single" | "split" | "on_account" | "gateway";
   paymentMethod: string;
   paymentMethodId?: number;
   amountPaid: number;
   tendered?: number;
   payments?: CheckoutPaymentLine[];
+  // Set when a configured online gateway (Tabby/Tamara/Moyasar) is selected:
+  // the sale is created first, then a checkout link is generated and opened.
+  gatewayProvider?: string;
 }
 
 export interface CompletedSale {
