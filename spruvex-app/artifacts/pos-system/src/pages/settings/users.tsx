@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ArrowLeft, Plus, KeyRound, Users as UsersIcon } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { TOKEN_KEY } from "@/contexts/AuthContext";
+import { QueryErrorState } from "@/components/QueryErrorState";
 
 interface AppUser {
   id: number;
@@ -53,7 +54,7 @@ export default function UsersSettingsPage() {
   const queryClient = useQueryClient();
   const [dialogUser, setDialogUser] = useState<AppUser | "new" | null>(null);
 
-  const { data: users, isLoading } = useQuery<AppUser[]>({
+  const { data: users, isLoading, isError, refetch } = useQuery<AppUser[]>({
     queryKey: ["auth-users"],
     queryFn: () => authFetch("/auth/users"),
   });
@@ -99,7 +100,8 @@ export default function UsersSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {isLoading && [1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full" />)}
-          {!isLoading && users?.length === 0 && (
+          {isError && <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} />}
+          {!isLoading && !isError && users?.length === 0 && (
             <EmptyState icon={UsersIcon} title={t("users.empty_title")} description={t("users.empty_desc")} />
           )}
           {users?.map(u => (

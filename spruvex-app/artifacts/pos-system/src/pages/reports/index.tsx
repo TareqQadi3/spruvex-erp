@@ -9,6 +9,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
 import { TrendingUp, TrendingDown, DollarSign, Wrench } from "lucide-react";
 import { useTranslation } from "@/i18n";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { EmptyState } from "@/components/EmptyState";
 
 const REPAIR_STATUS_COLORS: Record<string, string> = {
   received: "#6b7280",
@@ -48,10 +50,10 @@ export default function ReportsPage() {
   const from = range.from();
   const to = range.to();
 
-  const { data: salesSummary, isLoading: loadingSales } = useGetSalesSummary({ from, to });
-  const { data: topProducts, isLoading: loadingProducts } = useGetTopProducts({ from, to, limit: 10 });
-  const { data: repairsSummary, isLoading: loadingRepairs } = useGetRepairsSummary();
-  const { data: profitReport, isLoading: loadingProfit } = useGetProfitReport({ from, to });
+  const { data: salesSummary, isLoading: loadingSales, isError: errorSales, refetch: refetchSales } = useGetSalesSummary({ from, to });
+  const { data: topProducts, isLoading: loadingProducts, isError: errorProducts, refetch: refetchProducts } = useGetTopProducts({ from, to, limit: 10 });
+  const { data: repairsSummary, isLoading: loadingRepairs, isError: errorRepairs, refetch: refetchRepairs } = useGetRepairsSummary();
+  const { data: profitReport, isLoading: loadingProfit, isError: errorProfit, refetch: refetchProfit } = useGetProfitReport({ from, to });
 
   const totalSales = salesSummary?.reduce((s, d) => s + Number(d.totalSales), 0) ?? 0;
 
@@ -79,11 +81,13 @@ export default function ReportsPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {loadingProfit ? (
           [1, 2, 3, 4].map(i => <Card key={i}><CardContent className="pt-6"><Skeleton className="h-16 w-full" /></CardContent></Card>)
+        ) : errorProfit ? (
+          <div className="col-span-full"><QueryErrorState message={t("common.error_load_data")} onRetry={() => refetchProfit()} /></div>
         ) : profitReport ? (
           <>
             <StatCard label={t("reports.revenue")} value={Number(profitReport.revenue).toFixed(2)} icon={<DollarSign className="h-4 w-4 text-muted-foreground" />} sub={t("reports.sales_count", { count: totalSales })} />
             <StatCard label={t("reports.cost_of_goods")} value={Number(profitReport.costOfGoods).toFixed(2)} icon={<TrendingDown className="h-4 w-4 text-muted-foreground" />} />
-            <StatCard label={t("reports.repair_revenue")} value={Number(profitReport.repairRevenue).toFixed(2)} icon={<Wrench className="h-4 w-4 text-muted-foreground" />} />
+            <StatCard label={t("reports.repair_revenue")} value={Number(profitReport.repairRevenue ?? 0).toFixed(2)} icon={<Wrench className="h-4 w-4 text-muted-foreground" />} />
             <StatCard
               label={t("reports.net_profit")}
               value={Number(profitReport.netProfit).toFixed(2)}
@@ -101,6 +105,8 @@ export default function ReportsPage() {
           <CardContent>
             {loadingSales ? (
               <Skeleton className="h-[300px] w-full" />
+            ) : errorSales ? (
+              <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetchSales()} />
             ) : salesSummary && salesSummary.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={salesSummary} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
@@ -140,8 +146,10 @@ export default function ReportsPage() {
                       {[1, 2, 3, 4].map(j => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
                     </TableRow>
                   ))
+                ) : errorProducts ? (
+                  <TableRow><TableCell colSpan={4}><QueryErrorState message={t("common.error_load_data")} onRetry={() => refetchProducts()} /></TableCell></TableRow>
                 ) : topProducts?.length === 0 ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-6 text-muted-foreground">{t("reports.no_products")}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4}><EmptyState icon={TrendingUp} title={t("reports.no_products")} /></TableCell></TableRow>
                 ) : (
                   topProducts?.map((p, i) => (
                     <TableRow key={p.productId}>
@@ -162,6 +170,8 @@ export default function ReportsPage() {
           <CardContent>
             {loadingRepairs ? (
               <Skeleton className="h-[200px] w-full" />
+            ) : errorRepairs ? (
+              <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetchRepairs()} />
             ) : repairPieData.length > 0 ? (
               <>
                 <ResponsiveContainer width="100%" height={220}>

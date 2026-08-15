@@ -14,6 +14,8 @@ import { Link } from "wouter";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
 import { MediaUploadField } from "@/components/MediaUploadField";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { EmptyState } from "@/components/EmptyState";
 
 import { TranslateButton } from "@/components/TranslateButton";
 
@@ -22,7 +24,7 @@ interface Brand { id: number; name: string; nameEn?: string | null; imageUrl: st
 export default function BrandsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { data: brands, isLoading } = useGetBrands();
+  const { data: brands, isLoading, isError, refetch } = useGetBrands();
   const createBrand = useCreateBrand();
   const updateBrand = useUpdateBrand();
   const deleteBrand = useDeleteBrand();
@@ -110,8 +112,9 @@ export default function BrandsPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {isLoading && [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 w-full" />)}
-          {!isLoading && filtered.length === 0 && (
-            <p className="col-span-full text-center text-muted-foreground py-8">{t("brands.empty")}</p>
+          {isError && <div className="col-span-full"><QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} /></div>}
+          {!isLoading && !isError && filtered.length === 0 && (
+            <div className="col-span-full"><EmptyState icon={Tag} title={t("brands.empty")} /></div>
           )}
           {filtered.map(b => (
             <div key={b.id} className="flex flex-col items-center gap-2 rounded-lg border p-3">

@@ -13,6 +13,7 @@ import { ArrowDownCircle, ArrowUpCircle, Plus, Trash2, ReceiptText, AlertTriangl
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryErrorState } from "@/components/QueryErrorState";
 
 type PartyType = "customer" | "supplier" | "employee" | "other";
 interface PartyOption { id: string; name: string; }
@@ -33,7 +34,7 @@ export default function VouchersPage() {
   const queryClient = useQueryClient();
   const [dialogType, setDialogType] = useState<"receipt" | "payment" | null>(null);
 
-  const { data: vouchers, isLoading, isError } = useQuery<Voucher[]>({
+  const { data: vouchers, isLoading, isError, refetch } = useQuery<Voucher[]>({
     queryKey: ["vouchers"],
     queryFn: () => api("/vouchers"),
   });
@@ -74,7 +75,7 @@ export default function VouchersPage() {
 
       <div className="space-y-2">
         {isLoading && [1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
-        {isError && <EmptyState icon={AlertTriangle} title={t("common.error")} />}
+        {isError && <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} />}
         {!isLoading && !isError && !vouchers?.length && (
           <EmptyState icon={ReceiptText} title={t("vouchers.empty")} description={t("vouchers.empty_desc")} />
         )}

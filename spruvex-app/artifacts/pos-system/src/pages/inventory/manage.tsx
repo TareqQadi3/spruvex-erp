@@ -2,9 +2,12 @@ import { useParams, Link } from "wouter";
 import { useGetProduct } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Package } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { TOKEN_KEY } from "@/contexts/AuthContext";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { EmptyState } from "@/components/EmptyState";
+import { Loading } from "@/components/Loading";
 import { VariantsTab } from "./components/VariantsTab";
 import { RelatedProductsTab } from "./components/RelatedProductsTab";
 import { UnitsTab } from "./components/UnitsTab";
@@ -26,8 +29,12 @@ async function authFetch(path: string, options: RequestInit = {}) {
 export default function ManageProductPage() {
   const params = useParams<{ id: string }>();
   const productId = params.id;
-  const { data: product } = useGetProduct(productId as any);
+  const { data: product, isLoading, isError, refetch } = useGetProduct(productId as any);
   const { t } = useTranslation();
+
+  if (isLoading) return <Loading className="py-20" />;
+  if (isError) return <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} />;
+  if (!product) return <EmptyState icon={Package} title={t("inventory.no_products")} />;
 
   return (
     <div className="space-y-6 max-w-3xl">

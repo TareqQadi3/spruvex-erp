@@ -14,6 +14,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, CreditCard, Store, Plus, Pencil, PlugZap, Copy, Check, Link2, ExternalLink } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { EmptyState } from "@/components/EmptyState";
 
 type GatewayMode = "test" | "live";
 interface GatewaySettings {
@@ -88,12 +90,12 @@ export default function IntegrationsPage() {
   const [gatewayDialog, setGatewayDialog] = useState<string | null>(null);
   const [connectionDialog, setConnectionDialog] = useState<EcommerceConnection | "new" | null>(null);
 
-  const { data: gateways, isLoading: gatewaysLoading } = useQuery<GatewaySettings[]>({
+  const { data: gateways, isLoading: gatewaysLoading, isError: gatewaysError, refetch: refetchGateways } = useQuery<GatewaySettings[]>({
     queryKey: ["payment-gateways"],
     queryFn: () => api<{ data: GatewaySettings[] }>("/payments/gateways").then(r => r.data),
   });
 
-  const { data: connections, isLoading: connectionsLoading } = useQuery<EcommerceConnection[]>({
+  const { data: connections, isLoading: connectionsLoading, isError: connectionsError, refetch: refetchConnections } = useQuery<EcommerceConnection[]>({
     queryKey: ["ecommerce-connections"],
     queryFn: () => api<{ data: EcommerceConnection[] }>("/ecommerce/connections").then(r => r.data),
   });
@@ -161,7 +163,8 @@ export default function IntegrationsPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           {gatewaysLoading && [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-14 w-full" />)}
-          {!gatewaysLoading && GATEWAY_PROVIDERS.map(provider => {
+          {gatewaysError && <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetchGateways()} />}
+          {!gatewaysLoading && !gatewaysError && GATEWAY_PROVIDERS.map(provider => {
             const g = gatewayMap.get(provider);
             return (
               <div key={provider} className="flex items-center justify-between rounded-lg border p-3">
@@ -218,13 +221,11 @@ export default function IntegrationsPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           {connectionsLoading && [1, 2].map(i => <Skeleton key={i} className="h-14 w-full" />)}
-          {!connectionsLoading && (connections?.length ?? 0) === 0 && (
-            <div className="py-10 flex flex-col items-center text-center text-muted-foreground gap-2">
-              <Store className="h-8 w-8" />
-              <p className="text-sm">{t("integrations.no_connections")}</p>
-            </div>
+          {connectionsError && <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetchConnections()} />}
+          {!connectionsLoading && !connectionsError && (connections?.length ?? 0) === 0 && (
+            <EmptyState icon={Store} title={t("integrations.no_connections")} />
           )}
-          {(connections ?? []).map(conn => (
+          {!connectionsLoading && !connectionsError && (connections ?? []).map(conn => (
             <div key={conn.id} className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center">

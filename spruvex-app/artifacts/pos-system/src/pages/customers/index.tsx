@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Trash2, Eye } from "lucide-react";
+import { Plus, Search, Trash2, Eye, Users } from "lucide-react";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -15,6 +15,8 @@ import { useForm } from "react-hook-form";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n";
 import { MediaUploadField } from "@/components/MediaUploadField";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { EmptyState } from "@/components/EmptyState";
 
 import { TranslateButton } from "@/components/TranslateButton";
 
@@ -94,7 +96,7 @@ function NewCustomerDialog({ onCreated }: { onCreated: () => void }) {
 
 export default function CustomersPage() {
   const [search, setSearch] = useState("");
-  const { data: customers, isLoading } = useGetCustomers(search ? { search } : undefined);
+  const { data: customers, isLoading, isError, refetch } = useGetCustomers(search ? { search } : undefined);
   const deleteCustomer = useDeleteCustomer();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -150,10 +152,10 @@ export default function CustomersPage() {
                     {[1, 2, 3, 4, 5, 6].map(j => <TableCell key={j}><Skeleton className="h-4 w-[80px]" /></TableCell>)}
                   </TableRow>
                 ))
+              ) : isError ? (
+                <TableRow><TableCell colSpan={6}><QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} /></TableCell></TableRow>
               ) : customers?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t("customers.no_customers")}</TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={6}><EmptyState icon={Users} title={t("customers.no_customers")} description={t("customers.no_customers_desc")} /></TableCell></TableRow>
               ) : (
                 customers?.map((customer) => (
                   <TableRow key={customer.id}>

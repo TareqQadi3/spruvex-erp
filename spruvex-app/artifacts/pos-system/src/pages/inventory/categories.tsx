@@ -15,6 +15,9 @@ import { Link } from "wouter";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
 import { MediaUploadField } from "@/components/MediaUploadField";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { EmptyState } from "@/components/EmptyState";
+import { Loading } from "@/components/Loading";
 
 import { TranslateButton } from "@/components/TranslateButton";
 
@@ -27,7 +30,7 @@ interface CategoryRow {
 }
 
 export default function CategoriesPage() {
-  const { data: categories } = useGetCategories();
+  const { data: categories, isLoading, isError, refetch } = useGetCategories();
   const createCategory = useCreateCategory();
   const updateCategory = useUpdateCategory();
   const deleteCategory = useDeleteCategory();
@@ -105,8 +108,10 @@ export default function CategoriesPage() {
 
       <Card>
         <CardContent className="p-0 divide-y">
-          {mainCategories.length === 0 && (
-            <div className="p-8 text-center text-sm text-muted-foreground">{t("inventory.no_categories")}</div>
+          {isLoading && <Loading />}
+          {isError && <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} />}
+          {!isLoading && !isError && mainCategories.length === 0 && (
+            <EmptyState icon={FolderTree} title={t("inventory.no_categories")} />
           )}
           {mainCategories.map((main: any) => (
             <div key={main.id}>

@@ -16,6 +16,8 @@ import { ArrowLeft, ArrowLeftRight, ChevronLeft, ChevronRight } from "lucide-rea
 import { format } from "date-fns";
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { EmptyState } from "@/components/EmptyState";
 
 interface WarehouseItem {
   id: string;
@@ -196,7 +198,7 @@ export default function StockMovementsPage() {
   const { data: products } = useGetProducts();
 
   const queryKey = ["stock-movements", { productFilter, warehouseFilter, dateFrom, dateTo, page }];
-  const { data, isLoading } = useQuery<PaginatedMovements>({
+  const { data, isLoading, isError, refetch } = useQuery<PaginatedMovements>({
     queryKey,
     queryFn: () => {
       const params = new URLSearchParams();
@@ -297,10 +299,10 @@ export default function StockMovementsPage() {
                     {[1, 2, 3, 4, 5, 6].map((j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
                   </TableRow>
                 ))
+              ) : isError ? (
+                <TableRow><TableCell colSpan={6}><QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} /></TableCell></TableRow>
               ) : movements.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t("inventory_movements.no_movements")}</TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={6}><EmptyState icon={ArrowLeftRight} title={t("inventory_movements.no_movements")} description={t("inventory_movements.no_movements_desc")} /></TableCell></TableRow>
               ) : (
                 movements.map((m) => {
                   const isPositive = ["adjustment_in", "transfer_in", "sale_return", "reservation_release"].includes(m.movementType);

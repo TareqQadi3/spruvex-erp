@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ArrowLeft, ArrowLeftRight, Plus, Trash2, Warehouse } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
+import { QueryErrorState } from "@/components/QueryErrorState";
 
 interface WarehouseItem {
   id: number;
@@ -35,7 +36,7 @@ export default function WarehousesSettingsPage() {
   const [isRepairStock, setIsRepairStock] = useState(false);
   const [branchId, setBranchId] = useState<string>("");
 
-  const { data: warehouses, isLoading } = useQuery<WarehouseItem[]>({
+  const { data: warehouses, isLoading, isError, refetch } = useQuery<WarehouseItem[]>({
     queryKey: ["warehouses"],
     queryFn: () => api("/warehouses"),
   });
@@ -95,7 +96,8 @@ export default function WarehousesSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {isLoading && [1, 2].map(i => <Skeleton key={i} className="h-14 w-full" />)}
-          {!isLoading && warehouses?.length === 0 && (
+          {isError && <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} />}
+          {!isLoading && !isError && warehouses?.length === 0 && (
             <EmptyState icon={Warehouse} title={t("warehouses.empty_title")} description={t("warehouses.empty_desc")} />
           )}
           {warehouses?.map(w => (

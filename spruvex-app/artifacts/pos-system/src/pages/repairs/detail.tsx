@@ -16,6 +16,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
 import { TOKEN_KEY } from "@/contexts/AuthContext";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { EmptyState } from "@/components/EmptyState";
 
 interface RepairUser {
   id: number;
@@ -53,7 +55,7 @@ const STATUS_KEYS = [
 export default function RepairDetailPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
-  const { data: repair, isLoading } = useGetRepair((id as any), { query: { enabled: !!id } as any });
+  const { data: repair, isLoading, isError, refetch } = useGetRepair((id as any), { query: { enabled: !!id } as any });
   const updateStatus = useUpdateRepairStatus();
   const updateRepair = useUpdateRepair();
   const { t } = useTranslation();
@@ -200,7 +202,9 @@ export default function RepairDetailPage() {
     </div>
   );
 
-  if (!repair) return <div className="text-center py-8 text-muted-foreground">{t("repairs.not_found")}</div>;
+  if (isError) return <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} />;
+
+  if (!repair) return <EmptyState icon={Wrench} title={t("repairs.not_found")} />;
 
   const statusInfo = STATUS_KEYS.find(s => s.value === repair.status);
 

@@ -5,11 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Wrench } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { format } from "date-fns";
 import { useTranslation } from "@/i18n";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { EmptyState } from "@/components/EmptyState";
 
 const STATUS_COLORS: Record<string, string> = {
   received: "bg-gray-500 text-white",
@@ -22,7 +24,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function RepairsPage() {
   const [search, setSearch] = useState("");
-  const { data: repairs, isLoading } = useGetRepairs(search ? { search } : undefined);
+  const { data: repairs, isLoading, isError, refetch } = useGetRepairs(search ? { search } : undefined);
   const { t } = useTranslation();
 
   return (
@@ -66,10 +68,10 @@ export default function RepairsPage() {
                     {[1, 2, 3, 4, 5, 6].map(j => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
                   </TableRow>
                 ))
+              ) : isError ? (
+                <TableRow><TableCell colSpan={6}><QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} /></TableCell></TableRow>
               ) : repairs?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t("repairs.no_repairs")}</TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={6}><EmptyState icon={Wrench} title={t("repairs.no_repairs")} description={t("repairs.no_repairs_desc")} /></TableCell></TableRow>
               ) : (
                 repairs?.map((repair) => (
                   <TableRow key={repair.id}>

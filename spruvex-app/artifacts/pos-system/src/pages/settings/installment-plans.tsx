@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ArrowLeft, Plus, Trash2, CalendarClock } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
+import { QueryErrorState } from "@/components/QueryErrorState";
 
 interface InstallmentPlan {
   id: number;
@@ -27,7 +28,7 @@ export default function InstallmentPlansSettingsPage() {
   const [months, setMonths] = useState("");
   const [interestPercent, setInterestPercent] = useState("");
 
-  const { data: plans, isLoading } = useQuery<InstallmentPlan[]>({
+  const { data: plans, isLoading, isError, refetch } = useQuery<InstallmentPlan[]>({
     queryKey: ["installment-plans"],
     queryFn: () => api("/installment-plans"),
   });
@@ -72,7 +73,8 @@ export default function InstallmentPlansSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {isLoading && [1, 2].map(i => <Skeleton key={i} className="h-14 w-full" />)}
-          {!isLoading && plans?.length === 0 && (
+          {isError && <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} />}
+          {!isLoading && !isError && plans?.length === 0 && (
             <EmptyState icon={CalendarClock} title={t("installments.empty_title")} description={t("installments.empty_desc")} />
           )}
           {plans?.map(p => (

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { format } from "date-fns";
 import { api } from "@/lib/api";
 import { useTranslation } from "@/i18n";
@@ -88,7 +89,7 @@ export default function EcommerceOrdersPage() {
     queryFn: () => api("/payment-methods"),
   });
 
-  const { data, isLoading, refetch } = useQuery<Paginated<EcommerceOrder>>({
+  const { data, isLoading, isError, refetch } = useQuery<Paginated<EcommerceOrder>>({
     queryKey: ["ecommerce-orders", status],
     queryFn: () => api(`/ecommerce/orders?page=1&pageSize=100${status ? `&status=${status}` : ""}`),
   });
@@ -182,6 +183,8 @@ export default function EcommerceOrdersPage() {
             <div className="p-4 space-y-2">
               {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
             </div>
+          ) : isError ? (
+            <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} />
           ) : orders.length === 0 ? (
             <EmptyState
               icon={ShoppingBag}

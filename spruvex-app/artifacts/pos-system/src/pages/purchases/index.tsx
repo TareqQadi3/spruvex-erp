@@ -12,9 +12,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Undo2, Printer, Plus, Trash2 } from "lucide-react";
+import { Undo2, Printer, Plus, Trash2, ShoppingBag } from "lucide-react";
 import { format } from "date-fns";
 import { useTranslation } from "@/i18n";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { EmptyState } from "@/components/EmptyState";
 import { api } from "@/lib/api";
 import { openServerPrint } from "@/utils/openServerPrint";
 
@@ -94,10 +96,10 @@ export default function PurchasesPage() {
                     {[1, 2, 3, 4, 5, 6].map(j => <TableCell key={j}><Skeleton className="h-4 w-[80px]" /></TableCell>)}
                   </TableRow>
                 ))
+              ) : isError ? (
+                <TableRow><TableCell colSpan={6}><QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} /></TableCell></TableRow>
               ) : purchases?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t("purchases.empty")}</TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={6}><EmptyState icon={ShoppingBag} title={t("purchases.empty")} description={t("purchases.empty_desc")} /></TableCell></TableRow>
               ) : (
                 purchases?.map((purchase) => {
                   const available = purchase.quantity - (purchase.returnedQuantity ?? 0);

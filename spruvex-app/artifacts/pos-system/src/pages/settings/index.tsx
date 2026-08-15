@@ -16,12 +16,13 @@ import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "@/i18n";
 import type { Lang } from "@/i18n";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { useState } from "react";
 import { MediaUploadField } from "@/components/MediaUploadField";
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
-  const { data: settings, isLoading } = useGetSettings();
+  const { data: settings, isLoading, isError, refetch } = useGetSettings();
   const updateSettings = useUpdateSettings();
   const { t, setLang } = useTranslation();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -103,6 +104,15 @@ export default function SettingsPage() {
       <div className="space-y-6 max-w-2xl">
         <Skeleton className="h-8 w-48" />
         {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-48 w-full" />)}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="space-y-6 max-w-2xl">
+        <h1 className="text-2xl font-bold tracking-tight">{t("settings.title")}</h1>
+        <Card><CardContent><QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} /></CardContent></Card>
       </div>
     );
   }

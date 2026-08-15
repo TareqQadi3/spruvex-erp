@@ -10,6 +10,9 @@ import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
 import { TOKEN_KEY } from "@/contexts/AuthContext";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { EmptyState } from "@/components/EmptyState";
+import { SearchX } from "lucide-react";
 
 async function authFetch(path: string) {
   const token = localStorage.getItem(TOKEN_KEY);
@@ -43,9 +46,11 @@ export default function AuditLogPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
 
   const load = () => {
     setIsLoading(true);
+    setIsError(false);
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (userId) params.set("userId", userId);
     if (action) params.set("action", action);
@@ -54,7 +59,7 @@ export default function AuditLogPage() {
     if (to) params.set("to", to);
     authFetch(`/audit-log?${params}`)
       .then(data => { setRows(data.rows); setTotal(data.total); })
-      .catch(() => toast.error(t("auditLog.load_failed")))
+      .catch(() => { setIsError(true); toast.error(t("auditLog.load_failed")); })
       .finally(() => setIsLoading(false));
   };
 
@@ -115,19 +120,22 @@ export default function AuditLogPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map(r => (
-                  <TableRow key={r.id}>
-                    <TableCell className="text-xs whitespace-nowrap">{new Date(r.createdAt).toLocaleString()}</TableCell>
-                    <TableCell className="text-sm">{r.username ?? t("auditLog.system")}</TableCell>
-                    <TableCell><Badge variant="secondary">{r.action}</Badge></TableCell>
-                    <TableCell className="text-xs">{r.entityType}{r.entityId ? ` #${String(r.entityId).slice(0, 8)}` : ""}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
-                      {JSON.stringify(r.newValue ?? r.metadata ?? r.oldValue ?? {})}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {rows.length === 0 && !isLoading && (
-                  <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">{t("auditLog.no_results")}</TableCell></TableRow>
+                {isError ? (
+                  <TableRow><TableCell colSpan={5}><QueryErrorState message={t("common.error_load_data")} onRetry={load} /></TableCell></TableRow>
+                ) : rows.length === 0 && !isLoading ? (
+                  <TableRow><TableCell colSpan={5}><EmptyState icon={SearchX} title={t("auditLog.no_results")} description={t("auditLog.no_results_desc")} /></TableCell></TableRow>
+                ) : (
+                  rows.map(r => (
+                    <TableRow key={r.id}>
+                      <TableCell className="text-xs whitespace-nowrap">{new Date(r.createdAt).toLocaleString()}</TableCell>
+                      <TableCell className="text-sm">{r.username ?? t("auditLog.system")}</TableCell>
+                      <TableCell><Badge variant="secondary">{r.action}</Badge></TableCell>
+                      <TableCell className="text-xs">{r.entityType}{r.entityId ? ` #${String(r.entityId).slice(0, 8)}` : ""}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
+                        {JSON.stringify(r.newValue ?? r.metadata ?? r.oldValue ?? {})}
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>

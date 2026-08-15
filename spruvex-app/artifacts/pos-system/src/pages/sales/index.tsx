@@ -12,6 +12,8 @@ import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
 import { openServerPrint } from "@/utils/openServerPrint";
 import { useGetSettings } from "@workspace/api-client-react";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "./components/StatusBadge";
 import { SaleInstallmentDialog } from "./components/SaleInstallmentDialog";
 import { SaleReturnDialog } from "./components/SaleReturnDialog";
@@ -27,7 +29,7 @@ export default function SalesPage() {
   const [paySale, setPaySale] = useState<Sale | null>(null);
   const [approveDraft, setApproveDraft] = useState<Sale | null>(null);
 
-  const { data: sales, isLoading } = useQuery<Sale[]>({
+  const { data: sales, isLoading, isError, refetch } = useQuery<Sale[]>({
     queryKey: ["sales"],
     queryFn: () => api("/sales"),
   });
@@ -87,10 +89,10 @@ export default function SalesPage() {
                     {[1, 2, 3, 4, 5, 6, 7].map(j => <TableCell key={j}><Skeleton className="h-4 w-[80px]" /></TableCell>)}
                   </TableRow>
                 ))
+              ) : isError ? (
+                <TableRow><TableCell colSpan={7}><QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} /></TableCell></TableRow>
               ) : sales?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t("sales.empty")}</TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={7}><EmptyState icon={Undo2} title={t("sales.empty")} description={t("sales.empty_desc")} /></TableCell></TableRow>
               ) : (
                 sales?.map((sale) => (
                   <TableRow key={sale.id}>

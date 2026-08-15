@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ArrowLeft, Plus, Pencil, Trash2, Wallet } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { TOKEN_KEY } from "@/contexts/AuthContext";
+import { QueryErrorState } from "@/components/QueryErrorState";
 
 interface PaymentMethod {
   id: number;
@@ -45,7 +46,7 @@ export default function PaymentMethodsSettingsPage() {
   const queryClient = useQueryClient();
   const [dialogMethod, setDialogMethod] = useState<PaymentMethod | "new" | null>(null);
 
-  const { data: methods, isLoading } = useQuery<PaymentMethod[]>({
+  const { data: methods, isLoading, isError, refetch } = useQuery<PaymentMethod[]>({
     queryKey: ["payment-methods"],
     queryFn: () => authFetch("/payment-methods"),
   });
@@ -96,7 +97,8 @@ export default function PaymentMethodsSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {isLoading && [1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full" />)}
-          {!isLoading && methods?.length === 0 && (
+          {isError && <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} />}
+          {!isLoading && !isError && methods?.length === 0 && (
             <EmptyState icon={Wallet} title={t("paymentMethods.empty_title")} description={t("paymentMethods.empty_desc")} />
           )}
           {methods?.map(m => (

@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ArrowLeft, Building2, Plus, Users, Star } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
+import { QueryErrorState } from "@/components/QueryErrorState";
 
 interface BranchItem {
   id: string;
@@ -37,7 +38,7 @@ export default function BranchesSettingsPage() {
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
 
-  const { data: branches, isLoading } = useQuery<BranchItem[]>({
+  const { data: branches, isLoading, isError, refetch } = useQuery<BranchItem[]>({
     queryKey: ["branches"],
     queryFn: () => api("/branches"),
   });
@@ -109,7 +110,8 @@ export default function BranchesSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {isLoading && [1, 2].map(i => <Skeleton key={i} className="h-16 w-full" />)}
-          {!isLoading && branches?.length === 0 && (
+          {isError && <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} />}
+          {!isLoading && !isError && branches?.length === 0 && (
             <EmptyState icon={Building2} title={t("branches.empty_title")} description={t("branches.empty_desc")} />
           )}
           {branches?.map(b => (

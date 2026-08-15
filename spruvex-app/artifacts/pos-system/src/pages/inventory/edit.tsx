@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "@/i18n";
+import { QueryErrorState } from "@/components/QueryErrorState";
 import { MediaUploadField } from "@/components/MediaUploadField";
 import { TranslateButton } from "@/components/TranslateButton";
 import { AddonManager } from "./AddonManager";
@@ -26,7 +27,7 @@ export default function EditProductPage() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
-  const { data: product, isLoading: isLoadingProduct } = useGetProduct(id! as any);
+  const { data: product, isLoading: isLoadingProduct, isError, refetch } = useGetProduct(id! as any);
   const updateProduct = useUpdateProduct();
   const createCategory = useCreateCategory();
   const { data: categories } = useGetCategories();
@@ -133,6 +134,10 @@ export default function EditProductPage() {
         <Skeleton className="h-40 w-full" />
       </div>
     );
+  }
+
+  if (isError) {
+    return <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} />;
   }
 
   return (

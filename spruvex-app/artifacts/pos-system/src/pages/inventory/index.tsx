@@ -17,6 +17,8 @@ import { useTranslation } from "@/i18n";
 import { formatCurrency } from "@/lib/format";
 import { TOKEN_KEY } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { EmptyState } from "@/components/EmptyState";
 
 interface InventoryAlerts {
   lowStock: Array<{ id: string; name: string; stock: number }>;
@@ -26,7 +28,7 @@ interface InventoryAlerts {
 
 export default function InventoryPage() {
   const [search, setSearch] = useState("");
-  const { data: products, isLoading } = useGetProducts(search ? { search } : undefined);
+  const { data: products, isLoading, isError, refetch } = useGetProducts(search ? { search } : undefined);
   const { data: settings } = useGetSettings();
   const deleteProduct = useDeleteProduct();
   const queryClient = useQueryClient();
@@ -152,10 +154,10 @@ export default function InventoryPage() {
                     {[1, 2, 3, 4, 5, 6].map(j => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
                   </TableRow>
                 ))
+              ) : isError ? (
+                <TableRow><TableCell colSpan={6}><QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} /></TableCell></TableRow>
               ) : products?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t("inventory.no_products")}</TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={6}><EmptyState icon={Plus} title={t("inventory.no_products")} description={t("inventory.no_products_desc")} /></TableCell></TableRow>
               ) : (
                 products?.map((product) => {
                   const isLowStock = product.stock <= (product.lowStockThreshold || 5);

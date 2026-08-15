@@ -69,7 +69,9 @@
     "searching": "Searching",
     "stock": "Stock",
     "not_found": "Page not found",
-    "not_found_desc": "The page you are looking for does not exist or has been moved."
+    "not_found_desc": "The page you are looking for does not exist or has been moved.",
+    "error_load_data": "Failed to load data",
+    "error_load_data_desc": "Check your connection to the server and try again."
   },
   "topbar": {
     "search_placeholder": "Global search (coming soon)...",
@@ -91,7 +93,19 @@
     "recent_repairs": "Recent Repairs",
     "sale_number": "Sale #{{id}}",
     "no_recent_sales": "No recent sales.",
-    "no_recent_repairs": "No recent repairs."
+    "no_recent_repairs": "No recent repairs.",
+    "total_sales": "Total Sales",
+    "net_profit": "Net Profit",
+    "invoices_count": "Invoices",
+    "customers": "Customers",
+    "low_stock": "Low Stock",
+    "low_stock_items": "Products below threshold",
+    "sales_by_day": "Sales by Day",
+    "top_products": "Top Selling Products",
+    "cash_movement": "Cash Movement",
+    "no_chart_data": "Not enough data to render the chart",
+    "open_cash": "Open cash",
+    "no_active_session_short": "No open cash session"
   },
   "pos": {
     "title": "POS",
@@ -139,6 +153,7 @@
     "processing": "Processing transaction...",
     "out_of_stock": "Out of stock",
     "no_products": "No products found.",
+    "no_products_desc": "Add your first product to start selling and tracking inventory.",
     "serial_placeholder": "Serial / IMEI (optional)",
     "mobile_variants": "Variants",
     "mobile_no_variants": "No variants available for this product.",
@@ -183,6 +198,7 @@
     "search_placeholder": "Search by ticket, name, or phone...",
     "walk_in": "Walk-in",
     "no_repairs": "No repairs found.",
+    "no_repairs_desc": "Create a new repair ticket to start tracking repair work.",
     "new_title": "New Repair Ticket",
     "device_info": "Device Information",
     "device_type_required": "Device Type *",
@@ -378,6 +394,7 @@
     "purchases": "Purchases",
     "balance": "Balance",
     "no_customers": "No customers found.",
+    "no_customers_desc": "Add your first customer to track their sales and outstanding balance.",
     "delete_confirm": "Delete customer \"{{name}}\"?",
     "delete_success": "Customer deleted",
     "delete_failed": "Failed to delete customer",
@@ -929,6 +946,7 @@
     "title": "Sales",
     "subtitle": "All recorded sales. Select a sale to process a return.",
     "empty": "No sales yet.",
+    "empty_desc": "Create your first invoice from the POS or the sales page.",
     "return": "Return",
     "return_title": "Return Items",
     "return_reason": "Reason (optional)",
@@ -968,6 +986,7 @@
     "credit_notes_title": "Credit Notes",
     "credit_notes_subtitle": "Returned sales that can issue a ZATCA credit note.",
     "empty": "No returns yet.",
+    "empty_desc": "Sales returns will appear here once processed.",
     "number": "Return #",
     "refund_method": "Refund Method",
     "net_amount": "Net Amount",
@@ -977,6 +996,7 @@
     "title": "Purchases",
     "subtitle": "All recorded purchases. Select a purchase to process a return.",
     "empty": "No purchases yet.",
+    "empty_desc": "Record your first purchase invoice to track cost of goods and stock.",
     "product": "Product",
     "quantity": "Quantity",
     "returned": "{{count}} returned",
@@ -1086,6 +1106,7 @@
     "performed_by": "Performed By",
     "system": "System",
     "no_movements": "No stock movements found.",
+    "no_movements_desc": "Sales, purchases, and stock adjustments will appear here.",
     "page_of": "Page {{page}} of {{total}}",
     "type_adjustment_in": "Adjustment (In)",
     "type_adjustment_out": "Adjustment (Out)",
@@ -1251,6 +1272,7 @@
     "system": "System",
     "total": "Total",
     "no_results": "No results",
+    "no_results_desc": "No records match the current filters. Try changing the criteria.",
     "load_failed": "Failed to load audit log"
   }
 }

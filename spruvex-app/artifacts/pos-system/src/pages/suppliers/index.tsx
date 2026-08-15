@@ -12,6 +12,7 @@ import { Plus, Pencil, Trash2, Truck, Phone, AlertTriangle } from "lucide-react"
 import { useTranslation } from "@/i18n";
 import { api } from "@/lib/api";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryErrorState } from "@/components/QueryErrorState";
 
 interface Supplier {
   id: number;
@@ -29,7 +30,7 @@ export default function SuppliersPage() {
   const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<Supplier | "new" | null>(null);
 
-  const { data: suppliers, isLoading, isError } = useQuery<Supplier[]>({
+  const { data: suppliers, isLoading, isError, refetch } = useQuery<Supplier[]>({
     queryKey: ["suppliers", search],
     queryFn: () => api(`/suppliers${search ? `?search=${encodeURIComponent(search)}` : ""}`),
   });
@@ -72,7 +73,7 @@ export default function SuppliersPage() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {isLoading && [1, 2, 3].map(i => <Skeleton key={i} className="h-28 w-full" />)}
         {isError && (
-          <div className="col-span-full"><EmptyState icon={AlertTriangle} title={t("common.error")} /></div>
+          <div className="col-span-full"><QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} /></div>
         )}
         {!isLoading && !isError && !suppliers?.length && (
           <div className="col-span-full">

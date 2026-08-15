@@ -15,6 +15,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Plus, Pencil, Trash2, Star, FileText } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { TOKEN_KEY } from "@/contexts/AuthContext";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { EmptyState } from "@/components/EmptyState";
 
 interface TemplateConfig {
   showLogo: boolean;
@@ -66,7 +68,7 @@ export default function InvoiceBuilderPage() {
   const queryClient = useQueryClient();
   const [dialogTemplate, setDialogTemplate] = useState<InvoiceTemplate | "new" | null>(null);
 
-  const { data: templates, isLoading } = useQuery<InvoiceTemplate[]>({
+  const { data: templates, isLoading, isError, refetch } = useQuery<InvoiceTemplate[]>({
     queryKey: ["invoice-templates"],
     queryFn: () => authFetch("/invoice-templates"),
   });
@@ -134,11 +136,9 @@ export default function InvoiceBuilderPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {isLoading && [1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
-          {!isLoading && templates?.length === 0 && (
-            <div className="py-12 flex flex-col items-center text-center text-muted-foreground gap-2">
-              <FileText className="h-8 w-8" />
-              <p className="text-sm">{t("invoiceBuilder.empty")}</p>
-            </div>
+          {isError && <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} />}
+          {!isLoading && !isError && templates?.length === 0 && (
+            <EmptyState icon={FileText} title={t("invoiceBuilder.empty")} />
           )}
           {Object.entries(grouped).map(([key, list]) => {
             const [kind, printType] = key.split("|") as [InvoiceTemplate["documentKind"], InvoiceTemplate["printType"]];

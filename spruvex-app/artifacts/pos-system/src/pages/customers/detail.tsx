@@ -9,6 +9,8 @@ import { Link } from "wouter";
 import { ArrowLeft, Phone, Mail, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { useTranslation } from "@/i18n";
+import { QueryErrorState } from "@/components/QueryErrorState";
+import { EmptyState } from "@/components/EmptyState";
 
 const STATUS_COLORS: Record<string, string> = {
   received: "bg-gray-500 text-white",
@@ -26,7 +28,7 @@ export default function CustomerDetailPage() {
   // this table moved off integer ids) — Number(uuid) silently produces NaN
   // and a broken /api/customers/NaN request. Passing the string through
   // (cast to satisfy the stale type) is correct at runtime.
-  const { data: customer, isLoading } = useGetCustomer(id as any, { query: { enabled: !!id } as any });
+  const { data: customer, isLoading, isError, refetch } = useGetCustomer(id as any, { query: { enabled: !!id } as any });
   const { t } = useTranslation();
 
   if (isLoading) {
@@ -40,7 +42,9 @@ export default function CustomerDetailPage() {
     );
   }
 
-  if (!customer) return <div className="text-muted-foreground py-8 text-center">{t("customers.not_found")}</div>;
+  if (isError) return <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} />;
+
+  if (!customer) return <EmptyState icon={Phone} title={t("customers.not_found")} />;
 
   return (
     <div className="space-y-6">
