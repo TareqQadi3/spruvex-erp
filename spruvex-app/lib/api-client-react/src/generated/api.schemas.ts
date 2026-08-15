@@ -744,6 +744,8 @@ export interface Settings {
   setupCompleted?: boolean;
   posTemplate?: SettingsPosTemplate;
   expiryAlertDays?: number;
+  posAutoReturnSeconds?: number;
+  posSuccessSoundEnabled?: boolean;
 }
 
 export type SettingsInputLanguage = typeof SettingsInputLanguage[keyof typeof SettingsInputLanguage];
@@ -807,6 +809,8 @@ export interface SettingsInput {
   setupCompleted?: boolean;
   posTemplate?: SettingsInputPosTemplate;
   expiryAlertDays?: number;
+  posAutoReturnSeconds?: number;
+  posSuccessSoundEnabled?: boolean;
 }
 
 export type GetProductsParams = {

@@ -176,6 +176,13 @@
       "when": 1785489825274,
       "tag": "0024_heavy_blackheart",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1786757023117,
+      "tag": "0025_flippant_penance",
+      "breakpoints": true
     }
   ]
 }

@@ -61,6 +61,7 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
     repairInvoiceType, repairInvoiceSameAsSales,
     openingBalance, fiscalYearStart, fiscalYearEnd, setupCompleted,
     posTemplate, companyNameEn, businessType, expiryAlertDays,
+    posAutoReturnSeconds, posSuccessSoundEnabled,
   } = req.body;
   const currencyValue = nonBlank(currency);
   const languageValue = nonBlank(language);
@@ -104,6 +105,8 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
     ...(setupCompleted !== undefined ? { setupCompleted } : {}),
     ...(posTemplateValue !== undefined ? { posTemplate: posTemplateValue } : {}),
     ...(expiryAlertDays !== undefined ? { expiryAlertDays: Number(expiryAlertDays) } : {}),
+    ...(posAutoReturnSeconds !== undefined ? { posAutoReturnSeconds: Number(posAutoReturnSeconds) } : {}),
+    ...(posSuccessSoundEnabled !== undefined ? { posSuccessSoundEnabled } : {}),
     ...(businessDefaults && repairsModuleEnabled === undefined ? { repairsModuleEnabled: businessDefaults.repairsModuleEnabled } : {}),
     ...(businessDefaults && req.body.ecommerceModuleEnabled === undefined ? { ecommerceModuleEnabled: businessDefaults.ecommerceModuleEnabled } : {}),
     ...(businessDefaults && posTemplateValue === undefined ? { posTemplate: businessDefaults.posTemplate } : {}),

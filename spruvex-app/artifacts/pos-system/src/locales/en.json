@@ -187,7 +187,9 @@
     "gateway_ready": "A payment link will be generated for this sale after checkout and opened for the customer.",
     "gateway_none": "No active payment gateways. Configure Tabby, Tamara, or Moyasar in Settings → Integrations.",
     "gateway_failed": "Could not create the payment link",
-    "gateway_no_link": "The gateway did not return a checkout link. The sale is saved on the customer's balance."
+    "gateway_no_link": "The gateway did not return a checkout link. The sale is saved on the customer's balance.",
+    "auto_return_in": "Returning to POS in {{seconds}}s...",
+    "auto_return_disabled": "Auto-return disabled"
   },
   "repairs": {
     "title": "Repairs",
@@ -760,6 +762,10 @@
     "pos_template_image": "Image — large photo tiles",
     "pos_template_mobile": "Mobile — variants & accessories",
     "pos_template_hint": "Defaults to the recommended layout for your business type.",
+    "pos_auto_return_seconds": "Auto-return to POS (seconds)",
+    "pos_auto_return_seconds_help": "0 disables auto-return after a completed sale.",
+    "pos_success_sound": "Success sound",
+    "pos_success_sound_help": "Play a short chime when a sale completes.",
     "save": "Save Settings",
     "save_success": "Settings saved successfully",
     "save_failed": "Failed to save settings",

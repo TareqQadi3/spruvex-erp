@@ -35,4 +35,6 @@ export interface SettingsInput {
   setupCompleted?: boolean;
   posTemplate?: SettingsInputPosTemplate;
   expiryAlertDays?: number;
+  posAutoReturnSeconds?: number;
+  posSuccessSoundEnabled?: boolean;
 }

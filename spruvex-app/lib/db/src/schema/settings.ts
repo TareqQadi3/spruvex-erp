@@ -43,6 +43,9 @@ export const settingsTable = pgTable("settings", {
   // Days-before-expiry an unexpired batch starts showing up in the expiry
   // alerts endpoint (GET /api/reports/inventory-alerts).
   expiryAlertDays: integer("expiry_alert_days").notNull().default(7),
+  // POS success screen behavior
+  posAutoReturnSeconds: integer("pos_auto_return_seconds").notNull().default(3),
+  posSuccessSoundEnabled: boolean("pos_success_sound_enabled").notNull().default(true),
 }, (table) => [
   uniqueIndex("settings_company_idx").on(table.companyId),
 ]);

@@ -36,6 +36,8 @@ export default function SettingsPage() {
       showBarcode: false, invoiceType: "a4", repairsModuleEnabled: true,
       vatNumber: "", repairInvoiceType: "a4", repairInvoiceSameAsSales: true,
       posTemplate: "list",
+      posAutoReturnSeconds: 3,
+      posSuccessSoundEnabled: true,
     }
   });
 
@@ -61,6 +63,8 @@ export default function SettingsPage() {
         repairInvoiceType: (settings as any).repairInvoiceType ?? "a4",
         repairInvoiceSameAsSales: (settings as any).repairInvoiceSameAsSales ?? true,
         posTemplate: settings.posTemplate ?? "list",
+        posAutoReturnSeconds: settings.posAutoReturnSeconds ?? 3,
+        posSuccessSoundEnabled: settings.posSuccessSoundEnabled ?? true,
       });
       if (settings.logoUrl) setLogoPreview(settings.logoUrl);
     }
@@ -88,6 +92,8 @@ export default function SettingsPage() {
         repairInvoiceType: data.repairInvoiceType,
         repairInvoiceSameAsSales: data.repairInvoiceSameAsSales,
         posTemplate: data.posTemplate,
+        posAutoReturnSeconds: Number(data.posAutoReturnSeconds),
+        posSuccessSoundEnabled: data.posSuccessSoundEnabled,
       }
     }, {
       onSuccess: () => {
@@ -195,6 +201,24 @@ export default function SettingsPage() {
                 }}
               />
               <p className="text-xs text-muted-foreground">{t("settings.pos_template_hint")}</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t("settings.pos_auto_return_seconds")}</Label>
+              <Input type="number" min="0" {...register("posAutoReturnSeconds")} placeholder="3" />
+              <p className="text-xs text-muted-foreground">{t("settings.pos_auto_return_seconds_help")}</p>
+            </div>
+            <div className="flex items-center justify-between gap-4 py-1">
+              <div className="space-y-0.5">
+                <Label>{t("settings.pos_success_sound")}</Label>
+                <p className="text-xs text-muted-foreground">{t("settings.pos_success_sound_help")}</p>
+              </div>
+              <Controller
+                name="posSuccessSoundEnabled"
+                control={control}
+                render={({ field }) => (
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                )}
+              />
             </div>
           </CardContent>
         </Card>

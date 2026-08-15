@@ -1,0 +1,2 @@
+ALTER TABLE "settings" ADD COLUMN "pos_auto_return_seconds" integer DEFAULT 3 NOT NULL;--> statement-breakpoint
+ALTER TABLE "settings" ADD COLUMN "pos_success_sound_enabled" boolean DEFAULT true NOT NULL;

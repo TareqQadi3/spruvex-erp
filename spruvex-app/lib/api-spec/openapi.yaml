@@ -1933,6 +1933,10 @@ components:
           enum: [list, grid, image, mobile]
         expiryAlertDays:
           type: integer
+        posAutoReturnSeconds:
+          type: integer
+        posSuccessSoundEnabled:
+          type: boolean
 
     SettingsInput:
       type: object
@@ -1995,3 +1999,7 @@ components:
           enum: [list, grid, image, mobile]
         expiryAlertDays:
           type: integer
+        posAutoReturnSeconds:
+          type: integer
+        posSuccessSoundEnabled:
+          type: boolean

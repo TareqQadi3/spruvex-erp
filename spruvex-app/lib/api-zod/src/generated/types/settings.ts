@@ -44,4 +44,6 @@ export interface Settings {
   setupCompleted?: boolean;
   posTemplate?: SettingsPosTemplate;
   expiryAlertDays?: number;
+  posAutoReturnSeconds?: number;
+  posSuccessSoundEnabled?: boolean;
 }
