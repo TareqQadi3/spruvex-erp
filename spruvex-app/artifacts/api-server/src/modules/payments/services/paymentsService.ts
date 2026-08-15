@@ -92,7 +92,7 @@ export interface CreateCheckoutServiceInput {
   provider: string;
   source: "sale" | "ecommerce_order";
   sourceId: string;
-  idempotencyKey?: string;
+  idempotencyKey: string;
   successUrl?: string;
   cancelUrl?: string;
 }
@@ -115,9 +115,19 @@ export async function createCheckout(
 
   const settings = await resolveActiveGateway(tenant.companyId, input.provider);
 
-  if (input.idempotencyKey) {
-    const existing = await paymentsRepository.findTransactionByIdempotencyKey(tenant.companyId, input.idempotencyKey);
-    if (existing) return existing;
+  const existing = await paymentsRepository.findTransactionByIdempotencyKey(tenant.companyId, input.idempotencyKey);
+  if (existing) {
+    const payloadMatches =
+      existing.provider === input.provider &&
+      existing.source === input.source &&
+      existing.sourceId === input.sourceId &&
+      existing.amount === (input.source === "sale"
+        ? (await paymentsRepository.findSaleById(tenant.companyId, input.sourceId))?.total
+        : (await paymentsRepository.findEcommerceOrderById(tenant.companyId, input.sourceId))?.total);
+    if (!payloadMatches) {
+      throw AppError.conflict("Idempotency key already used with different payload");
+    }
+    return existing;
   }
 
   let amountCents: number;

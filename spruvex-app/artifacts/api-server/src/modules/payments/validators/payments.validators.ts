@@ -12,7 +12,7 @@ export const createCheckoutSchema = z.object({
   provider: z.enum(PAYMENT_PROVIDERS),
   source: z.enum(["sale", "ecommerce_order"]),
   sourceId: z.string().uuid(),
-  idempotencyKey: z.string().min(8).max(100).optional(),
+  idempotencyKey: z.string().min(8).max(100),
   successUrl: z.string().url().optional(),
   cancelUrl: z.string().url().optional(),
 });
