@@ -21,3 +21,7 @@ export const upsertAddonSchema = z.object({
 export const renewSubscriptionSchema = z.object({
   periodDays: z.number().int().min(1).max(365).default(30),
 });
+
+export const resetUserPasswordSchema = z.object({
+  newPassword: z.string().min(8).max(200),
+});
