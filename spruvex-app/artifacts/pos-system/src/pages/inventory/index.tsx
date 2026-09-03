@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, Edit, History, FolderTree, Layers, AlertTriangle, Scale } from "lucide-react";
+import { Plus, Search, Trash2, Edit, History, FolderTree, Layers, AlertTriangle, Scale, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useRef } from "react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
@@ -94,6 +94,9 @@ export default function InventoryPage() {
           </Link>
           <Link href="/inventory/movements">
             <Button variant="outline"><History className="me-2 h-4 w-4" /> {t("inventory.view_movements")}</Button>
+          </Link>
+          <Link href="/inventory/import">
+            <Button variant="outline"><Upload className="me-2 h-4 w-4" /> {t("inventory.import_products")}</Button>
           </Link>
           {hasPermission("products.create") && (
             <Link href="/inventory/new">
