@@ -13,7 +13,7 @@ import authRouter from "./modules/auth/routes/auth.routes";
 import rolesRouter from "./modules/rbac/routes/roles.routes";
 import permissionsRouter from "./modules/rbac/routes/permissions.routes";
 import userRolesRouter from "./modules/rbac/routes/userRoles.routes";
-import salesRouter from "./modules/pos/routes/sales.routes";
+
 import inventoryRouter from "./modules/inventory/routes/inventory.routes";
 import zatcaRouter from "./modules/zatca/routes/zatca.routes";
 import syncRouter from "./modules/sync/routes/sync.routes";
@@ -125,10 +125,12 @@ app.use("/api/auth", authRouter);
 app.use("/api/roles", rolesRouter);
 app.use("/api/permissions", permissionsRouter);
 app.use("/api", userRolesRouter); // exposes /users/:userId/roles and /user-roles/:id
-// NOTE: /api/sales POST / is shadowed by the legacy sales router (mounted via
-// legacyRouter line 105). This modular router is a partial migration stub —
-// complete it (GET, returns, approve, payments, DELETE) before removing legacy.
-app.use("/api/sales", salesRouter);
+// /api/sales POST / is handled by the legacy sales router (routes/index.ts
+// line 58, mounted via legacyRouter above). The modular POS sales controller
+// (formerly modules/pos/routes/sales.routes.ts) was dead code — shadowed by
+// the legacy mount and never reachable. Removed 2026-09-06 (fix/sales-route-
+// conflict). The POS sale service itself (createSale, stock deduction) is still
+// live — used by ecommerce and offline queue modules.
 app.use("/api/inventory", inventoryRouter);
 app.use("/api/zatca", zatcaRouter);
 app.use("/api/sync", syncRouter);
