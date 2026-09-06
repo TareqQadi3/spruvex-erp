@@ -1,9 +1,13 @@
-import { PLAN_CATALOG, type AddonCode, type Company, type CompanyAddon, type PlanCode } from "@workspace/db";
+import { PLAN_CATALOG, usersTable, type AddonCode, type Company, type CompanyAddon, type PlanCode } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+import { db } from "../../../core/database/connection";
 import { AppError } from "../../../core/errors/AppError";
 import { withTransaction } from "../../../core/database/transaction";
 import { platformRepository } from "../repositories/platformRepository";
 import { subscriptionsRepository } from "../../subscriptions/repositories/subscriptionsRepository";
 import type { CompanySummary } from "../types/platform.types";
+import { recordAuditEvent } from "../../../core/logging/auditLogger";
 
 function parseEnabledModules(raw: string | null): string[] {
   try {
@@ -125,4 +129,33 @@ export async function upsertAddon(
     isActive: input.isActive,
     quantity,
   });
+}
+
+const PLATFORM_RESET_BCRYPT_ROUNDS = 12;
+
+// Fallback password reset for a company user, performed by a platform admin
+// (see platformAdmin.middleware.ts). This is the escape hatch when a company
+// admin is locked out and the email-based OTP flow (forgot-password) is
+// unusable — e.g. the account's email is lost or the mail provider is down.
+// Deliberately cross-tenant and NOT subscription-gated: a suspended company
+// admin may still need recovery. Audited so the action is traceable.
+export async function resetUserPassword(
+  platformUserId: string,
+  targetUserId: string,
+  newPassword: string,
+): Promise<void> {
+  const [user] = await db
+    .select({ id: usersTable.id, companyId: usersTable.companyId, isActive: usersTable.isActive })
+    .from(usersTable)
+    .where(eq(usersTable.id, targetUserId))
+    .limit(1);
+  if (!user || !user.isActive) throw AppError.notFound("User not found");
+
+  const passwordHash = await bcrypt.hash(newPassword, PLATFORM_RESET_BCRYPT_ROUNDS);
+  await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, targetUserId));
+
+  recordAuditEvent(
+    { userId: platformUserId, companyId: user.companyId, role: "platform_admin" },
+    { action: "platform_reset_password", entityType: "user", entityId: targetUserId },
+  );
 }

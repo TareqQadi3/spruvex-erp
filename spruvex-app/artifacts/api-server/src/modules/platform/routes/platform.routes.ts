@@ -9,6 +9,7 @@ import {
   changePlanSchema,
   changeStatusSchema,
   renewSubscriptionSchema,
+  resetUserPasswordSchema,
   upsertAddonSchema,
 } from "../validators/platform.validators";
 import * as platformService from "../services/platformService";
@@ -86,6 +87,23 @@ router.put("/companies/:id/addons/:addonCode", async (req, res, next) => {
     const input = upsertAddonSchema.parse(req.body);
     const addon = await platformService.upsertAddon(companyId, addonCode, input);
     res.status(200).json(buildSuccess(addon));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Platform-admin fallback for a locked-out company admin — direct password
+// reset without the email OTP flow. Cross-tenant and NOT subscription-gated
+// by design (a suspended company may still need recovery). The acting
+// platform admin's identity is taken from the JWT (req.tenant.userId), never
+// from the body, and the action is audited.
+router.post("/users/:id/reset-password", async (req, res, next) => {
+  try {
+    if (!req.tenant) throw AppError.unauthorized();
+    const userId = uuidParamSchema.parse(req.params.id);
+    const { newPassword } = resetUserPasswordSchema.parse(req.body);
+    await platformService.resetUserPassword(req.tenant.userId, userId, newPassword);
+    res.status(200).json(buildSuccess({ reset: true }));
   } catch (err) {
     next(err);
   }
