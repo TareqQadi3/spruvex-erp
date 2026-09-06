@@ -135,3 +135,31 @@
 - **قرار نهاية الشهر** (معايير النجاح): صفر فقدان بيانات، كل تاجر أتم دورة بيع→فاتورة→تقرير بلا تدخل منا، وتاجر واحد على الأقل يقول إنه مستعد **للدفع** — عندها فقط يبدأ التخطيط للتوسّع (بوابة دفع حقيقية، تكامل خارجي أول، فتح التسجيل).
 
 **قناة الدعم خلال التجربة**: واتساب مباشر (استجابة بالساعات) + نظام التذاكر الداخلي بالتوازي لتوثيق كل شيء.
+
+
+---
+
+## Update log (2026-09-03 session)
+
+The known pilot-launch risks below were revisited after the T-01..T-07 work
+landed on separate review branches (see TASKS.md + AGENTS.md). Status reflects
+the code on those branches, pending human review/merge:
+
+- Risk “company admin password recovery” (sec 3b item 2): an email-OTP
+  forgot/reset flow already existed; T-01 added the platform-admin fallback
+  POST /api/platform/users/:id/reset-password plus integration tests.
+- Risk “offline queue never field-tested” (sec 3b item 3): T-06 added
+  integration tests proving no sale loss and no duplicate on reconnect
+  (idempotent clientGeneratedId dedupe), plus an honest findings doc.
+- Risk “products.stock vs warehouse engine divergence” (sec 3b item 5): T-02
+  added an integration test proving products.stock equals the SUM of the
+  per-warehouse stock table after sale+transfer+adjustment.
+- Risk “branch reports show unassigned” (sec 3b item 6): T-04 locked down
+  that sales.branchId is populated from the JWT only and legacy tokens still
+  work.
+- Risk “manual first-merchant product entry” (sec 3b item 1): T-05 added a
+  CSV/XLSX import UI (preview -> validate -> import) in the POS app.
+
+These remain open and unchanged: subscription manual renewal (item 4, by
+design until a payment gateway), no payment gateway yet, staging the PDF/A-3
+decision for ZATCA phase 2.
