@@ -1,7 +1,6 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 import categoriesRouter from "./categories";
-import brandsRouter from "./brands";
 import productsRouter from "./products";
 import cashSessionsRouter from "./cashSessions";
 import repairsRouter from "./repairs";
@@ -51,7 +50,6 @@ router.use("/auth", authRouter);
 // requireAuth, with no subscription-status check at all: a suspended/
 // expired/cancelled company could keep using the whole app freely.
 router.use("/categories", requireAuth, requireActiveSubscription, categoriesRouter);
-router.use("/brands", requireAuth, requireActiveSubscription, brandsRouter);
 router.use("/products", requireAuth, requireActiveSubscription, productsRouter);
 router.use("/customers", requireAuth, requireActiveSubscription, customersRouter);
 router.use("/cash-sessions", requireAuth, requireActiveSubscription, cashSessionsRouter);

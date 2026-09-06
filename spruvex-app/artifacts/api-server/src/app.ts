@@ -31,6 +31,7 @@ import purchaseInvoicesRouter from "./modules/purchases/routes/purchaseInvoices.
 import invoiceTemplatesRouter from "./modules/invoicing/routes/templates.routes";
 import invoicePrintRouter from "./modules/invoicing/routes/print.routes";
 import biRouter from "./modules/bi/routes/bi.routes";
+import brandsRouter from "./modules/brands/routes/brands.routes";
 
 // Only auth + rbac are mounted so far. Every other module under modules/<name>
 // lands here as it's rebuilt against the new core/ + shared/ layer; the
@@ -149,6 +150,8 @@ app.use("/api/bi", biRouter);
 app.use("/api/platform", platformRouter);
 
 app.use("/api/branches", branchesRouter);
+
+app.use("/api/brands", brandsRouter);
 
 // Remaining business module routers are mounted here as each is rebuilt.
 
