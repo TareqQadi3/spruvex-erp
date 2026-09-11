@@ -52,6 +52,7 @@ export * from "./aiSettings";
 export * from "./ecommerceOrders";
 export * from "./paymentGateways";
 export * from "./purchaseInvoices";
+export * from "./vatReturns";
 export * from "./invoiceTemplates";
 export * from "./registrationOtps";
 export * from "./productAttributes";

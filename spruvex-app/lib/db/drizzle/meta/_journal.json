@@ -183,6 +183,13 @@
       "when": 1786757023117,
       "tag": "0025_flippant_penance",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1789147647275,
+      "tag": "0026_misty_mandrill",
+      "breakpoints": true
     }
   ]
 }
