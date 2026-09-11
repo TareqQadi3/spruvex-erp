@@ -51,6 +51,9 @@ export const PERMISSIONS = {
   // Phase 7
   BRANCHES_MANAGE: "branches.manage",
   REPORTS_VIEW_ALL_BRANCHES: "reports.view_all_branches",
+  // T-16 — HR foundation (employees/departments/attendance only, no payroll)
+  HR_VIEW: "hr.view",
+  HR_MANAGE: "hr.manage",
 } as const;
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
