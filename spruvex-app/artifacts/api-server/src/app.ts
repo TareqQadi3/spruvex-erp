@@ -13,7 +13,6 @@ import authRouter from "./modules/auth/routes/auth.routes";
 import rolesRouter from "./modules/rbac/routes/roles.routes";
 import permissionsRouter from "./modules/rbac/routes/permissions.routes";
 import userRolesRouter from "./modules/rbac/routes/userRoles.routes";
-
 import inventoryRouter from "./modules/inventory/routes/inventory.routes";
 import zatcaRouter from "./modules/zatca/routes/zatca.routes";
 import syncRouter from "./modules/sync/routes/sync.routes";

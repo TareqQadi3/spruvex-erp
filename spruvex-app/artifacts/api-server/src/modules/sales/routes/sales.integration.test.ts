@@ -1,6 +1,17 @@
 // Integration test: proves requireActiveSubscription is enforced on the
-// modular zatca and pos/sales routers, and that login + /api/platform are
-// unaffected. Uses the real database, real express app, real JWT signing.
+// live /api/sales path and the modular zatca router, and that login +
+// /api/platform are unaffected. Uses the real database, real express app,
+// real JWT signing.
+//
+// Originally written against modules/pos/routes/sales.routes.ts, which was
+// deleted 2026-09-06 (fix/sales-route-conflict) after live-server testing
+// proved it was dead code — POST /api/sales was always shadowed by this
+// legacy modules/sales/routes/sales.ts router (mounted via routes/index.ts).
+// That legacy router does NOT gate itself internally (unlike zatca below);
+// production applies requireAuth + requireActiveSubscription at the mount
+// site in routes/index.ts (`router.use("/sales", requireAuth,
+// requireActiveSubscription, salesRouter)`). Rewritten here to replicate
+// that exact mount so the test still proves the real production behavior.
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "node:crypto";
 import http from "node:http";
@@ -10,10 +21,10 @@ import { eq, and, isNull } from "drizzle-orm";
 import { db, pool, companiesTable, subscriptionsTable, usersTable, productsTable, paymentMethodsTable, warehousesTable, rolesTable, userRolesTable } from "@workspace/db";
 import { env } from "../../../config/env";
 import { errorHandler } from "../../../core/errors/errorHandler";
-import { AppError } from "../../../core/errors/AppError";
+import { requireAuth, requireActiveSubscription } from "../../../lib/auth-middleware";
 import { ensureGlobalRbacSeeded } from "../../../modules/rbac/services/rbacSeedService";
 import zatcaRouter from "../../../modules/zatca/routes/zatca.routes";
-import salesRouter from "./sales.routes";
+import salesRouter from "./sales";
 
 const companyId = randomUUID();
 let productId: string;
@@ -77,7 +88,7 @@ beforeAll(async () => {
   const app = express();
   app.use(express.json());
   app.use("/api/zatca", zatcaRouter);
-  app.use("/api/sales", salesRouter);
+  app.use("/api/sales", requireAuth, requireActiveSubscription, salesRouter);
   app.use(errorHandler);
 
   await new Promise<void>((resolve) => {
@@ -100,7 +111,7 @@ afterAll(async () => {
   await pool.end();
 });
 
-describe("T-11 subscription gate (zatca + sales routers)", () => {
+describe("T-11 subscription gate (zatca router + live /api/sales mount)", () => {
   it("C1: zatca returns 403 when suspended, 200/404 when active", async () => {
     const uuid = "00000000-0000-0000-0000-000000000000";
     const r1 = await fetch("GET", `/api/zatca/invoices/${uuid}`);
@@ -121,7 +132,7 @@ describe("T-11 subscription gate (zatca + sales routers)", () => {
   });
 
   it("C2: POST /api/sales returns 403 when suspended, 201 when active", async () => {
-    const payload = { items: [{ productId, quantity: 1 }], payments: [{ paymentMethodId, amount: 50 }] };
+    const payload = { items: [{ productId, quantity: 1, unitPrice: 50 }], paymentMethodId, amountPaid: 50 };
     const r1 = await fetch("POST", "/api/sales", payload);
     expect(r1.status).toBe(201);
 
@@ -138,19 +149,18 @@ describe("T-11 subscription gate (zatca + sales routers)", () => {
   });
 
   it("C4: login and /api/platform are structurally unaffected", () => {
-    // The routers under test (zatca, sales) are self-contained module routers
-    // mounted at their own paths. They do not export or mount auth or platform
-    // routes. The subscription gate is scoped to router.use() inside each
-    // module, so no route outside /api/zatca/* and /api/sales/* can be
-    // affected.
-    // Structural proof:
-    // - zatcaRouter has 8 routes, all under /api/zatca
-    // - salesRouter has 1 route (POST /), under /api/sales
-    // - Neither router imports or mounts platform or auth routes
+    // The routers under test are self-contained module routers mounted at
+    // their own paths. They do not export or mount auth or platform routes.
+    // zatca gates itself internally (router.use(...) inside zatca.routes.ts);
+    // sales is gated at the mount site here, replicating routes/index.ts's
+    // per-path `router.use("/sales", requireAuth, requireActiveSubscription,
+    // salesRouter)` exactly (routes/index.ts documents why: a bare, pathless
+    // router.use(mw) previously leaked into sibling mounts like
+    // /api/platform — see the comment there). Either way the gate is scoped
+    // to a specific path, never applied unconditionally ahead of unrelated
+    // routers, so /api/auth and /api/platform can't be affected.
     // Verified by the test app above — only these routers are mounted;
     // /api/auth and /api/platform are not and never reachable via this app.
-    // This is a static + integration proof: the middleware is router-scoped,
-    // and the test app with only these routers proves no leakage.
     expect(zatcaRouter).toBeDefined();
     expect(salesRouter).toBeDefined();
   });
