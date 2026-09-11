@@ -1,21 +1,15 @@
-import { Router } from "express";
-import { db, settingsTable, companiesTable, PERMISSIONS } from "@workspace/db";
-import { eq } from "drizzle-orm";
-import { requirePermission, type AuthedRequest } from "../lib/auth-middleware";
-import { resolveBusinessTypeDefaults } from "../modules/auth/services/businessTypeDefaults";
-import type { BusinessType } from "../modules/auth/types/auth.types";
+import type { Settings } from "@workspace/db";
+import { settingsRepository } from "../repositories/settingsRepository";
+import type { DbClient } from "../../accounting/types";
+import { resolveBusinessTypeDefaults } from "../../auth/services/businessTypeDefaults";
+import type { BusinessType } from "../../auth/types/auth.types";
 
-const router = Router();
+export async function getOrCreateSettings(db: DbClient, companyId: string): Promise<Settings> {
+  const row = await settingsRepository.findByCompanyId(db, companyId);
+  if (!row) return settingsRepository.insertDefault(db, companyId);
 
-async function getOrCreateSettings(companyId: string) {
-  const rows = await db.select().from(settingsTable).where(eq(settingsTable.companyId, companyId)).limit(1);
-  if (rows.length === 0) {
-    const [created] = await db.insert(settingsTable).values({ companyId }).returning();
-    return created;
-  }
   // Self-heal rows that picked up a blank value for a required/enum field from before
   // the PUT route rejected blanks (see `nonBlank` below) — otherwise they'd be stuck forever.
-  const row = rows[0];
   const healed: Record<string, string> = {};
   if (!row.currency?.trim()) healed.currency = "SAR";
   if (!row.invoiceType?.trim()) healed.invoiceType = "a4";
@@ -24,20 +18,25 @@ async function getOrCreateSettings(companyId: string) {
   if (!row.themeColor?.trim()) healed.themeColor = "blue";
   if (!row.shopName?.trim()) healed.shopName = "My Shop";
   if (Object.keys(healed).length === 0) return row;
-  const [fixed] = await db.update(settingsTable).set(healed).where(eq(settingsTable.id, row.id)).returning();
-  return fixed;
+  return settingsRepository.update(db, row.id, healed);
 }
 
-router.get("/", async (req: AuthedRequest, res) => {
-  const settings = await getOrCreateSettings(req.user!.companyId);
-  const [company] = await db.select().from(companiesTable).where(eq(companiesTable.id, req.user!.companyId)).limit(1);
-  res.json({
+export interface SettingsResponse extends Settings {
+  companyName?: string;
+  companyNameEn: string | null;
+  businessType: string | null;
+}
+
+export async function buildSettingsResponse(db: DbClient, companyId: string): Promise<SettingsResponse> {
+  const settings = await getOrCreateSettings(db, companyId);
+  const company = await settingsRepository.findCompany(db, companyId);
+  return {
     ...settings,
     companyName: company?.name,
     companyNameEn: company?.nameEn ?? null,
     businessType: company?.businessType ?? null,
-  });
-});
+  };
+}
 
 // Required, enum-like fields: never let an empty/blank string blank out a saved value.
 // (Previously a stray "" payload for one of these would permanently stick, since
@@ -51,8 +50,10 @@ const BUSINESS_TYPES = new Set([
   "grocery", "cafe", "clothing", "other",
 ]);
 
-router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: AuthedRequest, res) => {
-  const settings = await getOrCreateSettings(req.user!.companyId);
+const POS_TEMPLATES = new Set(["list", "grid", "image", "mobile"]);
+
+export async function updateSettings(db: DbClient, companyId: string, body: Record<string, unknown>): Promise<Settings> {
+  const settings = await getOrCreateSettings(db, companyId);
   const {
     shopName, shopAddress, shopPhone, currency, taxRate,
     lowStockThreshold, receiptFooter, language,
@@ -62,7 +63,7 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
     openingBalance, fiscalYearStart, fiscalYearEnd, setupCompleted,
     posTemplate, companyNameEn, businessType, expiryAlertDays,
     posAutoReturnSeconds, posSuccessSoundEnabled,
-  } = req.body;
+  } = body as Record<string, any>;
   const currencyValue = nonBlank(currency);
   const languageValue = nonBlank(language);
   const invoiceTypeValue = nonBlank(invoiceType);
@@ -71,7 +72,6 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
   const shopNameValue = nonBlank(shopName);
   const companyNameEnValue = nonBlank(companyNameEn);
   const businessTypeValue = typeof businessType === "string" && BUSINESS_TYPES.has(businessType) ? businessType : undefined;
-  const POS_TEMPLATES = new Set(["list", "grid", "image", "mobile"]);
   const posTemplateValue = typeof posTemplate === "string" && POS_TEMPLATES.has(posTemplate) ? posTemplate : undefined;
 
   // Changing the line of business must keep the module gates, module flags
@@ -108,14 +108,14 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
     ...(posAutoReturnSeconds !== undefined ? { posAutoReturnSeconds: Number(posAutoReturnSeconds) } : {}),
     ...(posSuccessSoundEnabled !== undefined ? { posSuccessSoundEnabled } : {}),
     ...(businessDefaults && repairsModuleEnabled === undefined ? { repairsModuleEnabled: businessDefaults.repairsModuleEnabled } : {}),
-    ...(businessDefaults && req.body.ecommerceModuleEnabled === undefined ? { ecommerceModuleEnabled: businessDefaults.ecommerceModuleEnabled } : {}),
+    ...(businessDefaults && body.ecommerceModuleEnabled === undefined ? { ecommerceModuleEnabled: businessDefaults.ecommerceModuleEnabled } : {}),
     ...(businessDefaults && posTemplateValue === undefined ? { posTemplate: businessDefaults.posTemplate } : {}),
   };
   // An empty SET clause is invalid SQL — a request that only touches company
   // fields (e.g. the setup wizard's business-type-only step) legitimately
   // sends nothing here, so just keep the row unchanged instead of updating.
   const updated = Object.keys(settingsPatch).length > 0
-    ? (await db.update(settingsTable).set(settingsPatch).where(eq(settingsTable.id, settings.id)).returning())[0]
+    ? await settingsRepository.update(db, settings.id, settingsPatch)
     : settings;
 
   const companyPatch: Record<string, string> = {};
@@ -125,10 +125,8 @@ router.put("/", requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: Auth
     companyPatch.enabledModules = JSON.stringify(businessDefaults!.enabledModules);
   }
   if (Object.keys(companyPatch).length > 0) {
-    await db.update(companiesTable).set(companyPatch).where(eq(companiesTable.id, req.user!.companyId));
+    await settingsRepository.updateCompany(db, companyId, companyPatch);
   }
 
-  res.json(updated);
-});
-
-export default router;
+  return updated;
+}

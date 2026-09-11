@@ -39,6 +39,7 @@ import paymentMethodsRouter from "./modules/paymentMethods/routes/paymentMethods
 import warehousesRouter from "./modules/warehouses/routes/warehouses.routes";
 import barcodeSearchRouter from "./modules/barcodeSearch/routes/barcodeSearch.routes";
 import categoriesRouter from "./modules/categories/routes/categories.routes";
+import settingsRouter from "./modules/settings/routes/settings.routes";
 
 // Only auth + rbac are mounted so far. Every other module under modules/<name>
 // lands here as it's rebuilt against the new core/ + shared/ layer; the
@@ -169,6 +170,7 @@ app.use("/api/payment-methods", paymentMethodsRouter);
 app.use("/api/warehouses", warehousesRouter);
 app.use("/api/barcode-search", barcodeSearchRouter);
 app.use("/api/categories", categoriesRouter);
+app.use("/api/settings", settingsRouter);
 
 // Remaining business module routers are mounted here as each is rebuilt.
 
