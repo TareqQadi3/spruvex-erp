@@ -15,13 +15,9 @@ import purchasesRouter from "../modules/purchases/routes/purchases";
 import expensesRouter from "../modules/expenses/routes/expenses";
 import vouchersRouter from "../modules/vouchers/routes/vouchers";
 import accountingRouter from "../modules/accounting";
-import onboardingRouter from "./onboarding";
 import importRouter from "./import";
 import exportRouter from "./export";
-import auditLogRouter from "./auditLog";
-import invoiceTemplatesRouter from "./invoiceTemplates";
-import { requireAuth, requireActiveSubscription, requirePermission } from "../lib/auth-middleware";
-import { PERMISSIONS } from "@workspace/db";
+import { requireAuth, requireActiveSubscription } from "../lib/auth-middleware";
 
 const router: IRouter = Router();
 
@@ -54,10 +50,7 @@ router.use("/installment-plans", requireAuth, requireActiveSubscription, install
 router.use("/installment-sales", requireAuth, requireActiveSubscription, installmentSalesRouter);
 router.use("/purchases", requireAuth, requireActiveSubscription, purchasesRouter);
 router.use("/accounting", requireAuth, requireActiveSubscription, accountingRouter);
-router.use("/onboarding", requireAuth, requireActiveSubscription, onboardingRouter);
 router.use("/import", requireAuth, requireActiveSubscription, importRouter);
 router.use("/export", requireAuth, requireActiveSubscription, exportRouter);
-router.use("/audit-log", requireAuth, requireActiveSubscription, requirePermission(PERMISSIONS.AUDIT_VIEW), auditLogRouter);
-router.use("/invoice-templates", requireAuth, requireActiveSubscription, invoiceTemplatesRouter);
 
 export default router;
