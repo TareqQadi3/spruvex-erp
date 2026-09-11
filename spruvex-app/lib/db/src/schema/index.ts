@@ -54,6 +54,7 @@ export * from "./paymentGateways";
 export * from "./purchaseInvoices";
 export * from "./vatReturns";
 export * from "./hr";
+export * from "./affiliates";
 export * from "./invoiceTemplates";
 export * from "./registrationOtps";
 export * from "./productAttributes";

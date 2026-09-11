@@ -14,6 +14,7 @@ import { verifyRegistrationOtp, requestOtp, verifyOtp } from "./otpService";
 import { sendEmail } from "../../../core/email/resendService";
 import { logger } from "../../../core/logging/logger";
 import { accountCreatedEmail } from "../../../core/email/templates";
+import * as affiliateService from "../../affiliates/services/affiliateService";
 import type { AuthResult, LoginInput, RegisterCompanyInput } from "../types/auth.types";
 
 function dashboardUrl(): string {
@@ -173,6 +174,25 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Auth
     } catch (err) {
       logger.warn({ email: input.adminEmail, err: (err as Error).message }, "Welcome email failed to send after signup");
     }
+
+    // Same "never block a successful signup" rule as the welcome email
+    // above — an unknown/mistyped referral code, an inactive affiliate, or
+    // any other reporting failure must not turn a completed registration
+    // into an error response.
+    if (input.referralCode) {
+      try {
+        await affiliateService.reportConversion({
+          referralCode: input.referralCode,
+          product: "erp",
+          externalCompanyId: result.user.companyId,
+          companyName: input.companyName,
+          planCode: input.plan,
+        });
+      } catch (err) {
+        logger.warn({ referralCode: input.referralCode, companyId: result.user.companyId, err: (err as Error).message }, "Affiliate conversion reporting failed after signup");
+      }
+    }
+
     return result;
   });
 }

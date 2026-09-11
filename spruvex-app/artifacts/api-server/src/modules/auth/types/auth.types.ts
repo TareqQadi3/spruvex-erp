@@ -18,6 +18,7 @@ export interface RegisterCompanyInput {
   businessType: BusinessType;
   plan: CompanyPlan;
   otp: string;
+  referralCode?: string;
 }
 
 export interface LoginInput {

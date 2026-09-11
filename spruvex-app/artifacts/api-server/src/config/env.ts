@@ -49,4 +49,10 @@ export const env = {
   // on in an environment where a proxy you control is guaranteed to be the
   // sole entry point.
   trustProxy: process.env.TRUST_PROXY === "true",
+  // T-15 — shared secret for the cross-product affiliate-conversion webhook
+  // (modules/affiliates/routes/affiliateWebhooks.routes.ts). Unset means the
+  // endpoint rejects every request (fail-closed), not fail-open — a missing
+  // secret must never be silently treated as "no auth required" on an
+  // endpoint that writes commission-owing records.
+  affiliateReportApiKey: process.env.AFFILIATE_REPORT_API_KEY,
 };

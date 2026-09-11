@@ -55,6 +55,8 @@ import reportsRouter from "./modules/reports/routes/reports.routes";
 import departmentsRouter from "./modules/hr/routes/departments.routes";
 import employeesRouter from "./modules/hr/routes/employees.routes";
 import attendanceRouter from "./modules/hr/routes/attendance.routes";
+import affiliatesRouter from "./modules/affiliates/routes/affiliates.routes";
+import affiliateWebhooksRouter from "./modules/affiliates/routes/affiliateWebhooks.routes";
 
 // Only auth + rbac are mounted so far. Every other module under modules/<name>
 // lands here as it's rebuilt against the new core/ + shared/ layer; the
@@ -173,6 +175,8 @@ app.use("/api/bi", biRouter);
 // usersTable.isPlatformAdmin directly), not enforceTenantIsolation. See
 // modules/platform/middleware/platformAdmin.middleware.ts.
 app.use("/api/platform", platformRouter);
+app.use("/api/platform", affiliatesRouter);
+app.use("/api/affiliates", affiliateWebhooksRouter);
 
 app.use("/api/branches", branchesRouter);
 

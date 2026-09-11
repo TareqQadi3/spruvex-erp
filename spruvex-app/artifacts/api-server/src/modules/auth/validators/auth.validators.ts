@@ -15,6 +15,11 @@ export const registerCompanySchema = z.object({
   ]),
   plan: z.enum(["erp_business", "restaurant", "sales_repair", "enterprise"]),
   otp: z.string().trim().regex(/^\d{6}$/, "OTP must be a 6-digit code"),
+  // T-15 — optional affiliate referral code carried through from the
+  // marketing site's signup link (e.g. ?ref=CODE). Reporting the resulting
+  // conversion is best-effort and never blocks registration — see
+  // authService.registerCompany.
+  referralCode: z.string().trim().max(50).optional(),
 });
 
 export const forgotPasswordSchema = z.object({
