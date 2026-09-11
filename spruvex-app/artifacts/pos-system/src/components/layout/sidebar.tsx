@@ -167,7 +167,11 @@ export function Sidebar() {
           })}
 
           {NAV_GROUPS.map((group) => {
-            const items = group.items.filter(item => !user || canAccess(user.role, item.href));
+            const items = group.items.filter(item => {
+              if (user && !canAccess(user.role, item.href)) return false;
+              if (item.href === "/ecommerce/orders" && settings?.ecommerceModuleEnabled === false) return false;
+              return true;
+            });
             if (items.length === 0) return null;
             return (
               <div key={group.key}>

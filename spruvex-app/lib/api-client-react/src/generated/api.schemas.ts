@@ -731,6 +731,7 @@ export interface Settings {
   showBarcode?: boolean;
   invoiceType?: SettingsInvoiceType;
   repairsModuleEnabled?: boolean;
+  ecommerceModuleEnabled?: boolean;
   /** @nullable */
   vatNumber?: string | null;
   themeColor?: string;
@@ -799,6 +800,7 @@ export interface SettingsInput {
   showBarcode?: boolean;
   invoiceType?: SettingsInputInvoiceType;
   repairsModuleEnabled?: boolean;
+  ecommerceModuleEnabled?: boolean;
   vatNumber?: string | null;
   themeColor?: string;
   repairInvoiceType?: SettingsInputRepairInvoiceType;

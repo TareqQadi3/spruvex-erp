@@ -51,6 +51,7 @@ const MOVEMENT_BADGE: Record<string, string> = {
   adjustment_out: "bg-red-500/10 text-red-700 border-red-500/20",
   transfer_in: "bg-blue-500/10 text-blue-600 border-blue-500/20",
   transfer_out: "bg-orange-500/10 text-orange-700 border-orange-500/20",
+  purchase: "bg-green-500/10 text-green-700 border-green-500/20",
   sale: "bg-purple-500/10 text-purple-600 border-purple-500/20",
   sale_return: "bg-teal-500/10 text-teal-600 border-teal-500/20",
   reservation: "bg-yellow-500/10 text-yellow-700 border-yellow-500/20",
@@ -305,7 +306,7 @@ export default function StockMovementsPage() {
                 <TableRow><TableCell colSpan={6}><EmptyState icon={ArrowLeftRight} title={t("inventory_movements.no_movements")} description={t("inventory_movements.no_movements_desc")} /></TableCell></TableRow>
               ) : (
                 movements.map((m) => {
-                  const isPositive = ["adjustment_in", "transfer_in", "sale_return", "reservation_release"].includes(m.movementType);
+                  const isPositive = ["adjustment_in", "transfer_in", "purchase", "sale_return", "reservation_release"].includes(m.movementType);
                   return (
                     <TableRow key={m.id}>
                       <TableCell className="text-sm text-muted-foreground">{format(new Date(m.createdAt), "MMM d, yyyy HH:mm")}</TableCell>

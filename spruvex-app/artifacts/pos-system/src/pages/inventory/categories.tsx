@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useGetCategories, useCreateCategory, useUpdateCategory, useDeleteCategory,
   getGetCategoriesQueryKey,
@@ -37,6 +37,7 @@ export default function CategoriesPage() {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
 
+  const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CategoryRow | null>(null);
   const [name, setName] = useState("");
@@ -46,6 +47,21 @@ export default function CategoriesPage() {
 
   const mainCategories = (categories ?? []).filter((c: any) => !c.parentId);
   const subCategoriesOf = (id: string) => (categories ?? []).filter((c: any) => c.parentId === id);
+
+  const matchesSearch = (c: any) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return c.name?.toLowerCase().includes(q) || c.nameEn?.toLowerCase().includes(q);
+  };
+
+  const visibleMainCategories = useMemo(
+    () => mainCategories.filter((main: any) => matchesSearch(main) || subCategoriesOf(main.id).some(matchesSearch)),
+    [categories, search],
+  );
+  const visibleSubCategoriesOf = (id: string) => {
+    const subs = subCategoriesOf(id);
+    return search.trim() ? subs.filter(matchesSearch) : subs;
+  };
 
   const openCreate = (forParentId?: string) => {
     setEditing(null);
@@ -106,6 +122,13 @@ export default function CategoriesPage() {
         </Button>
       </div>
 
+      <Input
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder={t("inventory.categories_search_placeholder")}
+        className="max-w-sm"
+      />
+
       <Card>
         <CardContent className="p-0 divide-y">
           {isLoading && <Loading />}
@@ -113,10 +136,17 @@ export default function CategoriesPage() {
           {!isLoading && !isError && mainCategories.length === 0 && (
             <EmptyState icon={FolderTree} title={t("inventory.no_categories")} />
           )}
-          {mainCategories.map((main: any) => (
+          {!isLoading && !isError && mainCategories.length > 0 && visibleMainCategories.length === 0 && (
+            <EmptyState icon={FolderTree} title={t("inventory.no_categories_match")} />
+          )}
+          {visibleMainCategories.map((main: any) => (
             <div key={main.id}>
               <div className="flex items-center gap-3 p-4">
-                <FolderTree className="h-4 w-4 text-primary shrink-0" />
+                {main.imageUrl ? (
+                  <img src={main.imageUrl} alt={main.name} className="h-8 w-8 rounded object-cover shrink-0" />
+                ) : (
+                  <FolderTree className="h-4 w-4 text-primary shrink-0" />
+                )}
                 <span className="font-medium flex-1">{main.name}</span>
                 <Button variant="ghost" size="sm" onClick={() => openCreate(main.id)}>
                   <Plus className="h-3.5 w-3.5 me-1" /> {t("inventory.add_sub_category")}
@@ -128,9 +158,13 @@ export default function CategoriesPage() {
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
-              {subCategoriesOf(main.id).map((sub: any) => (
+              {visibleSubCategoriesOf(main.id).map((sub: any) => (
                 <div key={sub.id} className="flex items-center gap-3 py-2.5 ps-10 pe-4 bg-muted/20">
-                  <Folder className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  {sub.imageUrl ? (
+                    <img src={sub.imageUrl} alt={sub.name} className="h-6 w-6 rounded object-cover shrink-0" />
+                  ) : (
+                    <Folder className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  )}
                   <span className="text-sm flex-1">{sub.name}</span>
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(sub)}>
                     <Pencil className="h-3 w-3" />

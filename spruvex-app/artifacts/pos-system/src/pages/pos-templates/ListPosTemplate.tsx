@@ -8,6 +8,7 @@ import { useTranslation } from "@/i18n";
 import { PosLayoutShell } from "../pos-shared/PosLayoutShell";
 import { CartPanel } from "../pos-shared/CartPanel";
 import { PosSuccessScreen } from "../pos-shared/PosSuccessScreen";
+import { AddonPickerDialog, type SelectedAddon } from "../pos-shared/AddonPickerDialog";
 import { usePosSale } from "../pos-shared/usePosSale";
 import { usePosCustomerSelection } from "../pos-shared/usePosCustomerSelection";
 import type { CartItem, PosCustomer, CheckoutPayload } from "../pos-shared/types";
@@ -18,6 +19,7 @@ export default function ListPosTemplate() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [editingPrice, setEditingPrice] = useState<number | null>(null);
   const [editPriceValue, setEditPriceValue] = useState("");
+  const [addonProduct, setAddonProduct] = useState<{ id: number; name: string; sellingPrice: number; includesTax: boolean } | null>(null);
 
   const { data: products } = useGetProducts(search ? { search } : undefined);
   const { data: settings } = useGetSettings();
@@ -35,23 +37,38 @@ export default function ListPosTemplate() {
 
   const sale = usePosSale({ getItemFinalPrice, getItemTotal });
 
-  const addToCart = (product: any) => {
+  // Mirrors Grid/Image/Mobile's addLineToCart — lines with different
+  // addons/notes must stay separate; only an identical no-customization tap
+  // merges into an existing identical line.
+  const addLineToCart = (product: { id: number; name: string; sellingPrice: any; includesTax?: boolean }, addons: SelectedAddon[] = [], notes = "") => {
+    const addonTotal = addons.reduce((s, a) => s + a.priceDelta, 0);
+    const effectivePrice = Number(product.sellingPrice) + addonTotal;
     setCart(prev => {
-      const existing = prev.find(i => i.productId === product.id);
-      if (existing) {
-        return prev.map(i =>
-          i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i
-        );
+      if (addons.length === 0 && !notes) {
+        const existing = prev.find(i => i.productId === product.id && (!i.selectedAddons || i.selectedAddons.length === 0) && !i.itemNotes);
+        if (existing) {
+          return prev.map(i => i === existing ? { ...i, quantity: i.quantity + 1 } : i);
+        }
       }
       return [...prev, {
         productId: product.id,
         productName: product.name,
-        unitPrice: Number(product.sellingPrice),
+        unitPrice: effectivePrice,
         includesTax: product.includesTax ?? false,
         quantity: 1,
         discount: 0,
+        selectedAddons: addons.length > 0 ? addons : undefined,
+        itemNotes: notes || undefined,
       }];
     });
+  };
+
+  const handleProductTap = (product: any) => {
+    if (product.hasAddons) {
+      setAddonProduct({ id: product.id, name: product.name, sellingPrice: product.sellingPrice, includesTax: product.includesTax });
+    } else {
+      addLineToCart(product);
+    }
   };
 
   const updateQuantity = (productId: number, delta: number) => {
@@ -117,6 +134,7 @@ export default function ListPosTemplate() {
   }
 
   return (
+    <>
     <PosLayoutShell
       productArea={
         <>
@@ -135,7 +153,7 @@ export default function ListPosTemplate() {
                 <Card
                   key={product.id}
                   className="cursor-pointer hover:border-primary transition-colors select-none"
-                  onClick={() => addToCart(product)}
+                  onClick={() => handleProductTap(product)}
                 >
                   <CardContent className="p-3 flex flex-col items-center text-center gap-2">
                     <div className="h-14 w-14 bg-muted rounded-lg flex items-center justify-center">
@@ -192,5 +210,18 @@ export default function ListPosTemplate() {
         />
       }
     />
+    {addonProduct && (
+      <AddonPickerDialog
+        productId={addonProduct.id}
+        productName={addonProduct.name}
+        open={!!addonProduct}
+        onClose={() => setAddonProduct(null)}
+        onConfirm={(addons, notes) => {
+          addLineToCart(addonProduct, addons, notes);
+          setAddonProduct(null);
+        }}
+      />
+    )}
+    </>
   );
 }

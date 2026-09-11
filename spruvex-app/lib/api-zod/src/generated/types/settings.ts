@@ -31,6 +31,7 @@ export interface Settings {
   showBarcode?: boolean;
   invoiceType?: SettingsInvoiceType;
   repairsModuleEnabled?: boolean;
+  ecommerceModuleEnabled?: boolean;
   /** @nullable */
   vatNumber?: string | null;
   themeColor?: string;
