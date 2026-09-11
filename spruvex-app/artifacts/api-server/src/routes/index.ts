@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
-import reportsRouter from "./reports";
 import authRouter from "./auth";
 import customersRouter from "../modules/customers/routes/customers";
 import suppliersRouter from "../modules/suppliers/routes/suppliers";
@@ -31,7 +30,6 @@ router.use("/auth", authRouter);
 router.use("/customers", requireAuth, requireActiveSubscription, customersRouter);
 router.use("/sales", requireAuth, requireActiveSubscription, salesRouter);
 router.use("/expenses", requireAuth, requireActiveSubscription, expensesRouter);
-router.use("/reports", requireAuth, requireActiveSubscription, reportsRouter);
 router.use("/suppliers", requireAuth, requireActiveSubscription, suppliersRouter);
 router.use("/vouchers", requireAuth, requireActiveSubscription, vouchersRouter);
 router.use("/purchases", requireAuth, requireActiveSubscription, purchasesRouter);
