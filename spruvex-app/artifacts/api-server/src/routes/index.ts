@@ -23,7 +23,6 @@ import barcodeSearchRouter from "./barcodeSearch";
 import onboardingRouter from "./onboarding";
 import orderTypesRouter from "./orderTypes";
 import productAttributesRouter from "./productAttributes";
-import unitsRouter from "./units";
 import deviceModelsRouter from "./deviceModels";
 import importRouter from "./import";
 import exportRouter from "./export";
@@ -71,7 +70,6 @@ router.use("/barcode-search", requireAuth, requireActiveSubscription, barcodeSea
 router.use("/onboarding", requireAuth, requireActiveSubscription, onboardingRouter);
 router.use("/order-types", requireAuth, requireActiveSubscription, orderTypesRouter);
 router.use("/product-attributes", requireAuth, requireActiveSubscription, productAttributesRouter);
-router.use("/units", requireAuth, requireActiveSubscription, unitsRouter);
 router.use("/device-models", requireAuth, requireActiveSubscription, deviceModelsRouter);
 router.use("/import", requireAuth, requireActiveSubscription, importRouter);
 router.use("/export", requireAuth, requireActiveSubscription, exportRouter);
