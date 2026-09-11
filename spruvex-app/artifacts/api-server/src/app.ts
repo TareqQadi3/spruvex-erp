@@ -50,6 +50,7 @@ import installmentSalesRouter from "./modules/installmentSales/routes/installmen
 import cashSessionsRouter from "./modules/cashSessions/routes/cashSessions.routes";
 import productsRouter from "./modules/products/routes/products.routes";
 import repairsRouter from "./modules/repairs/routes/repairs.routes";
+import repairPartsRouter from "./modules/repairParts/routes/repairParts.routes";
 
 // Only auth + rbac are mounted so far. Every other module under modules/<name>
 // lands here as it's rebuilt against the new core/ + shared/ layer; the
@@ -191,6 +192,7 @@ app.use("/api/installment-sales", installmentSalesRouter);
 app.use("/api/cash-sessions", cashSessionsRouter);
 app.use("/api/products", productsRouter);
 app.use("/api/repairs", repairsRouter);
+app.use("/api/repair-parts", repairPartsRouter);
 
 // Remaining business module routers are mounted here as each is rebuilt.
 

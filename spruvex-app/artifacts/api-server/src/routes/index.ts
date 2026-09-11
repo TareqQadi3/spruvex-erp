@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
-import repairPartsRouter from "./repairParts";
 import reportsRouter from "./reports";
 import authRouter from "./auth";
 import customersRouter from "../modules/customers/routes/customers";
@@ -31,7 +30,6 @@ router.use("/auth", authRouter);
 // expired/cancelled company could keep using the whole app freely.
 router.use("/customers", requireAuth, requireActiveSubscription, customersRouter);
 router.use("/sales", requireAuth, requireActiveSubscription, salesRouter);
-router.use("/repair-parts", requireAuth, requireActiveSubscription, repairPartsRouter);
 router.use("/expenses", requireAuth, requireActiveSubscription, expensesRouter);
 router.use("/reports", requireAuth, requireActiveSubscription, reportsRouter);
 router.use("/suppliers", requireAuth, requireActiveSubscription, suppliersRouter);
