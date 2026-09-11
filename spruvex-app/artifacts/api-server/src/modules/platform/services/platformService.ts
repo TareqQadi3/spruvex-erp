@@ -6,7 +6,7 @@ import { AppError } from "../../../core/errors/AppError";
 import { withTransaction } from "../../../core/database/transaction";
 import { platformRepository } from "../repositories/platformRepository";
 import { subscriptionsRepository } from "../../subscriptions/repositories/subscriptionsRepository";
-import type { CompanySummary } from "../types/platform.types";
+import type { CompanySummary, MarketingSummary } from "../types/platform.types";
 import { recordAuditEvent } from "../../../core/logging/auditLogger";
 
 function parseEnabledModules(raw: string | null): string[] {
@@ -42,6 +42,31 @@ async function toCompanySummary(company: Company): Promise<CompanySummary> {
 export async function listCompanies(): Promise<CompanySummary[]> {
   const companies = await platformRepository.listCompanies();
   return Promise.all(companies.map(toCompanySummary));
+}
+
+function countBy<T>(items: T[], key: (item: T) => string): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const item of items) {
+    const k = key(item);
+    counts[k] = (counts[k] ?? 0) + 1;
+  }
+  return counts;
+}
+
+// T-14 — deliberately reuses listCompanies() (the same per-company
+// subscription resolution /api/platform/companies already exposes) rather
+// than a separate query path, so this summary can never drift from what
+// the platform-admin company list itself shows. No per-company field
+// (name, id, contact info) leaves this function — only counts.
+export async function getMarketingSummary(): Promise<MarketingSummary> {
+  const companies = await listCompanies();
+  return {
+    totalCompanies: companies.length,
+    companiesByStatus: countBy(companies, (c) => c.status),
+    companiesBySubscriptionStatus: countBy(companies, (c) => c.subscriptionStatus ?? "none"),
+    companiesByPlan: countBy(companies, (c) => c.plan),
+    companiesByBusinessType: countBy(companies, (c) => c.businessType ?? "unspecified"),
+  };
 }
 
 export async function getCompany(companyId: string): Promise<CompanySummary> {

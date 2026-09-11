@@ -28,6 +28,15 @@ const router: IRouter = Router();
 // company by design (see platformAdmin.middleware.ts).
 router.use(requireAuth, requirePlatformAdmin);
 
+router.get("/marketing-summary", async (_req, res, next) => {
+  try {
+    const summary = await platformService.getMarketingSummary();
+    res.status(200).json(buildSuccess(summary));
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/companies", async (_req, res, next) => {
   try {
     const companies = await platformService.listCompanies();

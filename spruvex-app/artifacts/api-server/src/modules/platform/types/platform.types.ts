@@ -15,3 +15,18 @@ export interface CompanySummary {
   currentPeriodEnd: Date | null;
   activeAddonCodes: string[];
 }
+
+// T-14 — aggregated-only, no per-company identity or sensitive detail
+// (no names, no ids, no contact info): counts and breakdowns for a
+// unified marketing dashboard (spruvex-s) that must never touch a
+// product's own database directly, per the full-isolation rule between
+// ERP and SpruVex R. Built on the same per-company resolution
+// listCompanies() already uses (single source of truth for "latest
+// subscription"), just aggregated instead of returned per-row.
+export interface MarketingSummary {
+  totalCompanies: number;
+  companiesByStatus: Record<string, number>;
+  companiesBySubscriptionStatus: Record<string, number>;
+  companiesByPlan: Record<string, number>;
+  companiesByBusinessType: Record<string, number>;
+}
