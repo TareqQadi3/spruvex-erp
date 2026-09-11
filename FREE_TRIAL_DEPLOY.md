@@ -19,10 +19,12 @@
 
 ## الخطوة 2 — نشر SpruVex R (نظام المطاعم)
 
+> **تحديث**: SpruVex R انتقل إلى مستودعه الخاص المستقل: [`spruvex-r`](https://github.com/TareqQadi3/spruvex-r) — لم يعد جزءاً من `spruvex-erp`.
+
 1. من لوحة Render: **New +** → **Blueprint**.
-2. اختر مستودع `spruvex-erp` → المسار `spruvex-r/render.yaml` (أو أدخل الفرع `main` إذا طُلب).
+2. اختر مستودع `spruvex-r` (المستقل) → المسار `render.yaml` بجذر المستودع.
 3. اضغط **Apply**. سيبني Render 6 خدمات (API + 5 واجهات) + قاعدة بيانات.
-4. **الخطوة اليدوية الوحيدة** (خاصة بأمان عزل بيانات المطاعم): افتح `spruvex-r/docs/RENDER_DEPLOY.md` في المستودع واتبع "الخطوة 3" بالضبط (إنشاء دور قاعدة بيانات ثانٍ `spruvex_app`) — أو أرسل لي رابط اتصال قاعدة البيانات (External Connection String) من لوحة Render وسأنفّذها نيابة عنك.
+4. **الخطوة اليدوية الوحيدة** (خاصة بأمان عزل بيانات المطاعم): افتح `docs/RENDER_DEPLOY.md` في مستودع `spruvex-r` واتبع "الخطوة 3" بالضبط (إنشاء دور قاعدة بيانات ثانٍ `spruvex_app`) — أو أرسل لي رابط اتصال قاعدة البيانات (External Connection String) من لوحة Render وسأنفّذها نيابة عنك.
 5. بعدها من تبويب **Shell** لخدمة `spruvex-r-api`:
    ```bash
    node_modules/.bin/prisma migrate deploy
