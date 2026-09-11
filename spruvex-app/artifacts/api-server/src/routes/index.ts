@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
-import categoriesRouter from "./categories";
 import productsRouter from "./products";
 import cashSessionsRouter from "./cashSessions";
 import repairsRouter from "./repairs";
@@ -17,7 +16,6 @@ import purchasesRouter from "../modules/purchases/routes/purchases";
 import expensesRouter from "../modules/expenses/routes/expenses";
 import vouchersRouter from "../modules/vouchers/routes/vouchers";
 import accountingRouter from "../modules/accounting";
-import barcodeSearchRouter from "./barcodeSearch";
 import onboardingRouter from "./onboarding";
 import importRouter from "./import";
 import exportRouter from "./export";
@@ -43,7 +41,6 @@ router.use("/auth", authRouter);
 // caught live before this shipped. Previously each line only had
 // requireAuth, with no subscription-status check at all: a suspended/
 // expired/cancelled company could keep using the whole app freely.
-router.use("/categories", requireAuth, requireActiveSubscription, categoriesRouter);
 router.use("/products", requireAuth, requireActiveSubscription, productsRouter);
 router.use("/customers", requireAuth, requireActiveSubscription, customersRouter);
 router.use("/cash-sessions", requireAuth, requireActiveSubscription, cashSessionsRouter);
@@ -59,7 +56,6 @@ router.use("/installment-plans", requireAuth, requireActiveSubscription, install
 router.use("/installment-sales", requireAuth, requireActiveSubscription, installmentSalesRouter);
 router.use("/purchases", requireAuth, requireActiveSubscription, purchasesRouter);
 router.use("/accounting", requireAuth, requireActiveSubscription, accountingRouter);
-router.use("/barcode-search", requireAuth, requireActiveSubscription, barcodeSearchRouter);
 router.use("/onboarding", requireAuth, requireActiveSubscription, onboardingRouter);
 router.use("/import", requireAuth, requireActiveSubscription, importRouter);
 router.use("/export", requireAuth, requireActiveSubscription, exportRouter);
