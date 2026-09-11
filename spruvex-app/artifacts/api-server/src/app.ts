@@ -43,6 +43,8 @@ import settingsRouter from "./modules/settings/routes/settings.routes";
 import onboardingRouter from "./modules/onboarding/routes/onboarding.routes";
 import auditLogRouter from "./modules/auditLog/routes/auditLog.routes";
 import legacyInvoiceTemplatesRouter from "./modules/invoiceTemplates/routes/invoiceTemplates.routes";
+import importRouter from "./modules/importExport/routes/import.routes";
+import exportRouter from "./modules/importExport/routes/export.routes";
 
 // Only auth + rbac are mounted so far. Every other module under modules/<name>
 // lands here as it's rebuilt against the new core/ + shared/ layer; the
@@ -177,6 +179,8 @@ app.use("/api/settings", settingsRouter);
 app.use("/api/onboarding", onboardingRouter);
 app.use("/api/audit-log", auditLogRouter);
 app.use("/api/invoice-templates", legacyInvoiceTemplatesRouter);
+app.use("/api/import", importRouter);
+app.use("/api/export", exportRouter);
 
 // Remaining business module routers are mounted here as each is rebuilt.
 
