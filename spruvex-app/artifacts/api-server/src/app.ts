@@ -36,6 +36,7 @@ import orderTypesRouter from "./modules/orderTypes/routes/orderTypes.routes";
 import deviceModelsRouter from "./modules/deviceModels/routes/deviceModels.routes";
 import productAttributesRouter from "./modules/productAttributes/routes/productAttributes.routes";
 import paymentMethodsRouter from "./modules/paymentMethods/routes/paymentMethods.routes";
+import warehousesRouter from "./modules/warehouses/routes/warehouses.routes";
 
 // Only auth + rbac are mounted so far. Every other module under modules/<name>
 // lands here as it's rebuilt against the new core/ + shared/ layer; the
@@ -163,6 +164,7 @@ app.use("/api/order-types", orderTypesRouter);
 app.use("/api/device-models", deviceModelsRouter);
 app.use("/api/product-attributes", productAttributesRouter);
 app.use("/api/payment-methods", paymentMethodsRouter);
+app.use("/api/warehouses", warehousesRouter);
 
 // Remaining business module routers are mounted here as each is rebuilt.
 
