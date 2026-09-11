@@ -6,8 +6,6 @@ import repairsRouter from "./repairs";
 import repairPartsRouter from "./repairParts";
 import reportsRouter from "./reports";
 import authRouter from "./auth";
-import installmentPlansRouter from "./installmentPlans";
-import installmentSalesRouter from "./installmentSales";
 import customersRouter from "../modules/customers/routes/customers";
 import suppliersRouter from "../modules/suppliers/routes/suppliers";
 import salesRouter from "../modules/sales/routes/sales";
@@ -44,8 +42,6 @@ router.use("/expenses", requireAuth, requireActiveSubscription, expensesRouter);
 router.use("/reports", requireAuth, requireActiveSubscription, reportsRouter);
 router.use("/suppliers", requireAuth, requireActiveSubscription, suppliersRouter);
 router.use("/vouchers", requireAuth, requireActiveSubscription, vouchersRouter);
-router.use("/installment-plans", requireAuth, requireActiveSubscription, installmentPlansRouter);
-router.use("/installment-sales", requireAuth, requireActiveSubscription, installmentSalesRouter);
 router.use("/purchases", requireAuth, requireActiveSubscription, purchasesRouter);
 router.use("/accounting", requireAuth, requireActiveSubscription, accountingRouter);
 

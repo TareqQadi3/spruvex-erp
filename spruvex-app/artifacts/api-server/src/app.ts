@@ -45,6 +45,8 @@ import auditLogRouter from "./modules/auditLog/routes/auditLog.routes";
 import legacyInvoiceTemplatesRouter from "./modules/invoiceTemplates/routes/invoiceTemplates.routes";
 import importRouter from "./modules/importExport/routes/import.routes";
 import exportRouter from "./modules/importExport/routes/export.routes";
+import installmentPlansRouter from "./modules/installmentPlans/routes/installmentPlans.routes";
+import installmentSalesRouter from "./modules/installmentSales/routes/installmentSales.routes";
 
 // Only auth + rbac are mounted so far. Every other module under modules/<name>
 // lands here as it's rebuilt against the new core/ + shared/ layer; the
@@ -181,6 +183,8 @@ app.use("/api/audit-log", auditLogRouter);
 app.use("/api/invoice-templates", legacyInvoiceTemplatesRouter);
 app.use("/api/import", importRouter);
 app.use("/api/export", exportRouter);
+app.use("/api/installment-plans", installmentPlansRouter);
+app.use("/api/installment-sales", installmentSalesRouter);
 
 // Remaining business module routers are mounted here as each is rebuilt.
 
