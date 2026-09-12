@@ -1275,6 +1275,8 @@
   "productImport": {
     "title": "Import Products",
     "back": "Back to Inventory",
+    "advanced_tool_hint": "Need column mapping, duplicate handling, or to export data too?",
+    "advanced_tool_link": "Use the advanced import/export tool",
     "upload_title": "Upload Products File",
     "upload_desc": "Upload a CSV or Excel (.xlsx) file with your products. Column headers can be in English or Arabic.",
     "accepted_formats": "Supported formats: CSV, XLSX",

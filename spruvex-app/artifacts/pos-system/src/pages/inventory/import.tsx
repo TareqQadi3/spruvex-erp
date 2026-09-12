@@ -256,6 +256,13 @@ export default function ProductImportPage() {
         <h1 className="text-2xl font-bold tracking-tight">{t("productImport.title")}</h1>
       </div>
 
+      <p className="text-sm text-muted-foreground">
+        {t("productImport.advanced_tool_hint")}{" "}
+        <Link href="/settings/import-export" className="text-primary underline underline-offset-2">
+          {t("productImport.advanced_tool_link")}
+        </Link>
+      </p>
+
       {step === "upload" && (
         <Card>
           <CardHeader>
