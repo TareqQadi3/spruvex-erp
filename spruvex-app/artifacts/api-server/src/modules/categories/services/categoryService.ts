@@ -30,6 +30,23 @@ export async function createCategory(db: DbClient, companyId: string, input: Cre
 
 export async function updateCategory(db: DbClient, companyId: string, id: string, input: UpdateCategoryInput): Promise<Category | undefined> {
   if (input.parentId === id) throw new SelfParentError("A category cannot be its own parent");
+  // Nesting is now unlimited depth (categories.tsx lets any category be
+  // picked as a parent, not just top-level ones) — a direct self-parent
+  // check alone no longer catches a deeper cycle (e.g. reparenting A under
+  // its own grandchild). Walk the proposed parent's ancestor chain in memory
+  // (one query, tree depths are always small) and reject if `id` appears in it.
+  if (input.parentId) {
+    const all = await categoryRepository.list(db, companyId);
+    const parentById = new Map(all.map((c) => [c.id, c.parentId]));
+    let cursor: string | null | undefined = input.parentId;
+    const seen = new Set<string>();
+    while (cursor) {
+      if (cursor === id) throw new SelfParentError("A category cannot be moved under one of its own sub-categories");
+      if (seen.has(cursor)) break; // already-corrupt data — don't loop forever
+      seen.add(cursor);
+      cursor = parentById.get(cursor);
+    }
+  }
   const changes: CategoryUpdate = { name: input.name, description: input.description };
   if (input.nameEn !== undefined) changes.nameEn = input.nameEn;
   if (input.parentId !== undefined) changes.parentId = input.parentId;

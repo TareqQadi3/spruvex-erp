@@ -47,8 +47,11 @@ export default function CategoriesPage() {
   const [parentId, setParentId] = useState<string>("__none__");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-  const mainCategories = (categories ?? []).filter((c: any) => !c.parentId);
-  const subCategoriesOf = (id: string) => (categories ?? []).filter((c: any) => c.parentId === id);
+  // Unlimited-depth tree (categories.parentId is a plain self-reference with
+  // no depth limit in the schema) — any category can be a parent, not just
+  // top-level ones.
+  const rootCategories = (categories ?? []).filter((c: any) => !c.parentId);
+  const childrenOf = (id: string) => (categories ?? []).filter((c: any) => c.parentId === id);
 
   const matchesSearch = (c: any) => {
     const q = search.trim().toLowerCase();
@@ -56,14 +59,21 @@ export default function CategoriesPage() {
     return c.name?.toLowerCase().includes(q) || c.nameEn?.toLowerCase().includes(q);
   };
 
-  const visibleMainCategories = useMemo(
-    () => mainCategories.filter((main: any) => matchesSearch(main) || subCategoriesOf(main.id).some(matchesSearch)),
+  // A node stays visible if it matches, or any descendant (at any depth) matches.
+  const subtreeMatches = (cat: any): boolean =>
+    matchesSearch(cat) || childrenOf(cat.id).some(subtreeMatches);
+
+  const visibleRootCategories = useMemo(
+    () => rootCategories.filter(subtreeMatches),
     [categories, search],
   );
-  const visibleSubCategoriesOf = (id: string) => {
-    const subs = subCategoriesOf(id);
-    return search.trim() ? subs.filter(matchesSearch) : subs;
-  };
+  const visibleChildrenOf = (id: string) => childrenOf(id).filter(subtreeMatches);
+
+  // Every descendant id of `id` (used to keep the parent picker from letting
+  // a category become its own descendant's child — backend rejects this too,
+  // but excluding it from the list is a clearer UX than a save-time error).
+  const descendantIds = (id: string): string[] =>
+    childrenOf(id).flatMap((c: any) => [c.id, ...descendantIds(c.id)]);
 
   const openCreate = (forParentId?: string) => {
     setEditing(null);
@@ -137,58 +147,24 @@ export default function CategoriesPage() {
         <CardContent className="p-0 divide-y">
           {isLoading && <Loading />}
           {isError && <QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} />}
-          {!isLoading && !isError && mainCategories.length === 0 && (
+          {!isLoading && !isError && rootCategories.length === 0 && (
             <EmptyState icon={FolderTree} title={t("inventory.no_categories")} />
           )}
-          {!isLoading && !isError && mainCategories.length > 0 && visibleMainCategories.length === 0 && (
+          {!isLoading && !isError && rootCategories.length > 0 && visibleRootCategories.length === 0 && (
             <EmptyState icon={FolderTree} title={t("inventory.no_categories_match")} />
           )}
-          {visibleMainCategories.map((main: any) => (
-            <div key={main.id}>
-              <div className="flex items-center gap-3 p-4">
-                {main.imageUrl ? (
-                  <img src={main.imageUrl} alt={main.name} className="h-8 w-8 rounded object-cover shrink-0" />
-                ) : (
-                  <FolderTree className="h-4 w-4 text-primary shrink-0" />
-                )}
-                <span className="font-medium flex-1">{main.name}</span>
-                {hasPermission("products.create") && (
-                  <Button variant="ghost" size="sm" onClick={() => openCreate(main.id)}>
-                    <Plus className="h-3.5 w-3.5 me-1" /> {t("inventory.add_sub_category")}
-                  </Button>
-                )}
-                {hasPermission("products.update") && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(main)}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-                {hasPermission("products.delete") && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(main.id)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-              </div>
-              {visibleSubCategoriesOf(main.id).map((sub: any) => (
-                <div key={sub.id} className="flex items-center gap-3 py-2.5 ps-10 pe-4 bg-muted/20">
-                  {sub.imageUrl ? (
-                    <img src={sub.imageUrl} alt={sub.name} className="h-6 w-6 rounded object-cover shrink-0" />
-                  ) : (
-                    <Folder className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  )}
-                  <span className="text-sm flex-1">{sub.name}</span>
-                  {hasPermission("products.update") && (
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(sub)}>
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                  )}
-                  {hasPermission("products.delete") && (
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(sub.id)}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
+          {visibleRootCategories.map((cat: any) => (
+            <CategoryNode
+              key={cat.id}
+              category={cat}
+              depth={0}
+              childrenOf={visibleChildrenOf}
+              hasPermission={hasPermission}
+              onAddChild={openCreate}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+              t={t}
+            />
           ))}
         </CardContent>
       </Card>
@@ -196,7 +172,9 @@ export default function CategoriesPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? t("common.edit") : t("inventory.add_main_category")}</DialogTitle>
+            <DialogTitle>
+              {editing ? t("common.edit") : parentId !== "__none__" ? t("inventory.add_sub_category") : t("inventory.add_main_category")}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
@@ -230,9 +208,15 @@ export default function CategoriesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">{t("inventory.no_parent")}</SelectItem>
-                  {mainCategories.filter((c: any) => c.id !== editing?.id).map((c: any) => (
-                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
-                  ))}
+                  {(categories ?? [])
+                    .filter((c: any) => {
+                      if (!editing) return true;
+                      // Can't become its own parent, nor its own descendant's child (would create a cycle).
+                      return c.id !== editing.id && !descendantIds(editing.id).includes(c.id);
+                    })
+                    .map((c: any) => (
+                      <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -249,6 +233,65 @@ export default function CategoriesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function CategoryNode({ category, depth, childrenOf, hasPermission, onAddChild, onEdit, onDelete, t }: {
+  category: any;
+  depth: number;
+  childrenOf: (id: string) => any[];
+  hasPermission: (perm: string) => boolean;
+  onAddChild: (parentId: string) => void;
+  onEdit: (cat: CategoryRow) => void;
+  onDelete: (id: string) => void;
+  t: (key: string) => string;
+}) {
+  const children = childrenOf(category.id);
+  const isRoot = depth === 0;
+  return (
+    <div>
+      <div
+        className={depth === 0 ? "flex items-center gap-3 p-4" : "flex items-center gap-3 py-2.5 pe-4 bg-muted/20"}
+        style={depth > 0 ? { paddingInlineStart: `${1.5 + depth * 1.5}rem` } : undefined}
+      >
+        {category.imageUrl ? (
+          <img src={category.imageUrl} alt={category.name} className={isRoot ? "h-8 w-8 rounded object-cover shrink-0" : "h-6 w-6 rounded object-cover shrink-0"} />
+        ) : isRoot ? (
+          <FolderTree className="h-4 w-4 text-primary shrink-0" />
+        ) : (
+          <Folder className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        )}
+        <span className={isRoot ? "font-medium flex-1" : "text-sm flex-1"}>{category.name}</span>
+        {hasPermission("products.create") && (
+          <Button variant="ghost" size="sm" onClick={() => onAddChild(category.id)}>
+            <Plus className="h-3.5 w-3.5 me-1" /> {t("inventory.add_sub_category")}
+          </Button>
+        )}
+        {hasPermission("products.update") && (
+          <Button variant="ghost" size="icon" className={isRoot ? "h-8 w-8" : "h-7 w-7"} onClick={() => onEdit(category)}>
+            <Pencil className={isRoot ? "h-3.5 w-3.5" : "h-3 w-3"} />
+          </Button>
+        )}
+        {hasPermission("products.delete") && (
+          <Button variant="ghost" size="icon" className={isRoot ? "h-8 w-8 text-destructive" : "h-7 w-7 text-destructive"} onClick={() => onDelete(category.id)}>
+            <Trash2 className={isRoot ? "h-3.5 w-3.5" : "h-3 w-3"} />
+          </Button>
+        )}
+      </div>
+      {children.map((child) => (
+        <CategoryNode
+          key={child.id}
+          category={child}
+          depth={depth + 1}
+          childrenOf={childrenOf}
+          hasPermission={hasPermission}
+          onAddChild={onAddChild}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          t={t}
+        />
+      ))}
     </div>
   );
 }
