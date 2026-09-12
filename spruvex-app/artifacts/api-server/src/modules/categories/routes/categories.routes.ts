@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
-import { db } from "@workspace/db";
+import { db, PERMISSIONS } from "@workspace/db";
 import { requireAuth } from "../../../core/middleware/auth.middleware";
 import { enforceTenantIsolation } from "../../../core/middleware/tenant.middleware";
 import { requireActiveSubscription } from "../../../core/middleware/subscription.middleware";
+import { requirePermission } from "../../../core/middleware/permission.middleware";
 import * as categoryService from "../services/categoryService";
 
 const router: IRouter = Router();
@@ -13,7 +14,11 @@ router.get("/", async (req, res) => {
   res.json(await categoryService.listCategories(db, req.tenant!.companyId));
 });
 
-router.post("/", async (req, res) => {
+// Same catalog-management permissions as products.routes.ts (categories are
+// product metadata, not a separate domain) — until this fix these mutation
+// routes had no permission check at all, so any authenticated user in the
+// company could create/edit/delete categories regardless of role.
+router.post("/", requirePermission(PERMISSIONS.PRODUCTS_CREATE), async (req, res) => {
   try {
     const category = await categoryService.createCategory(db, req.tenant!.companyId, req.body);
     res.status(201).json(category);
@@ -22,7 +27,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", requirePermission(PERMISSIONS.PRODUCTS_UPDATE), async (req, res) => {
   try {
     const category = await categoryService.updateCategory(db, req.tenant!.companyId, req.params.id as string, req.body);
     if (!category) {
@@ -39,7 +44,7 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requirePermission(PERMISSIONS.PRODUCTS_DELETE), async (req, res) => {
   const result = await categoryService.deleteCategory(db, req.tenant!.companyId, req.params.id as string);
   if (result === "has-products") {
     res.status(409).json({ error: "This category still has products assigned to it" });

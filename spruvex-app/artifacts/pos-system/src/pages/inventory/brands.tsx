@@ -16,6 +16,7 @@ import { useTranslation } from "@/i18n";
 import { MediaUploadField } from "@/components/MediaUploadField";
 import { QueryErrorState } from "@/components/QueryErrorState";
 import { EmptyState } from "@/components/EmptyState";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { TranslateButton } from "@/components/TranslateButton";
 
@@ -28,6 +29,7 @@ export default function BrandsPage() {
   const createBrand = useCreateBrand();
   const updateBrand = useUpdateBrand();
   const deleteBrand = useDeleteBrand();
+  const { has: hasPermission } = usePermissions();
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -94,9 +96,11 @@ export default function BrandsPage() {
           </Link>
           <h1 className="text-2xl font-bold tracking-tight">{t("brands.title")}</h1>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="me-2 h-4 w-4" /> {t("brands.add")}
-        </Button>
+        {hasPermission("products.create") && (
+          <Button onClick={openCreate}>
+            <Plus className="me-2 h-4 w-4" /> {t("brands.add")}
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -124,12 +128,16 @@ export default function BrandsPage() {
               <div className="text-sm font-medium text-center truncate w-full">{b.name}</div>
               {"nameEn" in b && (b as any).nameEn && <div className="text-[10px] text-muted-foreground text-center truncate w-full">{(b as any).nameEn}</div>}
               <div className="flex gap-1">
-                <Button variant="ghost" size="icon" onClick={() => openEdit(b)}>
-                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => handleDelete(b)}>
-                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                </Button>
+                {hasPermission("products.update") && (
+                  <Button variant="ghost" size="icon" onClick={() => openEdit(b)}>
+                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
+                )}
+                {hasPermission("products.delete") && (
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(b)}>
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  </Button>
+                )}
               </div>
             </div>
           ))}

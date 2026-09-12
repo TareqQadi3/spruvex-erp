@@ -18,6 +18,7 @@ import { MediaUploadField } from "@/components/MediaUploadField";
 import { QueryErrorState } from "@/components/QueryErrorState";
 import { EmptyState } from "@/components/EmptyState";
 import { Loading } from "@/components/Loading";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { TranslateButton } from "@/components/TranslateButton";
 
@@ -36,6 +37,7 @@ export default function CategoriesPage() {
   const deleteCategory = useDeleteCategory();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const { has: hasPermission } = usePermissions();
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -117,9 +119,11 @@ export default function CategoriesPage() {
           <h1 className="text-2xl font-bold tracking-tight">{t("inventory.categories_title")}</h1>
           <p className="text-sm text-muted-foreground">{t("inventory.categories_desc")}</p>
         </div>
-        <Button className="ms-auto" onClick={() => openCreate()}>
-          <Plus className="me-2 h-4 w-4" /> {t("inventory.add_main_category")}
-        </Button>
+        {hasPermission("products.create") && (
+          <Button className="ms-auto" onClick={() => openCreate()}>
+            <Plus className="me-2 h-4 w-4" /> {t("inventory.add_main_category")}
+          </Button>
+        )}
       </div>
 
       <Input
@@ -148,15 +152,21 @@ export default function CategoriesPage() {
                   <FolderTree className="h-4 w-4 text-primary shrink-0" />
                 )}
                 <span className="font-medium flex-1">{main.name}</span>
-                <Button variant="ghost" size="sm" onClick={() => openCreate(main.id)}>
-                  <Plus className="h-3.5 w-3.5 me-1" /> {t("inventory.add_sub_category")}
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(main)}>
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(main.id)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                {hasPermission("products.create") && (
+                  <Button variant="ghost" size="sm" onClick={() => openCreate(main.id)}>
+                    <Plus className="h-3.5 w-3.5 me-1" /> {t("inventory.add_sub_category")}
+                  </Button>
+                )}
+                {hasPermission("products.update") && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(main)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                {hasPermission("products.delete") && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(main.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
               {visibleSubCategoriesOf(main.id).map((sub: any) => (
                 <div key={sub.id} className="flex items-center gap-3 py-2.5 ps-10 pe-4 bg-muted/20">
@@ -166,12 +176,16 @@ export default function CategoriesPage() {
                     <Folder className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   )}
                   <span className="text-sm flex-1">{sub.name}</span>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(sub)}>
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(sub.id)}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  {hasPermission("products.update") && (
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(sub)}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
+                  {hasPermission("products.delete") && (
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(sub.id)}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>

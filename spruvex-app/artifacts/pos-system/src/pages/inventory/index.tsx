@@ -208,11 +208,13 @@ export default function InventoryPage() {
                             <Layers className="h-4 w-4 text-muted-foreground" />
                           </Button>
                         </Link>
-                        <Link href={`/inventory/${product.id}/edit`}>
-                          <Button variant="ghost" size="icon" title={t("common.edit")}>
-                            <Edit className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                        </Link>
+                        {hasPermission("products.update") && (
+                          <Link href={`/inventory/${product.id}/edit`}>
+                            <Button variant="ghost" size="icon" title={t("common.edit")}>
+                              <Edit className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </Link>
+                        )}
                         {hasPermission("products.delete") && (
                           <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
