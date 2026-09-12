@@ -7,6 +7,15 @@ export type BusinessType =
   | "grocery"
   | "cafe"
   | "clothing"
+  // Phones-and-repair-in-one-shop is how this activity is actually run and
+  // named in this market — distinct from picking "electronics" and then
+  // separately discovering/enabling the repairs module afterward.
+  | "mobile_repair"
+  // Project/service-based (site work, supply-and-install, no cash-register
+  // point of sale) — needs isService-heavy defaults, not a retail POS screen.
+  | "contracting"
+  | "pharmacy"
+  | "salon_beauty"
   | "other";
 export type CompanyPlan = "erp_business" | "restaurant" | "sales_repair" | "enterprise";
 

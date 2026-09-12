@@ -21,22 +21,29 @@ import {
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
+  HardHat,
+  Pill,
+  Scissors,
 } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth, type AuthUser } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
-type BusinessType = "retail" | "electronics" | "grocery" | "restaurant" | "cafe" | "clothing" | "repair" | "ecommerce" | "other";
+type BusinessType = "retail" | "electronics" | "grocery" | "restaurant" | "cafe" | "clothing" | "repair" | "ecommerce" | "mobile_repair" | "contracting" | "pharmacy" | "salon_beauty" | "other";
 type CompanyPlan = "erp_business" | "restaurant" | "sales_repair" | "enterprise";
 
 const BUSINESS_TYPES: { value: BusinessType; icon: typeof Store }[] = [
   { value: "retail", icon: ShoppingBag },
   { value: "electronics", icon: Smartphone },
+  { value: "mobile_repair", icon: Wrench },
   { value: "grocery", icon: Store },
+  { value: "pharmacy", icon: Pill },
   { value: "restaurant", icon: UtensilsCrossed },
   { value: "cafe", icon: Coffee },
   { value: "clothing", icon: Shirt },
+  { value: "salon_beauty", icon: Scissors },
+  { value: "contracting", icon: HardHat },
   { value: "repair", icon: Wrench },
   { value: "ecommerce", icon: ShoppingCart },
   { value: "other", icon: MoreHorizontal },

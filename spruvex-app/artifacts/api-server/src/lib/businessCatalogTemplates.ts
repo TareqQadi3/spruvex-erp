@@ -75,6 +75,43 @@ const TEMPLATES: Record<BusinessType, CatalogTemplateCategory> = {
       { name: "قميص قطن", nameEn: "Cotton Shirt", sellingPrice: 99, skuSuffix: "SHIRT" },
     ],
   },
+  mobile_repair: {
+    name: "جوالات وصيانة",
+    nameEn: "Mobile Phones & Repair",
+    subcategory: { name: "اكسسوارات", nameEn: "Accessories" },
+    products: [
+      { name: "جراب حماية", nameEn: "Phone Case", sellingPrice: 25, skuSuffix: "CASE" },
+      // Demonstrates the isService capability from day one — a repair shop's
+      // most common line item is a service, not a stocked accessory.
+      { name: "خدمة تركيب شاشة", nameEn: "Screen Replacement Service", sellingPrice: 100, skuSuffix: "SCRNSVC", isService: true },
+    ],
+  },
+  contracting: {
+    name: "أعمال المقاولات",
+    nameEn: "Contracting Works",
+    subcategory: { name: "خدمات عامة", nameEn: "General Services" },
+    products: [
+      { name: "معاينة وتقييم الموقع", nameEn: "Site Survey & Assessment", sellingPrice: 200, skuSuffix: "SURVEY", isService: true },
+      { name: "أعمال توريد وتركيب", nameEn: "Supply & Installation Works", sellingPrice: 500, skuSuffix: "INSTALL", isService: true },
+    ],
+  },
+  pharmacy: {
+    name: "أدوية بدون وصفة",
+    nameEn: "Over-the-Counter Medicine",
+    subcategory: { name: "مسكنات", nameEn: "Pain Relief" },
+    products: [
+      { name: "باراسيتامول 500مج", nameEn: "Paracetamol 500mg", sellingPrice: 8, skuSuffix: "PARA500" },
+    ],
+  },
+  salon_beauty: {
+    name: "خدمات الشعر",
+    nameEn: "Hair Services",
+    subcategory: { name: "قص وتصفيف", nameEn: "Cut & Style" },
+    products: [
+      { name: "قص شعر", nameEn: "Haircut", sellingPrice: 40, skuSuffix: "HAIRCUT", isService: true },
+      { name: "صبغة شعر", nameEn: "Hair Coloring", sellingPrice: 120, skuSuffix: "COLOR", isService: true },
+    ],
+  },
   ecommerce: {
     name: "منتجات عامة",
     nameEn: "General Products",

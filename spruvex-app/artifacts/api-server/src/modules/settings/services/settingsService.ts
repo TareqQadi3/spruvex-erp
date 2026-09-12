@@ -47,7 +47,8 @@ function nonBlank(value: unknown): string | undefined {
 
 const BUSINESS_TYPES = new Set([
   "retail", "electronics", "repair", "restaurant", "ecommerce",
-  "grocery", "cafe", "clothing", "other",
+  "grocery", "cafe", "clothing", "mobile_repair", "contracting",
+  "pharmacy", "salon_beauty", "other",
 ]);
 
 const POS_TEMPLATES = new Set(["list", "grid", "image", "mobile"]);

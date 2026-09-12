@@ -74,6 +74,46 @@ const BUSINESS_TYPE_DEFAULTS: Record<BusinessType, BusinessTypeDefaults> = {
     ecommerceModuleEnabled: false,
     posTemplate: "image",
   },
+  // Phone shop that also repairs phones — one activity as this market
+  // actually runs it, not "electronics" + a separately-discovered toggle.
+  // Same defaults as electronics, named for how the merchant thinks of their
+  // own business at signup.
+  mobile_repair: {
+    enabledModules: ["pos", "inventory", "customers", "repairs"],
+    repairsModuleEnabled: true,
+    ecommerceModuleEnabled: false,
+    posTemplate: "mobile",
+  },
+  // Contracting/construction — project- and service-based, not a
+  // cash-register retail floor. No variant picker, no product grid; the POS
+  // screen is really just a fast way to enter a service/material line onto
+  // an invoice. Seeded catalog (businessCatalogTemplates.ts) leans on
+  // isService line items instead of stocked goods.
+  contracting: {
+    enabledModules: ["pos", "inventory", "customers"],
+    repairsModuleEnabled: false,
+    ecommerceModuleEnabled: false,
+    posTemplate: "list",
+  },
+  // Pharmacy — fast barcode/search entry like grocery, but expiry-tracking
+  // (productBatches/expiryDate, already in the schema) matters far more here
+  // than for a generic retailer; no POS-template distinction needed for that,
+  // it's a per-product data-entry habit, not a screen-layout concern.
+  pharmacy: {
+    enabledModules: ["pos", "inventory", "customers"],
+    repairsModuleEnabled: false,
+    ecommerceModuleEnabled: false,
+    posTemplate: "list",
+  },
+  // Salon / beauty center — a service menu (haircut, manicure...), not
+  // physical stock; grid fits a visual service-picker the same way it fits a
+  // restaurant's menu.
+  salon_beauty: {
+    enabledModules: ["pos", "inventory", "customers"],
+    repairsModuleEnabled: false,
+    ecommerceModuleEnabled: false,
+    posTemplate: "grid",
+  },
   // Generic fallback for anything that doesn't fit the named types — same
   // defaults as retail, kept as its own key so the signup wizard's "Other"
   // option doesn't have to misuse "retail"'s label.
