@@ -1233,6 +1233,18 @@
     "batch_created": "Batch added",
     "batch_create_failed": "Failed to add batch"
   },
+  "images": {
+    "tab_images": "Photo Gallery",
+    "gallery_title": "Product Photos",
+    "primary_badge": "Primary",
+    "set_primary": "Set as primary",
+    "add_to_gallery": "Add to Gallery",
+    "added": "Photo added",
+    "add_failed": "Failed to add photo",
+    "deleted": "Photo removed",
+    "delete_failed": "Failed to remove photo",
+    "update_failed": "Failed to update photo"
+  },
   "importExport": {
     "title": "Import & Export Data",
     "import_title": "Import",

@@ -235,6 +235,26 @@ export const productService = {
     return productRepository.insertBatch(db, companyId, productId, data);
   },
 
+  // ─── Image gallery ──────────────────────────────────────────────────
+
+  async listImages(db: DbClient, companyId: string, productId: string) {
+    return productRepository.listImages(db, companyId, productId);
+  },
+
+  async addImage(db: DbClient, companyId: string, productId: string, data: { url: string; isPrimary?: boolean }) {
+    if (data.isPrimary) await productRepository.clearPrimaryImage(db, companyId, productId);
+    return productRepository.insertImage(db, companyId, productId, data);
+  },
+
+  async updateImage(db: DbClient, companyId: string, productId: string, imageId: string, changes: { sortOrder?: number; isPrimary?: boolean }) {
+    if (changes.isPrimary) await productRepository.clearPrimaryImage(db, companyId, productId);
+    return productRepository.updateImage(db, companyId, imageId, changes);
+  },
+
+  async removeImage(db: DbClient, companyId: string, imageId: string) {
+    return productRepository.deleteImage(db, companyId, imageId);
+  },
+
   // ─── Addon groups ─────────────────────────────────────────────────
 
   async listAddonGroups(db: DbClient, companyId: string, productId: string) {

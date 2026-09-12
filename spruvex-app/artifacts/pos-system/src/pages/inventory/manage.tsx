@@ -12,6 +12,7 @@ import { VariantsTab } from "./components/VariantsTab";
 import { RelatedProductsTab } from "./components/RelatedProductsTab";
 import { UnitsTab } from "./components/UnitsTab";
 import { BatchesTab } from "./components/BatchesTab";
+import { ImagesTab } from "./components/ImagesTab";
 
 async function authFetch(path: string, options: RequestInit = {}) {
   const token = localStorage.getItem(TOKEN_KEY);
@@ -54,6 +55,7 @@ export default function ManageProductPage() {
           <TabsTrigger value="related">{t("variants.tab_related")}</TabsTrigger>
           <TabsTrigger value="units">{t("units.tab_units")}</TabsTrigger>
           <TabsTrigger value="batches">{t("units.tab_batches")}</TabsTrigger>
+          <TabsTrigger value="images">{t("images.tab_images")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="variants" className="space-y-4">
@@ -70,6 +72,10 @@ export default function ManageProductPage() {
 
         <TabsContent value="batches" className="space-y-4">
           <BatchesTab productId={productId} authFetch={authFetch} />
+        </TabsContent>
+
+        <TabsContent value="images" className="space-y-4">
+          <ImagesTab productId={productId} authFetch={authFetch} />
         </TabsContent>
       </Tabs>
     </div>

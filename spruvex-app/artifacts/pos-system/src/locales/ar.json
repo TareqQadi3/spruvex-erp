@@ -1233,6 +1233,18 @@
     "batch_created": "تم إضافة الدفعة",
     "batch_create_failed": "فشل إضافة الدفعة"
   },
+  "images": {
+    "tab_images": "معرض الصور",
+    "gallery_title": "صور المنتج",
+    "primary_badge": "الرئيسية",
+    "set_primary": "تعيين كصورة رئيسية",
+    "add_to_gallery": "إضافة إلى المعرض",
+    "added": "تمت إضافة الصورة",
+    "add_failed": "فشل إضافة الصورة",
+    "deleted": "تم حذف الصورة",
+    "delete_failed": "فشل حذف الصورة",
+    "update_failed": "فشل تحديث الصورة"
+  },
   "importExport": {
     "title": "استيراد وتصدير البيانات",
     "import_title": "استيراد",

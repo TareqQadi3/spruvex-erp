@@ -178,6 +178,35 @@ router.post("/:id/batches", async (req, res) => {
   res.status(201).json(batch);
 });
 
+// ─── Image gallery ───────────────────────────────────────────────────
+
+router.get("/:id/images", async (req, res) => {
+  const images = await productService.listImages(db, req.tenant!.companyId, req.params.id as string);
+  res.json(images);
+});
+
+router.post("/:id/images", async (req, res) => {
+  const { url, isPrimary } = req.body;
+  if (!url) { res.status(400).json({ error: "url is required" }); return; }
+  const image = await productService.addImage(db, req.tenant!.companyId, req.params.id as string, { url, isPrimary });
+  res.status(201).json(image);
+});
+
+router.put("/:id/images/:imageId", async (req, res) => {
+  const { sortOrder, isPrimary } = req.body;
+  const changes: { sortOrder?: number; isPrimary?: boolean } = {};
+  if (sortOrder !== undefined) changes.sortOrder = Number(sortOrder);
+  if (isPrimary !== undefined) changes.isPrimary = Boolean(isPrimary);
+  const image = await productService.updateImage(db, req.tenant!.companyId, req.params.id as string, req.params.imageId as string, changes);
+  if (!image) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(image);
+});
+
+router.delete("/:id/images/:imageId", async (req, res) => {
+  await productService.removeImage(db, req.tenant!.companyId, req.params.imageId as string);
+  res.status(204).send();
+});
+
 // ─── Addon groups ────────────────────────────────────────────────────
 
 router.get("/:id/addon-groups", async (req, res) => {

@@ -3,7 +3,7 @@ import {
   productsTable, categoriesTable, suppliersTable,
   productAddonGroupsTable, productAddonOptionsTable,
   productRelatedProductsTable, productUnitsTable, unitsTable,
-  productBatchesTable,
+  productBatchesTable, productImagesTable,
 } from "@workspace/db";
 import type { DbClient } from "../../accounting/types";
 
@@ -277,6 +277,49 @@ export const productRepository = {
       expiryDate: data.expiryDate ?? null,
     }).returning();
     return batch;
+  },
+
+  // ─── Image gallery ──────────────────────────────────────────────────
+
+  async listImages(db: DbClient, companyId: string, productId: string) {
+    return db.select().from(productImagesTable)
+      .where(and(eq(productImagesTable.companyId, companyId), eq(productImagesTable.productId, productId)))
+      .orderBy(productImagesTable.sortOrder);
+  },
+
+  async findImage(db: DbClient, companyId: string, imageId: string) {
+    const [image] = await db.select().from(productImagesTable)
+      .where(and(eq(productImagesTable.id, imageId), eq(productImagesTable.companyId, companyId)));
+    return image;
+  },
+
+  async insertImage(db: DbClient, companyId: string, productId: string, data: { url: string; sortOrder?: number; isPrimary?: boolean }) {
+    const [image] = await db.insert(productImagesTable).values({
+      companyId, productId,
+      url: data.url,
+      sortOrder: data.sortOrder ?? 0,
+      isPrimary: data.isPrimary ?? false,
+    }).returning();
+    return image;
+  },
+
+  async updateImage(db: DbClient, companyId: string, imageId: string, changes: { sortOrder?: number; isPrimary?: boolean }) {
+    const [image] = await db.update(productImagesTable).set(changes)
+      .where(and(eq(productImagesTable.id, imageId), eq(productImagesTable.companyId, companyId)))
+      .returning();
+    return image;
+  },
+
+  // Only one image per product may be primary — called before setting a new
+  // one so the invariant holds without a DB-level partial unique index.
+  async clearPrimaryImage(db: DbClient, companyId: string, productId: string) {
+    await db.update(productImagesTable).set({ isPrimary: false })
+      .where(and(eq(productImagesTable.companyId, companyId), eq(productImagesTable.productId, productId)));
+  },
+
+  async deleteImage(db: DbClient, companyId: string, imageId: string) {
+    await db.delete(productImagesTable)
+      .where(and(eq(productImagesTable.id, imageId), eq(productImagesTable.companyId, companyId)));
   },
 
   // ─── Addon groups ──────────────────────────────────────────────────
