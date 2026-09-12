@@ -33,4 +33,27 @@ router.get("/modules/:moduleCode/status", async (req, res, next) => {
   }
 });
 
+// Merchant-facing billing summary — lets the frontend render a trial
+// countdown / expired-plan banner without needing platform-admin access.
+// trialEndsAt/currentPeriodEnd were already computed by getEffectiveState for
+// every other gate in this module; this just exposes the same read to the
+// tenant that owns it.
+router.get("/status", async (req, res, next) => {
+  try {
+    if (!req.tenant) throw AppError.unauthorized();
+    const state = await getEffectiveState(req.tenant.companyId);
+    // Flat body (not the buildSuccess envelope used by /modules/:moduleCode/status
+    // above) — this route is consumed by the generated frontend client via
+    // openapi.yaml, which expects the schema directly, same as /settings.
+    res.status(200).json({
+      status: state.status,
+      plan: state.company.plan,
+      trialEndsAt: state.subscription?.trialEndsAt ?? null,
+      currentPeriodEnd: state.subscription?.currentPeriodEnd ?? null,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

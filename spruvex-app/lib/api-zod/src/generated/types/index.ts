@@ -85,6 +85,8 @@ export * from './settingsInvoiceType';
 export * from './settingsLanguage';
 export * from './settingsPosTemplate';
 export * from './settingsRepairInvoiceType';
+export * from './subscriptionStatusResponse';
+export * from './subscriptionStatusResponseStatus';
 export * from './topProductItem';
 export * from './trialBalanceLine';
 export * from './trialBalanceLineAccountType';

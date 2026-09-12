@@ -1,4 +1,4 @@
-import { useGetProducts, useDeleteProduct, useGetSettings, getGetProductsQueryKey } from "@workspace/api-client-react";
+import { useGetProducts, useDeleteProduct, useGetSettings, useGetCategories, getGetProductsQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Trash2, Edit, History, FolderTree, Layers, AlertTriangle, Scale, Upload } from "lucide-react";
@@ -28,7 +30,14 @@ interface InventoryAlerts {
 
 export default function InventoryPage() {
   const [search, setSearch] = useState("");
-  const { data: products, isLoading, isError, refetch } = useGetProducts(search ? { search } : undefined);
+  const [categoryId, setCategoryId] = useState<string>("__all__");
+  const [lowStockOnly, setLowStockOnly] = useState(false);
+  const { data: products, isLoading, isError, refetch } = useGetProducts({
+    ...(search ? { search } : {}),
+    ...(categoryId !== "__all__" ? { categoryId: categoryId as any } : {}),
+    ...(lowStockOnly ? { lowStock: true } : {}),
+  });
+  const { data: categories } = useGetCategories();
   const { data: settings } = useGetSettings();
   const deleteProduct = useDeleteProduct();
   const queryClient = useQueryClient();
@@ -127,15 +136,32 @@ export default function InventoryPage() {
 
       <Card>
         <CardHeader className="py-4">
-          <div className="flex gap-2 relative max-w-sm">
-            <Search className="absolute start-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder={t("inventory.search_placeholder")}
-              className="ps-8"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex gap-2 relative max-w-sm flex-1 min-w-[200px]">
+              <Search className="absolute start-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder={t("inventory.search_placeholder")}
+                className="ps-8"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">{t("inventory.filter_all_categories")}</SelectItem>
+                {categories?.map((c: any) => (
+                  <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
+              <Switch checked={lowStockOnly} onCheckedChange={setLowStockOnly} />
+              {t("inventory.filter_low_stock_only")}
+            </label>
           </div>
         </CardHeader>
         <CardContent className="p-0">

@@ -264,6 +264,11 @@ export function SetupWizardOverlay({
               <p className="text-muted-foreground text-sm">
                 {seededOk === false ? t("setupWizard.seed_failed") : t("setupWizard.done_desc")}
               </p>
+              {seededOk === false && (
+                <Button variant="outline" className="w-full h-11" onClick={() => seedCatalog(true)} disabled={isSaving}>
+                  {isSaving ? t("setupWizard.setting_up") : t("common.retry")}
+                </Button>
+              )}
               <Button className="w-full h-11" onClick={finish} disabled={isSaving}>
                 {t("setupWizard.go_to_dashboard")}
               </Button>

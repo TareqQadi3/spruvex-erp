@@ -1115,6 +1115,17 @@ export const GetProfitReportResponse = zod.object({
 
 
 /**
+ * @summary Get the current company's billing/trial status
+ */
+export const GetSubscriptionStatusResponse = zod.object({
+  "status": zod.enum(['trial', 'active', 'expired', 'suspended', 'cancelled']),
+  "plan": zod.string(),
+  "trialEndsAt": zod.coerce.date().nullish(),
+  "currentPeriodEnd": zod.coerce.date().nullish()
+})
+
+
+/**
  * @summary Get application settings
  */
 export const GetSettingsResponse = zod.object({

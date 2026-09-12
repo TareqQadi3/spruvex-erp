@@ -66,6 +66,7 @@ import type {
   SalesSummaryItem,
   Settings,
   SettingsInput,
+  SubscriptionStatusResponse,
   TopProductItem,
   TrialBalanceResult
 } from './api.schemas';
@@ -3619,6 +3620,83 @@ export function useGetProfitReport<TData = Awaited<ReturnType<typeof getProfitRe
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetProfitReportQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetSubscriptionStatusUrl = () => {
+
+
+
+
+  return `/api/subscriptions/status`
+}
+
+/**
+ * @summary Get the current company's billing/trial status
+ */
+export const getSubscriptionStatus = async ( options?: RequestInit): Promise<SubscriptionStatusResponse> => {
+
+  return customFetch<SubscriptionStatusResponse>(getGetSubscriptionStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSubscriptionStatusQueryKey = () => {
+    return [
+    `/api/subscriptions/status`
+    ] as const;
+    }
+
+
+export const getGetSubscriptionStatusQueryOptions = <TData = Awaited<ReturnType<typeof getSubscriptionStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSubscriptionStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSubscriptionStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSubscriptionStatus>>> = ({ signal }) => getSubscriptionStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSubscriptionStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSubscriptionStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getSubscriptionStatus>>>
+export type GetSubscriptionStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the current company's billing/trial status
+ */
+
+export function useGetSubscriptionStatus<TData = Awaited<ReturnType<typeof getSubscriptionStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSubscriptionStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSubscriptionStatusQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

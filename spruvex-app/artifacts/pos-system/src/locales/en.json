@@ -322,6 +322,8 @@
     "no_categories": "No categories yet",
     "categories_search_placeholder": "Search categories...",
     "no_categories_match": "No categories match your search",
+    "filter_all_categories": "All categories",
+    "filter_low_stock_only": "Low stock only",
     "new_title": "Add New Product",
     "edit_title": "Edit Product",
     "product_details": "Product Details",
@@ -1174,6 +1176,11 @@
     "seed_failed": "Could not add the starter catalog, but your store is ready to use.",
     "save_failed": "Could not save your changes. Please try again.",
     "go_to_dashboard": "Go to dashboard"
+  },
+  "trialBanner": {
+    "days_left": "{{count}} days left in your free trial",
+    "last_day": "Your free trial ends today",
+    "expired": "Your trial has ended — some features may be limited. Contact us to continue."
   },
   "variants": {
     "page_desc": "Manage variants and related products",

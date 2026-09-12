@@ -674,6 +674,26 @@ export interface ProfitReport {
   netProfit: number;
 }
 
+export type SubscriptionStatusResponseStatus = typeof SubscriptionStatusResponseStatus[keyof typeof SubscriptionStatusResponseStatus];
+
+
+export const SubscriptionStatusResponseStatus = {
+  trial: 'trial',
+  active: 'active',
+  expired: 'expired',
+  suspended: 'suspended',
+  cancelled: 'cancelled',
+} as const;
+
+export interface SubscriptionStatusResponse {
+  status: SubscriptionStatusResponseStatus;
+  plan: string;
+  /** @nullable */
+  trialEndsAt?: string | null;
+  /** @nullable */
+  currentPeriodEnd?: string | null;
+}
+
 export type SettingsLanguage = typeof SettingsLanguage[keyof typeof SettingsLanguage];
 
 
