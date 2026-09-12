@@ -290,6 +290,7 @@
     "search_placeholder": "بحث في المنتجات...",
     "sku": "رمز المنتج",
     "no_products": "لا توجد منتجات.",
+    "no_products_desc": "أضف أول منتج لبدء البيع وتتبع المخزون.",
     "uncategorized": "غير مصنف",
     "delete_confirm": "هل تريد حذف هذا المنتج؟",
     "delete_success": "تم حذف المنتج",
