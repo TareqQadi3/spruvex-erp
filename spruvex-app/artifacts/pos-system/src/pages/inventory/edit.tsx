@@ -41,7 +41,7 @@ export default function EditProductPage() {
   const { t } = useTranslation();
 
   const { register, handleSubmit, control, watch, setValue, reset, formState: { errors } } = useForm<any>({
-    defaultValues: { stock: 0, lowStockThreshold: 5, includesTax: false }
+    defaultValues: { stock: 0, lowStockThreshold: 5, includesTax: false, isService: false }
   });
 
   useEffect(() => {
@@ -58,6 +58,7 @@ export default function EditProductPage() {
         stock: product.stock,
         lowStockThreshold: product.lowStockThreshold,
         includesTax: product.includesTax ?? false,
+        isService: (product as any).isService ?? false,
         categoryId: product.categoryId != null ? String(product.categoryId) : undefined,
         brandName: (product as any).brand ?? undefined,
       });
@@ -95,6 +96,7 @@ export default function EditProductPage() {
 
   const includesTax = watch("includesTax");
   const sellingPrice = watch("sellingPrice");
+  const isService = watch("isService");
 
   const onSubmit = (data: any) => {
     const payload: any = {
@@ -102,9 +104,10 @@ export default function EditProductPage() {
       sku: data.sku,
       costPrice: Number(data.costPrice) || 0,
       sellingPrice: Number(data.sellingPrice) || 0,
-      stock: Number(data.stock) || 0,
+      stock: data.isService ? 0 : (Number(data.stock) || 0),
       lowStockThreshold: Number(data.lowStockThreshold) || 5,
       includesTax: data.includesTax ?? false,
+      isService: data.isService ?? false,
       barcode: data.barcode || null,
       description: data.description || null,
       categoryId: data.categoryId || null,
@@ -313,16 +316,41 @@ export default function EditProductPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label>{t("inventory.stock_qty")}</Label>
-                  <Input type="number" {...register("stock")} placeholder="0" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>{t("inventory.low_stock_threshold")}</Label>
-                  <Input type="number" {...register("lowStockThreshold")} placeholder="5" />
-                </div>
+              <div className="rounded-lg border bg-muted/30 p-4">
+                <Controller
+                  name="isService"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="isService"
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="mt-0.5"
+                      />
+                      <div className="space-y-1">
+                        <label htmlFor="isService" className="text-sm font-medium cursor-pointer">
+                          {t("inventory.is_service")}
+                        </label>
+                        <p className="text-xs text-muted-foreground">{t("inventory.is_service_desc")}</p>
+                      </div>
+                    </div>
+                  )}
+                />
               </div>
+
+              {!isService && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>{t("inventory.stock_qty")}</Label>
+                    <Input type="number" {...register("stock")} placeholder="0" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>{t("inventory.low_stock_threshold")}</Label>
+                    <Input type="number" {...register("lowStockThreshold")} placeholder="5" />
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

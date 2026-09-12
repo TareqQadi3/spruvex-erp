@@ -21,4 +21,6 @@ export interface ProductInput {
   /** @minimum 0 */
   lowStockThreshold?: number;
   categoryId?: number;
+  includesTax?: boolean;
+  isService?: boolean;
 }

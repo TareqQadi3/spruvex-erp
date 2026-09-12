@@ -11,6 +11,10 @@ export interface CatalogTemplateProduct {
   nameEn: string;
   sellingPrice: number;
   skuSuffix: string; // appended to a per-seed prefix to keep SKUs unique
+  // Non-stock line item (a service, not a physical good) — see
+  // products.isService. Omitted/false for every pre-existing template;
+  // service-heavy business types (contracting, salons...) set it true.
+  isService?: boolean;
 }
 
 export interface CatalogTemplateCategory {

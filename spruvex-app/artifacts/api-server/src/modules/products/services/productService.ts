@@ -29,10 +29,11 @@ function parseProductFields(body: Record<string, unknown>) {
   const sectionId = body.sectionId as string | undefined;
   const supplierId = body.supplierId as string | undefined;
   const includesTax = body.includesTax as boolean | undefined;
+  const isService = body.isService as boolean | undefined;
   const parentProductId = body.parentProductId as string | undefined;
   const variantAttributes = body.variantAttributes as Record<string, string> | undefined;
 
-  return { name, nameEn, sku, barcode, description, costPrice, sellingPrice, minSellingPrice, stock, lowStockThreshold, categoryId, brand, imageUrl, warehouseId, sectionId, supplierId, includesTax, parentProductId, variantAttributes };
+  return { name, nameEn, sku, barcode, description, costPrice, sellingPrice, minSellingPrice, stock, lowStockThreshold, categoryId, brand, imageUrl, warehouseId, sectionId, supplierId, includesTax, isService, parentProductId, variantAttributes };
 }
 
 function buildCreateInput(companyId: string, body: Record<string, unknown>): CreateProductInput {
@@ -60,6 +61,7 @@ function buildCreateInput(companyId: string, body: Record<string, unknown>): Cre
     sectionId: f.sectionId,
     supplierId: f.supplierId,
     includesTax: f.includesTax ?? false,
+    isService: f.isService ?? false,
     parentProductId: f.parentProductId,
     variantAttributes: f.variantAttributes ?? null,
   };
@@ -90,6 +92,7 @@ function buildUpdateChanges(body: Record<string, unknown>): Record<string, unkno
   if (f.sectionId !== undefined) changes.sectionId = f.sectionId;
   if (f.supplierId !== undefined) changes.supplierId = f.supplierId;
   if (f.includesTax !== undefined) changes.includesTax = f.includesTax;
+  if (f.isService !== undefined) changes.isService = f.isService;
 
   return changes;
 }

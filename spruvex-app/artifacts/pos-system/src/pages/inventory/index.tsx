@@ -189,7 +189,8 @@ export default function InventoryPage() {
                 <TableRow><TableCell colSpan={6}><EmptyState icon={Plus} title={t("inventory.no_products")} description={t("inventory.no_products_desc")} /></TableCell></TableRow>
               ) : (
                 products?.map((product) => {
-                  const isLowStock = product.stock <= (product.lowStockThreshold || 5);
+                  const isService = (product as any).isService;
+                  const isLowStock = !isService && product.stock <= (product.lowStockThreshold || 5);
                   return (
                     <TableRow key={product.id} className={isLowStock ? "bg-destructive/5" : ""}>
                       <TableCell className="font-mono text-xs">{product.sku}</TableCell>
@@ -197,12 +198,18 @@ export default function InventoryPage() {
                       <TableCell>{product.categoryName || t("inventory.uncategorized")}</TableCell>
                       <TableCell className="text-end">{formatCurrency(product.sellingPrice, settings?.currency ?? "SAR", lang)}</TableCell>
                       <TableCell className="text-end">
-                        <Badge variant={isLowStock ? "destructive" : "secondary"}>{product.stock}</Badge>
+                        {isService ? (
+                          <Badge variant="outline">{t("inventory.service_badge")}</Badge>
+                        ) : (
+                          <Badge variant={isLowStock ? "destructive" : "secondary"}>{product.stock}</Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-end space-x-2">
-                        <Button variant="ghost" size="icon" onClick={() => { setAdjustProduct(product); setAdjustQty(""); setAdjustReason(""); }}>
-                          <Scale className="h-4 w-4 text-muted-foreground" />
-                        </Button>
+                        {!isService && (
+                          <Button variant="ghost" size="icon" onClick={() => { setAdjustProduct(product); setAdjustQty(""); setAdjustReason(""); }}>
+                            <Scale className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        )}
                         <Link href={`/inventory/${product.id}/manage`}>
                           <Button variant="ghost" size="icon" title={t("variants.manage_button")}>
                             <Layers className="h-4 w-4 text-muted-foreground" />

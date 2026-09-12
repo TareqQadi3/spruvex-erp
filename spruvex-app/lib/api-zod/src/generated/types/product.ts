@@ -23,6 +23,7 @@ export interface Product {
   /** @nullable */
   categoryName?: string | null;
   includesTax?: boolean;
+  isService?: boolean;
   /** @nullable */
   imageUrl?: string | null;
   hasAddons?: boolean;

@@ -11,6 +11,7 @@ export interface SeedProductInput {
   stock: number;
   categoryId: string;
   warehouseId?: string;
+  isService?: boolean;
 }
 
 export interface IOnboardingRepository {

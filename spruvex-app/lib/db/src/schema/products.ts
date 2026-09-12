@@ -35,6 +35,14 @@ export const productsTable = pgTable("products", {
   brand: text("brand"),
   imageUrl: text("image_url"),
   includesTax: boolean("includes_tax").notNull().default(false),
+  // Non-stock line item (labor, a repair/installation service, a delivery
+  // fee, a site survey...) — sellable with no quantity-on-hand concept.
+  // Every stock-sufficiency check and stock-movement write in sales/purchase/
+  // POS flows must skip a service product entirely rather than treat its
+  // (meaningless) stock=0 as "out of stock". Distinct from repairs, which
+  // are their own ticket/workflow — this is for selling a service as a plain
+  // invoice/sale line, e.g. a contracting or salon business.
+  isService: boolean("is_service").notNull().default(false),
   // POS template resolution is businessType default (settings.posTemplate) ->
   // category override (categories.displayMode) -> this product's own
   // override, each step optional. Lets the same product (e.g. a bottled

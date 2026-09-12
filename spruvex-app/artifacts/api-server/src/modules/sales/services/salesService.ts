@@ -73,7 +73,7 @@ export async function createSale(companyId: string, input: CreateSaleInput, crea
     let subtotal = 0;
     const resolvedItems: Array<{
       productId: string; productName: string; quantity: number; unitPrice: number; discount: number;
-      subtotal: number; costPrice: number; warehouseId: string | null;
+      subtotal: number; costPrice: number; warehouseId: string | null; isService: boolean;
       selectedAddons?: SaleItemInput["selectedAddons"]; itemNotes?: string; serialNumber?: string;
     }> = [];
 
@@ -93,7 +93,9 @@ export async function createSale(companyId: string, input: CreateSaleInput, crea
       if (!product) throw new SaleValidationError(`Product ${item.productId} not found`);
       // Drafts reserve nothing: stock is only checked and deducted when the draft is
       // approved/paid. Approving a stale draft re-validates every line anyway.
-      if (input.status !== "draft" && product.stock < quantity) throw new SaleValidationError(`Insufficient stock for ${product.name}`);
+      // Service line items (labor, a repair fee, a site visit...) have no
+      // stock concept — never subject to the oversell guard.
+      if (input.status !== "draft" && !product.isService && product.stock < quantity) throw new SaleValidationError(`Insufficient stock for ${product.name}`);
       const itemSubtotal = unitPrice * quantity - discount;
       subtotal += itemSubtotal;
       resolvedItems.push({
@@ -105,6 +107,7 @@ export async function createSale(companyId: string, input: CreateSaleInput, crea
         subtotal: itemSubtotal,
         costPrice: Number(product.costPrice),
         warehouseId: product.warehouseId,
+        isService: product.isService,
         selectedAddons: item.selectedAddons,
         itemNotes: item.itemNotes,
         serialNumber: item.serialNumber,
@@ -216,13 +219,16 @@ export async function createSale(companyId: string, input: CreateSaleInput, crea
       // Deducts from both the per-warehouse stock table and the legacy
       // products.stock mirror in one place (see lib/stockDelta.ts) — before
       // this, sales only touched products.stock and the inventory pages'
-      // per-warehouse numbers drifted stale.
-      const booked = await applyStockDelta(tx, {
-        companyId, productId: item.productId, delta: -item.quantity,
-        warehouseId: item.warehouseId, movementType: "sale",
-        referenceType: "sale", referenceId: sale.id,
-      });
-      if (booked === null) throw new SaleValidationError(`Insufficient stock for ${item.productName}`);
+      // per-warehouse numbers drifted stale. Service items have no stock to
+      // deduct and no per-warehouse row worth writing a movement for.
+      if (!item.isService) {
+        const booked = await applyStockDelta(tx, {
+          companyId, productId: item.productId, delta: -item.quantity,
+          warehouseId: item.warehouseId, movementType: "sale",
+          referenceType: "sale", referenceId: sale.id,
+        });
+        if (booked === null) throw new SaleValidationError(`Insufficient stock for ${item.productName}`);
+      }
       cogsTotal += item.costPrice * item.quantity;
     }
 
@@ -399,13 +405,15 @@ export async function approveSale(companyId: string, saleId: string, input: Appr
       const product = await salesRepository.findProduct(tx, companyId, item.productId);
       if (!product) throw new SaleValidationError(`Product ${item.productId} not found`);
       const available = item.quantity - (item.returnedQuantity ?? 0);
-      if (product.stock < available) throw new SaleValidationError(`Insufficient stock for ${product.name}`);
-      const booked = await applyStockDelta(tx, {
-        companyId, productId: item.productId, delta: -available,
-        warehouseId: product.warehouseId, movementType: "sale",
-        referenceType: "sale", referenceId: saleId,
-      });
-      if (booked === null) throw new SaleValidationError(`Insufficient stock for ${product.name}`);
+      if (!product.isService) {
+        if (product.stock < available) throw new SaleValidationError(`Insufficient stock for ${product.name}`);
+        const booked = await applyStockDelta(tx, {
+          companyId, productId: item.productId, delta: -available,
+          warehouseId: product.warehouseId, movementType: "sale",
+          referenceType: "sale", referenceId: saleId,
+        });
+        if (booked === null) throw new SaleValidationError(`Insufficient stock for ${product.name}`);
+      }
       cogsTotal += Number(product.costPrice) * available;
     }
 
@@ -605,11 +613,15 @@ export async function createSaleReturn(companyId: string, saleId: string, input:
       const product = await salesRepository.findProduct(tx, companyId, item.productId);
       if (product) cogsReversal += Number(product.costPrice) * ri.quantity;
 
-      await applyStockDelta(tx, {
-        companyId, productId: item.productId, delta: ri.quantity,
-        warehouseId: product?.warehouseId, movementType: "sale_return",
-        referenceType: "sale_return", referenceId: ret.id,
-      });
+      // A service line item never had stock deducted at sale time, so a
+      // return doesn't credit anything back either.
+      if (!product?.isService) {
+        await applyStockDelta(tx, {
+          companyId, productId: item.productId, delta: ri.quantity,
+          warehouseId: product?.warehouseId, movementType: "sale_return",
+          referenceType: "sale_return", referenceId: ret.id,
+        });
+      }
       await salesRepository.incrementItemReturnedQuantity(tx, companyId, item.id, ri.quantity);
       await salesRepository.insertReturnItem(tx, {
         companyId, saleReturnId: ret.id, saleItemId: item.id, productId: item.productId,
@@ -624,17 +636,19 @@ export async function createSaleReturn(companyId: string, saleId: string, input:
       if (!ei.quantity || ei.quantity <= 0) throw new SaleValidationError("Exchange quantity must be greater than zero");
       const product = await salesRepository.findProduct(tx, companyId, ei.productId);
       if (!product) throw new SaleValidationError(`Product ${ei.productId} not found`);
-      if (product.stock < ei.quantity) throw new SaleValidationError(`Insufficient stock for ${product.name}`);
+      if (!product.isService && product.stock < ei.quantity) throw new SaleValidationError(`Insufficient stock for ${product.name}`);
 
       const lineTotal = ei.unitPrice * ei.quantity;
       exchangeAmount += lineTotal;
       exchangeCogs += Number(product.costPrice) * ei.quantity;
 
-      await applyStockDelta(tx, {
-        companyId, productId: ei.productId, delta: -ei.quantity,
-        warehouseId: product.warehouseId, movementType: "sale",
-        referenceType: "sale_return", referenceId: ret.id,
-      });
+      if (!product.isService) {
+        await applyStockDelta(tx, {
+          companyId, productId: ei.productId, delta: -ei.quantity,
+          warehouseId: product.warehouseId, movementType: "sale",
+          referenceType: "sale_return", referenceId: ret.id,
+        });
+      }
       await salesRepository.insertReturnItem(tx, {
         companyId, saleReturnId: ret.id, saleItemId: null, productId: ei.productId,
         quantity: ei.quantity, unitPrice: ei.unitPrice.toString(), subtotal: lineTotal.toString(), isExchange: true,

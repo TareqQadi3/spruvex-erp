@@ -39,9 +39,10 @@ export async function seedCatalog(db: DbClient, companyId: string): Promise<Seed
     nameEn: p.nameEn,
     sku: `${skuPrefix}-${p.skuSuffix}`,
     sellingPrice: p.sellingPrice.toString(),
-    stock: 10,
+    stock: p.isService ? 0 : 10,
     categoryId: subCategory.id,
     warehouseId: warehouse?.id,
+    isService: p.isService ?? false,
   })));
 
   return { mainCategory, subCategory, products };

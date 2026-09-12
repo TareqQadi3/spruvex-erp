@@ -28,6 +28,7 @@ export const PRODUCT_SELECT = {
   brand: productsTable.brand,
   imageUrl: productsTable.imageUrl,
   includesTax: productsTable.includesTax,
+  isService: productsTable.isService,
   displayMode: productsTable.displayMode,
   hasAddons: productsTable.hasAddons,
   hasRelatedProducts: productsTable.hasRelatedProducts,
@@ -62,6 +63,7 @@ export interface CreateProductInput {
   sectionId?: string;
   supplierId?: string;
   includesTax?: boolean;
+  isService?: boolean;
   parentProductId?: string;
   variantAttributes?: Record<string, string> | null;
 }
@@ -84,6 +86,7 @@ export interface UpdateProductInput {
   sectionId?: string;
   supplierId?: string;
   includesTax?: boolean;
+  isService?: boolean;
 }
 
 export const productRepository = {
@@ -150,6 +153,7 @@ export const productRepository = {
       sectionId: input.sectionId,
       supplierId: input.supplierId,
       includesTax: input.includesTax ?? false,
+      isService: input.isService ?? false,
       ...(input.parentProductId !== undefined ? { parentProductId: input.parentProductId } : {}),
       ...(input.variantAttributes !== undefined ? { variantAttributes: input.variantAttributes } : {}),
     }).returning();

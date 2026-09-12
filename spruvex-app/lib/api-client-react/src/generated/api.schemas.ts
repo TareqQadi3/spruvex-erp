@@ -82,6 +82,7 @@ export interface Product {
   /** @nullable */
   categoryName?: string | null;
   includesTax?: boolean;
+  isService?: boolean;
   /** @nullable */
   imageUrl?: string | null;
   hasAddons?: boolean;
@@ -106,6 +107,8 @@ export interface ProductInput {
   /** @minimum 0 */
   lowStockThreshold?: number;
   categoryId?: number;
+  includesTax?: boolean;
+  isService?: boolean;
 }
 
 export interface Customer {

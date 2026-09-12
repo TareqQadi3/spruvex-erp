@@ -1158,6 +1158,8 @@ components:
           type: ["string", "null"]
         includesTax:
           type: boolean
+        isService:
+          type: boolean
         imageUrl:
           type: ["string", "null"]
         hasAddons:
@@ -1198,6 +1200,10 @@ components:
           default: 5
         categoryId:
           type: integer
+        includesTax:
+          type: boolean
+        isService:
+          type: boolean
 
     # ─── CUSTOMER ───────────────────────────────────────────────────
     Customer:

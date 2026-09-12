@@ -37,7 +37,7 @@ export async function createSale(tenant: TenantContext, input: CreateSaleInput):
     }
     for (const item of input.items) {
       const product = productMap.get(item.productId)!;
-      if (product.stock < item.quantity) {
+      if (!product.isService && product.stock < item.quantity) {
         throw AppError.conflict(
           `Insufficient stock for "${product.name}": have ${product.stock}, need ${item.quantity}`,
         );
@@ -167,11 +167,13 @@ export async function createSale(tenant: TenantContext, input: CreateSaleInput):
     await stockDeductionService.deduct(
       tenant,
       sale.id,
-      input.items.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        productName: productMap.get(item.productId)!.name,
-      })),
+      input.items
+        .filter((item) => !productMap.get(item.productId)!.isService)
+        .map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          productName: productMap.get(item.productId)!.name,
+        })),
       tx,
     );
 

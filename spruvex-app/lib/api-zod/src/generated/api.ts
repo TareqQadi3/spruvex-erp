@@ -172,6 +172,7 @@ export const GetProductsResponseItem = zod.object({
   "categoryId": zod.number().nullable(),
   "categoryName": zod.string().nullish(),
   "includesTax": zod.boolean().optional(),
+  "isService": zod.boolean().optional(),
   "imageUrl": zod.string().nullish(),
   "hasAddons": zod.boolean().optional(),
   "hasRelatedProducts": zod.boolean().optional(),
@@ -205,7 +206,9 @@ export const CreateProductBody = zod.object({
   "sellingPrice": zod.number().min(createProductBodySellingPriceMin),
   "stock": zod.number().min(createProductBodyStockMin),
   "lowStockThreshold": zod.number().min(createProductBodyLowStockThresholdMin).default(createProductBodyLowStockThresholdDefault),
-  "categoryId": zod.number().optional()
+  "categoryId": zod.number().optional(),
+  "includesTax": zod.boolean().optional(),
+  "isService": zod.boolean().optional()
 })
 
 
@@ -229,6 +232,7 @@ export const GetProductResponse = zod.object({
   "categoryId": zod.number().nullable(),
   "categoryName": zod.string().nullish(),
   "includesTax": zod.boolean().optional(),
+  "isService": zod.boolean().optional(),
   "imageUrl": zod.string().nullish(),
   "hasAddons": zod.boolean().optional(),
   "hasRelatedProducts": zod.boolean().optional(),
@@ -265,7 +269,9 @@ export const UpdateProductBody = zod.object({
   "sellingPrice": zod.number().min(updateProductBodySellingPriceMin),
   "stock": zod.number().min(updateProductBodyStockMin),
   "lowStockThreshold": zod.number().min(updateProductBodyLowStockThresholdMin).default(updateProductBodyLowStockThresholdDefault),
-  "categoryId": zod.number().optional()
+  "categoryId": zod.number().optional(),
+  "includesTax": zod.boolean().optional(),
+  "isService": zod.boolean().optional()
 })
 
 export const UpdateProductResponse = zod.object({
@@ -281,6 +287,7 @@ export const UpdateProductResponse = zod.object({
   "categoryId": zod.number().nullable(),
   "categoryName": zod.string().nullish(),
   "includesTax": zod.boolean().optional(),
+  "isService": zod.boolean().optional(),
   "imageUrl": zod.string().nullish(),
   "hasAddons": zod.boolean().optional(),
   "hasRelatedProducts": zod.boolean().optional(),
@@ -317,6 +324,7 @@ export const GetProductByBarcodeResponse = zod.object({
   "categoryId": zod.number().nullable(),
   "categoryName": zod.string().nullish(),
   "includesTax": zod.boolean().optional(),
+  "isService": zod.boolean().optional(),
   "imageUrl": zod.string().nullish(),
   "hasAddons": zod.boolean().optional(),
   "hasRelatedProducts": zod.boolean().optional(),
