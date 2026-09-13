@@ -80,7 +80,16 @@ export const DEFAULT_ROLES: Array<{ name: string; displayName: string; permissio
   {
     name: "warehouse_staff",
     displayName: "Warehouse Staff",
-    permissions: [PERMISSIONS.ADD_PRODUCT, PERMISSIONS.MANAGE_INVENTORY],
+    // The dot-namespaced PRODUCTS_* codes are included alongside the legacy
+    // flat ones because every route this role actually needs (products,
+    // categories, brands) checks PRODUCTS_CREATE/UPDATE/DELETE, not the old
+    // ADD_PRODUCT/MANAGE_INVENTORY flags — without them this role could view
+    // products but never create/edit/delete one, despite its name and the
+    // legacy permissions implying otherwise.
+    permissions: [
+      PERMISSIONS.ADD_PRODUCT, PERMISSIONS.MANAGE_INVENTORY,
+      PERMISSIONS.PRODUCTS_CREATE, PERMISSIONS.PRODUCTS_UPDATE, PERMISSIONS.PRODUCTS_DELETE,
+    ],
   },
   {
     name: "accountant",
@@ -112,8 +121,12 @@ export const DEFAULT_ROLES: Array<{ name: string; displayName: string; permissio
   {
     name: "inventory_staff",
     displayName: "Inventory Staff",
+    // Same fix as warehouse_staff above — PRODUCTS_VIEW alone let this role
+    // see the product list but never actually create/edit/delete a product,
+    // category, or brand (all gated on the dot-namespaced codes).
     permissions: [
-      PERMISSIONS.PRODUCTS_VIEW, PERMISSIONS.INVENTORY_VIEW, PERMISSIONS.INVENTORY_ADJUST,
+      PERMISSIONS.PRODUCTS_VIEW, PERMISSIONS.PRODUCTS_CREATE, PERMISSIONS.PRODUCTS_UPDATE, PERMISSIONS.PRODUCTS_DELETE,
+      PERMISSIONS.INVENTORY_VIEW, PERMISSIONS.INVENTORY_ADJUST,
       PERMISSIONS.ADD_PRODUCT, PERMISSIONS.MANAGE_INVENTORY,
     ],
   },
