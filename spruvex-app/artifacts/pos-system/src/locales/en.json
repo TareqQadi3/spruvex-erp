@@ -613,6 +613,8 @@
     "otp_resend": "Resend code",
     "otp_incomplete": "Please enter the 6-digit verification code.",
     "otp_send_failed": "Could not send the verification code. Try again.",
+    "otp_invalid": "Incorrect or expired code. Check the code or resend it.",
+    "checking_otp": "Checking...",
     "step2_title": "Business type",
     "step2_desc": "Choose the option that best describes your business",
     "step2_incomplete": "Please select a business type.",

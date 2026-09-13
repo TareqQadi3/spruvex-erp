@@ -4,6 +4,11 @@ export const requestOtpSchema = z.object({
   email: z.string().trim().email(),
 });
 
+export const checkOtpSchema = z.object({
+  email: z.string().trim().email(),
+  otp: z.string().trim().regex(/^\d{6}$/, "OTP must be a 6-digit code"),
+});
+
 export const registerCompanySchema = z.object({
   companyName: z.string().trim().min(1).max(200),
   adminUsername: z.string().trim().min(3).max(50),

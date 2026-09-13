@@ -47,8 +47,13 @@ export async function requestRegistrationOtp(email: string): Promise<void> {
   await requestOtp(email, "registration");
 }
 
-/** Verifies and consumes the OTP row for `email`/`purpose`. Throws on mismatch/expiry/too-many-attempts. */
-export async function verifyOtp(email: string, purpose: OtpPurpose, code: string): Promise<void> {
+// `consume` controls whether a *successful* check deletes the row. Both the
+// real verify (registration/reset actually completing) and the early
+// "is this code still good" peek from the signup wizard's step 2 run
+// through the exact same expiry/attempts/hash logic and share the same
+// attempt-throttling on failure — only the happy-path row deletion differs,
+// so a wizard peek doesn't burn the code the final submit still needs.
+async function checkOrVerifyOtp(email: string, purpose: OtpPurpose, code: string, consume: boolean): Promise<void> {
   const [row] = await db
     .select()
     .from(registrationOtpsTable)
@@ -76,9 +81,32 @@ export async function verifyOtp(email: string, purpose: OtpPurpose, code: string
     throw AppError.validation("Invalid verification code");
   }
 
-  await db.delete(registrationOtpsTable).where(eq(registrationOtpsTable.id, row.id));
+  if (consume) {
+    await db.delete(registrationOtpsTable).where(eq(registrationOtpsTable.id, row.id));
+  }
+}
+
+/** Verifies and consumes the OTP row for `email`/`purpose`. Throws on mismatch/expiry/too-many-attempts. */
+export async function verifyOtp(email: string, purpose: OtpPurpose, code: string): Promise<void> {
+  await checkOrVerifyOtp(email, purpose, code, true);
+}
+
+/**
+ * Same checks as verifyOtp, but never deletes the row on success — lets the
+ * signup wizard confirm a code is correct right after entry (step 2) instead
+ * of only discovering it was wrong/expired at final submit (after business
+ * type + plan are also picked). The real, consuming check still happens at
+ * registerCompany — a code that passes this peek but expires in the few
+ * minutes before final submit is still caught there.
+ */
+export async function checkOtp(email: string, purpose: OtpPurpose, code: string): Promise<void> {
+  await checkOrVerifyOtp(email, purpose, code, false);
 }
 
 export async function verifyRegistrationOtp(email: string, code: string): Promise<void> {
   await verifyOtp(email, "registration", code);
+}
+
+export async function checkRegistrationOtp(email: string, code: string): Promise<void> {
+  await checkOtp(email, "registration", code);
 }

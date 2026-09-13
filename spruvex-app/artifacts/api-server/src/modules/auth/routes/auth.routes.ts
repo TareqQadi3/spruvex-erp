@@ -7,13 +7,14 @@ import { buildSuccess } from "../../../shared/utils/responseEnvelope";
 import {
   registerCompanySchema,
   requestOtpSchema,
+  checkOtpSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
   loginSchema,
   refreshSchema,
 } from "../validators/auth.validators";
 import * as authService from "../services/authService";
-import { requestRegistrationOtp } from "../services/otpService";
+import { requestRegistrationOtp, checkRegistrationOtp } from "../services/otpService";
 
 const router: IRouter = Router();
 
@@ -22,6 +23,20 @@ router.post("/register-company/request-otp", rateLimitAuth, async (req, res, nex
     const { email } = requestOtpSchema.parse(req.body);
     await requestRegistrationOtp(email);
     res.status(200).json(buildSuccess({ sent: true }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Non-consuming peek used by the signup wizard right after the merchant
+// types the code (step 2), so a wrong/expired code is caught immediately
+// instead of only at final submit after business type + plan are also
+// picked. The real, consuming check still happens in registerCompany below.
+router.post("/register-company/check-otp", rateLimitAuth, async (req, res, next) => {
+  try {
+    const { email, otp } = checkOtpSchema.parse(req.body);
+    await checkRegistrationOtp(email, otp);
+    res.status(200).json(buildSuccess({ valid: true }));
   } catch (err) {
     next(err);
   }

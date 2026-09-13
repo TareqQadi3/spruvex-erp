@@ -108,6 +108,35 @@ export default function SignupPage() {
     }
   };
 
+  // Non-consuming check — confirms the code is right immediately after entry
+  // (step 2) instead of only at final submit, after business type and plan
+  // are also picked. The real, consuming check still happens in handleSubmit.
+  const [isCheckingOtp, setIsCheckingOtp] = useState(false);
+  const checkOtp = async (): Promise<boolean> => {
+    setError("");
+    setIsCheckingOtp(true);
+    try {
+      const res = await fetch("/api/auth/register-company/check-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: adminEmail.trim(), otp }),
+      });
+      // Every failure mode here (wrong code, expired, too many attempts) is
+      // covered by one translated message — the backend's own message is
+      // English-only and would leak past i18n if shown directly.
+      if (!res.ok) {
+        setError(t("signup.otp_invalid"));
+        return false;
+      }
+      return true;
+    } catch {
+      setError(t("signup.otp_invalid"));
+      return false;
+    } finally {
+      setIsCheckingOtp(false);
+    }
+  };
+
   const handleNext = async () => {
     setError("");
     if (step === 1) {
@@ -119,8 +148,13 @@ export default function SignupPage() {
       await sendOtp();
       return;
     }
-    if (step === 2 && !otpValid) {
-      setError(t("signup.otp_incomplete"));
+    if (step === 2) {
+      if (!otpValid) {
+        setError(t("signup.otp_incomplete"));
+        return;
+      }
+      if (!(await checkOtp())) return;
+      setStep(3);
       return;
     }
     if (step === 3 && !businessType) {
@@ -364,8 +398,8 @@ export default function SignupPage() {
                 </Button>
               )}
               {step < 4 && (
-                <Button type="button" className="flex-1 h-11" onClick={handleNext} disabled={isLoading || isSendingOtp}>
-                  {t("signup.next")}
+                <Button type="button" className="flex-1 h-11" onClick={handleNext} disabled={isLoading || isSendingOtp || isCheckingOtp}>
+                  {isCheckingOtp ? t("signup.checking_otp") : t("signup.next")}
                   <ChevronRight className="h-4 w-4 ms-1 rtl:rotate-180" />
                 </Button>
               )}
