@@ -21,7 +21,6 @@ import { useTranslation } from "@/i18n";
 import { QueryErrorState } from "@/components/QueryErrorState";
 import { MediaUploadField } from "@/components/MediaUploadField";
 import { TranslateButton } from "@/components/TranslateButton";
-import { AddonManager } from "./AddonManager";
 
 export default function EditProductPage() {
   const { id } = useParams<{ id: string }>();
@@ -364,8 +363,6 @@ export default function EditProductPage() {
           </div>
         </div>
       </form>
-
-      <AddonManager productId={id!} />
 
       <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
         <DialogContent>

@@ -359,6 +359,7 @@
     "addons_deleted": "تم الحذف",
     "addons_delete_confirm": "حذف هذه المجموعة وخياراتها؟",
     "addons_load_failed": "فشل تحميل الإضافات",
+    "tab_addons": "الإضافات",
     "sku_required": "رمز المنتج *",
     "sku_placeholder": "مثال: ACC-IPH15-CASE",
     "barcode": "الباركود",

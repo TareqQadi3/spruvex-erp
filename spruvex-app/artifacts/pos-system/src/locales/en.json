@@ -359,6 +359,7 @@
     "addons_deleted": "Deleted",
     "addons_delete_confirm": "Delete this group and its options?",
     "addons_load_failed": "Failed to load add-ons",
+    "tab_addons": "Add-ons",
     "sku_required": "SKU *",
     "sku_placeholder": "e.g. ACC-IPH15-CASE",
     "barcode": "Barcode",
