@@ -45,7 +45,9 @@ export default function SalesReturnsPage({ variant = "returns" }: { variant?: "r
   const handlePrintCreditNote = async (ret: SaleReturn) => {
     setPrintingId(ret.id);
     try {
-      const creditNote = await api<{ id: string }>("/zatca/invoices/from-return", {
+      // Wrapped as { data } by this modular route — unwrap or creditNote.id
+      // is undefined and the print URL 400s.
+      const { data: creditNote } = await api<{ data: { id: string } }>("/zatca/invoices/from-return", {
         method: "POST",
         body: JSON.stringify({ saleReturnId: ret.id }),
       });

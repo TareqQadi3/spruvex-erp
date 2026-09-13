@@ -55,7 +55,9 @@ export default function PurchasesPage() {
   const handlePrintPurchase = async (purchase: Purchase) => {
     setPrintingPurchaseId(purchase.id);
     try {
-      const doc = await api<{ id: string }>(`/purchase-invoices/from-purchase/${purchase.id}`, { method: "POST" });
+      // Wrapped as { data } by this modular route — unwrap or doc.id is
+      // undefined and the print URL 400s.
+      const { data: doc } = await api<{ data: { id: string } }>(`/purchase-invoices/from-purchase/${purchase.id}`, { method: "POST" });
       await openServerPrint(`/invoicing/print/purchases/${doc.id}?printType=${printType}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("common.error"));
@@ -374,7 +376,9 @@ function PurchaseReturnDialog({
       // sales credit notes this never fails on "no prior document" (purchase
       // documents are plain records, not chained to a required original).
       try {
-        const doc = await api<{ id: string }>(`/purchase-invoices/from-return/${ret.id}`, { method: "POST" });
+        // Wrapped as { data } by this modular route — unwrap or doc.id is
+        // undefined and the print URL 400s.
+        const { data: doc } = await api<{ data: { id: string } }>(`/purchase-invoices/from-return/${ret.id}`, { method: "POST" });
         await openServerPrint(`/invoicing/print/purchases/${doc.id}?printType=${printType}`);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t("common.error"));

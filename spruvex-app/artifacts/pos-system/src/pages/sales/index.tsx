@@ -50,7 +50,9 @@ export default function SalesPage() {
   const handlePrintInvoice = async (sale: Sale) => {
     setPrintingSaleId(sale.id);
     try {
-      const invoice = await api<{ id: string }>(`/zatca/invoices/for-sale/${sale.id}`, { method: "POST" });
+      // Wrapped as { data } by this modular route — unwrap or invoice.id is
+      // undefined and the print URL 400s.
+      const { data: invoice } = await api<{ data: { id: string } }>(`/zatca/invoices/for-sale/${sale.id}`, { method: "POST" });
       await openServerPrint(`/invoicing/print/sales/${invoice.id}?printType=${printType}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("common.error"));

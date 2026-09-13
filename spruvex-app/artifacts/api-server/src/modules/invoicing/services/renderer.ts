@@ -59,6 +59,8 @@ interface Labels {
   qrPending: string;
   notes: string;
   walkIn: string;
+  printButton: string;
+  closeButton: string;
 }
 
 const LABELS: Record<"ar" | "en", Labels> = {
@@ -82,6 +84,8 @@ const LABELS: Record<"ar" | "en", Labels> = {
     qrPending: "لم يتم توليد رمز الاستجابة السريع بعد (الفاتورة غير موقّعة بعد)",
     notes: "ملاحظات",
     walkIn: "عميل نقدي",
+    printButton: "طباعة",
+    closeButton: "إغلاق",
   },
   en: {
     documentNumber: "Document Number",
@@ -103,10 +107,32 @@ const LABELS: Record<"ar" | "en", Labels> = {
     qrPending: "QR code not yet generated (invoice not signed yet)",
     notes: "Notes",
     walkIn: "Walk-in",
+    printButton: "Print",
+    closeButton: "Close",
   },
 };
 
+// Thermal receipts print immediately on open — a merchant printing dozens of
+// walk-in receipts a day already made an explicit choice by clicking "print"
+// in the POS UI (see PosSuccessScreen's "on-demand" comment); a second
+// confirmation click per receipt would only add friction at the counter,
+// and reviewing every disposable receipt isn't standard retail UX anyway.
 const AUTO_PRINT_SCRIPT = `<script>window.onload=()=>setTimeout(()=>window.print(),300)</script>`;
+
+// A4 documents are formal, sometimes-archived paperwork worth an actual look
+// before committing to paper — this renders a real on-screen preview (the
+// exact invoice, computed totals and QR included, not the invoice-builder's
+// mock data) with an explicit Print button instead of firing window.print()
+// the instant the tab opens behind the browser's own print-dialog chrome.
+// .no-print is hidden by the @media print rule so the toolbar never appears
+// on the physical printout.
+function previewToolbar(labels: Labels): string {
+  return `
+  <div class="print-toolbar no-print">
+    <button type="button" onclick="window.print()">${escapeHtml(labels.printButton)}</button>
+    <button type="button" class="secondary" onclick="window.close()">${escapeHtml(labels.closeButton)}</button>
+  </div>`;
+}
 
 async function buildQrSection(data: PrintDocumentData, config: TemplateConfig, sizePx: number): Promise<string> {
   const labels = LABELS[config.language];
@@ -205,13 +231,23 @@ function renderA4(html: {
     .qr-pending { text-align: center; margin-top: 18px; font-size: 11px; color: #999; }
     .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #ddd; text-align: center; color: #666; font-size: 11px; line-height: 1.6; }
     .text-center { text-align: center; }
+    .print-toolbar {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; justify-content: center; gap: 8px;
+      padding: 10px; margin: -30px -30px 20px; background: #f1f3f5; border-bottom: 1px solid #ddd;
+    }
+    .print-toolbar button { font-family: inherit; font-size: 14px; font-weight: 600; padding: 8px 20px; border-radius: 6px; border: none; cursor: pointer; }
+    .print-toolbar button:not(.secondary) { background: ${accentColor}; color: #fff; }
+    .print-toolbar button.secondary { background: #e9ecef; color: #333; }
     @media print {
+      .no-print { display: none !important; }
       body { padding: 0; }
       @page { size: A4; margin: 10mm; }
     }
   </style>
 </head>
 <body>
+  ${previewToolbar(labels)}
   <div class="header">
     ${config.showLogo && config.logoUrl ? `<img class="logo" src="${escapeHtml(config.logoUrl)}" alt="" />` : ""}
     <div class="doc-title accent">${renderTitle(data, config)}</div>
@@ -297,8 +333,6 @@ function renderA4(html: {
   ${qrSectionHtml}
 
   ${config.footerText ? `<div class="footer">${escapeHtml(config.footerText)}</div>` : ""}
-
-  ${AUTO_PRINT_SCRIPT}
 </body>
 </html>`;
 }

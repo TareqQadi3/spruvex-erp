@@ -36,7 +36,10 @@ export function SaleReturnDialog({ sale, onClose }: { sale: Sale; onClose: () =>
       toast.success(t("sales.return_success"));
       onClose();
       try {
-        const creditNote = await api<{ id: string }>("/zatca/invoices/from-return", { method: "POST", body: JSON.stringify({ saleReturnId: ret.id }) });
+        // This modular route wraps its response as { data }, unlike the
+        // legacy /sales/:id/returns call above — unwrap it or creditNote.id
+        // is undefined and the print URL 400s.
+        const { data: creditNote } = await api<{ data: { id: string } }>("/zatca/invoices/from-return", { method: "POST", body: JSON.stringify({ saleReturnId: ret.id }) });
         await openServerPrint(`/invoicing/print/sales/${creditNote.id}?printType=${printType}`);
       } catch (err) {
         toast.info(err instanceof Error ? err.message : t("sales.credit_note_skipped"));

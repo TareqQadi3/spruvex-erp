@@ -95,7 +95,10 @@ export function PosSuccessScreen({
     if (printing) return;
     setPrinting(true);
     try {
-      const invoice = await api<{ id: string }>(`/zatca/invoices/for-sale/${completedSale.id}`, { method: "POST" });
+      // Wrapped as { data } by this modular route — unwrap or invoice.id is
+      // undefined and the print URL 400s (silently: openServerPrint's error
+      // handling just closes the popup with no visible failure to the cashier).
+      const { data: invoice } = await api<{ data: { id: string } }>(`/zatca/invoices/for-sale/${completedSale.id}`, { method: "POST" });
       await openServerPrint(`/invoicing/print/sales/${invoice.id}?printType=${printType}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("common.error"));
