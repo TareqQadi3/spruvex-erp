@@ -603,6 +603,19 @@
     "reset_success_desc": "Your password has been reset. You can now sign in.",
     "back_to_login": "Back to sign in"
   },
+  "acceptInvite": {
+    "title": "You're invited",
+    "desc_with_company": "{{name}} invited you to join their team on SpruVex as {{role}}. Choose a username and password to finish creating your account.",
+    "loading": "Checking your invite...",
+    "invalid_title": "Invite not valid",
+    "invalid_desc": "This invite link is invalid, expired, or has already been used. Ask your admin to send a new one.",
+    "username": "Choose a username",
+    "password": "Choose a password",
+    "accept_button": "Create account",
+    "accepting": "Creating account...",
+    "accept_failed": "Could not create your account. Try again.",
+    "back_to_login": "Back to sign in"
+  },
   "signup": {
     "subtitle": "Create your SpruVex account",
     "step1_title": "Account details",
@@ -934,7 +947,27 @@
     "extra_permissions_desc": "Grant specific permissions in addition to the role's defaults.",
     "save_success": "User saved",
     "empty_title": "No team members yet",
-    "empty_desc": "Add your first user to share access to the store."
+    "empty_desc": "Add your first user to share access to the store.",
+    "invite_by_email": "Invite by Email",
+    "invite_title": "Invite a teammate",
+    "invite_desc": "Send an email invite — they'll pick their own username and password when they accept.",
+    "invite_email": "Email address",
+    "invite_role": "Role",
+    "invite_send": "Send Invite",
+    "invite_sending": "Sending...",
+    "invite_sent": "Invite sent",
+    "pending_invites_title": "Pending invites",
+    "pending_invites_desc": "Invites that haven't been accepted yet.",
+    "invite_status_pending": "Pending",
+    "invite_status_accepted": "Accepted",
+    "invite_status_revoked": "Revoked",
+    "invite_status_expired": "Expired",
+    "invite_revoke": "Revoke",
+    "invite_revoke_confirm": "Revoke this invite? The link will stop working.",
+    "invite_revoked": "Invite revoked",
+    "invite_resend": "Resend",
+    "invite_expires": "Expires {{date}}",
+    "no_pending_invites": "No pending invites"
   },
   "paymentMethods": {
     "title": "Payment Methods",

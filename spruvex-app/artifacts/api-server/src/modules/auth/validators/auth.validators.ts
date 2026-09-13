@@ -46,3 +46,20 @@ export const loginSchema = z.object({
 export const refreshSchema = z.object({
   refreshToken: z.string().min(1),
 });
+
+// Same flat role set the Users settings page assigns from (ROLES in
+// users.tsx) — every value here is also a seeded DEFAULT_ROLES name, so
+// inviteService can assign it directly via findGlobalRoleByName without a
+// translation step.
+export const INVITABLE_ROLES = ["admin", "store_manager", "cashier", "warehouse_staff", "accountant"] as const;
+
+export const createInviteSchema = z.object({
+  email: z.string().trim().email(),
+  role: z.enum(INVITABLE_ROLES),
+});
+
+export const acceptInviteSchema = z.object({
+  token: z.string().trim().min(1),
+  username: z.string().trim().min(3).max(50),
+  password: z.string().min(8).max(200),
+});

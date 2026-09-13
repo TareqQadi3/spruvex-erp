@@ -17,7 +17,7 @@ import { accountCreatedEmail } from "../../../core/email/templates";
 import * as affiliateService from "../../affiliates/services/affiliateService";
 import type { AuthResult, LoginInput, RegisterCompanyInput } from "../types/auth.types";
 
-function dashboardUrl(): string {
+export function dashboardUrl(): string {
   return process.env.DASHBOARD_BASE_URL ?? "http://localhost:5173";
 }
 
@@ -35,7 +35,7 @@ const repo = new UserAuthRepository();
 
 // No permissions resolved here — TenantContext is identity only. Requests
 // authorize via core/middleware/permission.middleware's live DB resolution.
-async function buildTenantContext(companyId: string, userId: string, client: DbOrTx = db): Promise<TenantContext> {
+export async function buildTenantContext(companyId: string, userId: string, client: DbOrTx = db): Promise<TenantContext> {
   const roleName = await repo.getUserPrimaryRoleName(companyId, userId, client);
   // Only pre-select when unambiguous (exactly one branch) — same rule as
   // the legacy login path; a genuinely multi-branch user picks explicitly.
@@ -49,7 +49,7 @@ async function buildTenantContext(companyId: string, userId: string, client: DbO
 // every authorization check uses, not a separate/duplicated query. Takes the
 // same `client` as the caller (registerCompany passes its `tx`) so this reads
 // role assignments made earlier in the same not-yet-committed transaction.
-async function toAuthResult(
+export async function toAuthResult(
   user: { id: string; username: string; email: string | null },
   tenant: TenantContext,
   client: DbOrTx = db,

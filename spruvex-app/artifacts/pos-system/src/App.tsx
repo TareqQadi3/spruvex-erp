@@ -20,6 +20,7 @@ import { BranchSelectOverlay } from "@/components/BranchSelectOverlay";
 const LoginPage = lazy(() => import("@/pages/login"));
 const SignupPage = lazy(() => import("@/pages/signup"));
 const ForgotPasswordPage = lazy(() => import("@/pages/forgot-password"));
+const AcceptInvitePage = lazy(() => import("@/pages/accept-invite"));
 
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const PosPage = lazy(() => import("@/pages/pos"));
@@ -135,6 +136,16 @@ function AppRouter() {
     return (
       <Suspense fallback={<PageLoadingSpinner />}>
         <ForgotPasswordPage />
+      </Suspense>
+    );
+  }
+
+  if (location.startsWith("/accept-invite/")) {
+    if (user) return <Redirect to="/" />;
+    const token = location.slice("/accept-invite/".length);
+    return (
+      <Suspense fallback={<PageLoadingSpinner />}>
+        <AcceptInvitePage token={token} />
       </Suspense>
     );
   }

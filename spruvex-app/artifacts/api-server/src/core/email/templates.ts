@@ -108,3 +108,27 @@ export function accountCreatedEmail(
     ),
   };
 }
+
+// Sent when an admin/manager invites a new employee to their company. The
+// link carries the raw invite token (see inviteService) — the employee picks
+// their own username/password when accepting, so no credential is ever
+// included here.
+export function staffInviteEmail(
+  companyName: string,
+  roleLabel: string,
+  invitedByName: string,
+  acceptUrl: string,
+): { subject: string; html: string } {
+  return {
+    subject: `دعوة للانضمام إلى فريق ${companyName} على SpruVex`,
+    html: wrapper(
+      "ERP",
+      `
+      <p style="font-size:15px;color:#333;">مرحباً،</p>
+      <p style="font-size:15px;color:#333;">دعاك <strong>${invitedByName}</strong> للانضمام إلى فريق <strong>${companyName}</strong> على نظام SpruVex ERP بصلاحية <strong>${roleLabel}</strong>.</p>
+      <div style="text-align:center;">${ctaButton("قبول الدعوة وإنشاء الحساب", acceptUrl)}</div>
+      <p style="font-size:13px;color:#888;margin-top:8px;">هذه الدعوة صالحة لمدة 7 أيام. إذا لم تكن تتوقع هذه الدعوة، يمكنك تجاهل هذه الرسالة بأمان.</p>
+    `,
+    ),
+  };
+}

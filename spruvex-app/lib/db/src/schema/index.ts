@@ -18,6 +18,7 @@ export * from "./expenses";
 export * from "./settings";
 export * from "./roles";
 export * from "./users";
+export * from "./userInvites";
 export * from "./accounts";
 export * from "./purchases";
 export * from "./permissions";

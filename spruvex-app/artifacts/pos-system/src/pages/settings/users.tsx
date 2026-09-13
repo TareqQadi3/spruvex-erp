@@ -8,11 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
-import { ArrowLeft, Plus, KeyRound, Users as UsersIcon } from "lucide-react";
+import { ArrowLeft, Plus, KeyRound, Users as UsersIcon, Mail, X } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { TOKEN_KEY } from "@/contexts/AuthContext";
 import { QueryErrorState } from "@/components/QueryErrorState";
@@ -23,6 +24,16 @@ interface AppUser {
   role: string;
   permissions: string | null;
   isActive: boolean;
+  createdAt: string;
+}
+
+interface InviteSummary {
+  id: string;
+  email: string;
+  role: string;
+  status: "pending" | "accepted" | "revoked";
+  expiresAt: string;
+  acceptedAt: string | null;
   createdAt: string;
 }
 
@@ -44,20 +55,34 @@ async function authFetch(path: string, options: RequestInit = {}) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Request failed" }));
-    throw new Error(err.error ?? "Request failed");
+    // Legacy routes (/auth/users) reply { error: "message" }; modular routes
+    // (/auth/invites) go through the AppError envelope { error: { message } }.
+    // This page calls both, so handle either shape.
+    throw new Error(err.error?.message ?? err.error ?? "Request failed");
   }
-  return res.status === 204 ? null : res.json();
+  if (res.status === 204) return null;
+  const body = await res.json();
+  // Same split on the success side: legacy routes return the payload
+  // directly, modular routes wrap it as { data }.
+  return body?.data ?? body;
 }
 
 export default function UsersSettingsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [dialogUser, setDialogUser] = useState<AppUser | "new" | null>(null);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   const { data: users, isLoading, isError, refetch } = useQuery<AppUser[]>({
     queryKey: ["auth-users"],
     queryFn: () => authFetch("/auth/users"),
   });
+
+  const { data: invites, isLoading: invitesLoading } = useQuery<InviteSummary[]>({
+    queryKey: ["auth-invites"],
+    queryFn: () => authFetch("/auth/invites"),
+  });
+  const pendingInvites = invites?.filter(i => i.status === "pending") ?? [];
 
   const saveMutation = useMutation({
     mutationFn: (vars: { id?: number; username?: string; password?: string; role: string; permissions: string[] }) =>
@@ -78,6 +103,26 @@ export default function UsersSettingsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auth-users"] }),
   });
 
+  const inviteMutation = useMutation({
+    mutationFn: (vars: { email: string; role: string }) =>
+      authFetch("/auth/invites", { method: "POST", body: JSON.stringify(vars) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["auth-invites"] });
+      setInviteDialogOpen(false);
+      toast.success(t("users.invite_sent"));
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const revokeInviteMutation = useMutation({
+    mutationFn: (id: string) => authFetch(`/auth/invites/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["auth-invites"] });
+      toast.success(t("users.invite_revoked"));
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center justify-between">
@@ -87,10 +132,16 @@ export default function UsersSettingsPage() {
           </Link>
           <h1 className="text-2xl font-bold tracking-tight">{t("users.title")}</h1>
         </div>
-        <Button onClick={() => setDialogUser("new")}>
-          <Plus className="me-2 h-4 w-4" />
-          {t("users.add_user")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setInviteDialogOpen(true)}>
+            <Mail className="me-2 h-4 w-4" />
+            {t("users.invite_by_email")}
+          </Button>
+          <Button onClick={() => setDialogUser("new")}>
+            <Plus className="me-2 h-4 w-4" />
+            {t("users.add_user")}
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -124,6 +175,37 @@ export default function UsersSettingsPage() {
         </CardContent>
       </Card>
 
+      {!invitesLoading && pendingInvites.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t("users.pending_invites_title")}</CardTitle>
+            <CardDescription>{t("users.pending_invites_desc")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {pendingInvites.map(inv => (
+              <div key={inv.id} className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <div className="font-medium text-sm" dir="ltr">{inv.email}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-2">
+                    <span>{t(`roles.${inv.role}`)}</span>
+                    <Badge variant="outline">{t("users.invite_status_pending")}</Badge>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost" size="icon"
+                  onClick={() => {
+                    if (confirm(t("users.invite_revoke_confirm"))) revokeInviteMutation.mutate(inv.id);
+                  }}
+                  disabled={revokeInviteMutation.isPending}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {dialogUser && (
         <UserDialog
           user={dialogUser === "new" ? null : dialogUser}
@@ -132,7 +214,59 @@ export default function UsersSettingsPage() {
           isPending={saveMutation.isPending}
         />
       )}
+
+      {inviteDialogOpen && (
+        <InviteDialog
+          onClose={() => setInviteDialogOpen(false)}
+          onSend={(vars) => inviteMutation.mutate(vars)}
+          isPending={inviteMutation.isPending}
+        />
+      )}
     </div>
+  );
+}
+
+function InviteDialog({
+  onClose, onSend, isPending,
+}: {
+  onClose: () => void;
+  onSend: (vars: { email: string; role: string }) => void;
+  isPending: boolean;
+}) {
+  const { t } = useTranslation();
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("cashier");
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("users.invite_title")}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground -mt-2">{t("users.invite_desc")}</p>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>{t("users.invite_email")}</Label>
+            <Input type="email" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="teammate@example.com" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t("users.invite_role")}</Label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger><SelectValue>{t(`roles.${role}`)}</SelectValue></SelectTrigger>
+              <SelectContent>
+                {ROLES.map(r => <SelectItem key={r} value={r}>{t(`roles.${r}`)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
+          <Button disabled={isPending || !email.trim()} onClick={() => onSend({ email: email.trim(), role })}>
+            {isPending ? t("users.invite_sending") : t("users.invite_send")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

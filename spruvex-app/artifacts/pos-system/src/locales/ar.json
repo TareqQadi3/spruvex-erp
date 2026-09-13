@@ -603,6 +603,19 @@
     "reset_success_desc": "تم تعيين كلمة المرور الجديدة. يمكنك الآن تسجيل الدخول.",
     "back_to_login": "العودة لتسجيل الدخول"
   },
+  "acceptInvite": {
+    "title": "أنت مدعو",
+    "desc_with_company": "دعتك شركة {{name}} للانضمام إلى فريقها على SpruVex بصلاحية {{role}}. اختر اسم مستخدم وكلمة مرور لإكمال إنشاء حسابك.",
+    "loading": "جارٍ التحقق من الدعوة...",
+    "invalid_title": "الدعوة غير صالحة",
+    "invalid_desc": "رابط الدعوة غير صالح أو منتهي أو تم استخدامه من قبل. اطلب من المسؤول إرسال دعوة جديدة.",
+    "username": "اختر اسم مستخدم",
+    "password": "اختر كلمة مرور",
+    "accept_button": "إنشاء الحساب",
+    "accepting": "جارٍ إنشاء الحساب...",
+    "accept_failed": "تعذر إنشاء حسابك. حاول مرة أخرى.",
+    "back_to_login": "العودة لتسجيل الدخول"
+  },
   "signup": {
     "subtitle": "أنشئ حساب سبروفكس الخاص بك",
     "step1_title": "بيانات الحساب",
@@ -934,7 +947,27 @@
     "extra_permissions_desc": "منح صلاحيات محددة إضافة على صلاحيات الدور الافتراضية.",
     "save_success": "تم حفظ المستخدم",
     "empty_title": "لا يوجد أعضاء فريق بعد",
-    "empty_desc": "أضف أول مستخدم لمشاركة الوصول إلى المتجر."
+    "empty_desc": "أضف أول مستخدم لمشاركة الوصول إلى المتجر.",
+    "invite_by_email": "دعوة عبر البريد الإلكتروني",
+    "invite_title": "دعوة زميل جديد",
+    "invite_desc": "أرسل دعوة بالبريد الإلكتروني — سيختار اسم المستخدم وكلمة المرور بنفسه عند قبول الدعوة.",
+    "invite_email": "البريد الإلكتروني",
+    "invite_role": "الدور",
+    "invite_send": "إرسال الدعوة",
+    "invite_sending": "جارٍ الإرسال...",
+    "invite_sent": "تم إرسال الدعوة",
+    "pending_invites_title": "الدعوات المعلقة",
+    "pending_invites_desc": "الدعوات التي لم تُقبل بعد.",
+    "invite_status_pending": "بانتظار القبول",
+    "invite_status_accepted": "تم القبول",
+    "invite_status_revoked": "أُلغيت",
+    "invite_status_expired": "منتهية",
+    "invite_revoke": "إلغاء",
+    "invite_revoke_confirm": "إلغاء هذه الدعوة؟ سيتوقف الرابط عن العمل.",
+    "invite_revoked": "تم إلغاء الدعوة",
+    "invite_resend": "إعادة الإرسال",
+    "invite_expires": "تنتهي في {{date}}",
+    "no_pending_invites": "لا توجد دعوات معلقة"
   },
   "paymentMethods": {
     "title": "طرق الدفع",
