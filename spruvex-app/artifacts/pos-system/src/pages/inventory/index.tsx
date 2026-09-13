@@ -1,4 +1,4 @@
-import { useGetProducts, useDeleteProduct, useGetSettings, useGetCategories, getGetProductsQueryKey } from "@workspace/api-client-react";
+import { useGetProducts, useDeleteProduct, useUpdateProduct, useGetSettings, useGetCategories, getGetProductsQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Trash2, Edit, History, FolderTree, Layers, AlertTriangle, Scale, Upload } from "lucide-react";
@@ -40,9 +41,64 @@ export default function InventoryPage() {
   const { data: categories } = useGetCategories();
   const { data: settings } = useGetSettings();
   const deleteProduct = useDeleteProduct();
+  const updateProduct = useUpdateProduct();
   const queryClient = useQueryClient();
   const { t, lang } = useTranslation();
   const { has: hasPermission } = usePermissions();
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkCategoryDialogOpen, setBulkCategoryDialogOpen] = useState(false);
+  const [bulkCategoryId, setBulkCategoryId] = useState<string>("__none__");
+  const [isBulkWorking, setIsBulkWorking] = useState(false);
+
+  const toggleSelectAll = () => {
+    if (!products || products.length === 0) return;
+    const allSelected = products.every(p => selectedIds.has(String(p.id)));
+    setSelectedIds(allSelected ? new Set() : new Set(products.map(p => String(p.id))));
+  };
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(t("inventory.bulk_delete_confirm", { count: selectedIds.size }))) return;
+    setIsBulkWorking(true);
+    const ids = Array.from(selectedIds);
+    const results = await Promise.allSettled(ids.map(id => deleteProduct.mutateAsync({ id } as any)));
+    const failed = results.filter(r => r.status === "rejected").length;
+    queryClient.invalidateQueries({ queryKey: getGetProductsQueryKey() });
+    setIsBulkWorking(false);
+    clearSelection();
+    if (failed > 0) {
+      toast.error(t("inventory.bulk_delete_partial", { success: ids.length - failed, failed }));
+    } else {
+      toast.success(t("inventory.bulk_delete_success", { count: ids.length }));
+    }
+  };
+
+  const handleBulkCategoryChange = async () => {
+    setIsBulkWorking(true);
+    const ids = Array.from(selectedIds);
+    const categoryId = bulkCategoryId === "__none__" ? null : bulkCategoryId;
+    const results = await Promise.allSettled(
+      ids.map(id => updateProduct.mutateAsync({ id, data: { categoryId } } as any)),
+    );
+    const failed = results.filter(r => r.status === "rejected").length;
+    queryClient.invalidateQueries({ queryKey: getGetProductsQueryKey() });
+    setIsBulkWorking(false);
+    setBulkCategoryDialogOpen(false);
+    clearSelection();
+    if (failed > 0) {
+      toast.error(t("inventory.bulk_category_partial", { success: ids.length - failed, failed }));
+    } else {
+      toast.success(t("inventory.bulk_category_success", { count: ids.length }));
+    }
+  };
 
   const [alerts, setAlerts] = useState<InventoryAlerts | null>(null);
   useEffect(() => {
@@ -163,11 +219,36 @@ export default function InventoryPage() {
               {t("inventory.filter_low_stock_only")}
             </label>
           </div>
+          {selectedIds.size > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/40 px-3 py-2 mt-3">
+              <span className="text-sm font-medium">{t("inventory.bulk_selected_count", { count: selectedIds.size })}</span>
+              {hasPermission("products.update") && (
+                <Button variant="outline" size="sm" onClick={() => { setBulkCategoryId("__none__"); setBulkCategoryDialogOpen(true); }} disabled={isBulkWorking}>
+                  {t("inventory.bulk_change_category")}
+                </Button>
+              )}
+              {hasPermission("products.delete") && (
+                <Button variant="outline" size="sm" className="text-destructive" onClick={handleBulkDelete} disabled={isBulkWorking}>
+                  <Trash2 className="h-3.5 w-3.5 me-1.5" /> {t("inventory.bulk_delete")}
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" className="ms-auto" onClick={clearSelection} disabled={isBulkWorking}>
+                {t("inventory.bulk_clear_selection")}
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={!!products && products.length > 0 && products.every(p => selectedIds.has(String(p.id)))}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label={t("inventory.bulk_select_all")}
+                  />
+                </TableHead>
                 <TableHead>{t("inventory.sku")}</TableHead>
                 <TableHead>{t("common.name")}</TableHead>
                 <TableHead>{t("common.category")}</TableHead>
@@ -180,19 +261,26 @@ export default function InventoryPage() {
               {isLoading ? (
                 [1, 2, 3].map(i => (
                   <TableRow key={i}>
-                    {[1, 2, 3, 4, 5, 6].map(j => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
+                    {[1, 2, 3, 4, 5, 6, 7].map(j => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
                   </TableRow>
                 ))
               ) : isError ? (
-                <TableRow><TableCell colSpan={6}><QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={7}><QueryErrorState message={t("common.error_load_data")} onRetry={() => refetch()} /></TableCell></TableRow>
               ) : products?.length === 0 ? (
-                <TableRow><TableCell colSpan={6}><EmptyState icon={Plus} title={t("inventory.no_products")} description={t("inventory.no_products_desc")} /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={7}><EmptyState icon={Plus} title={t("inventory.no_products")} description={t("inventory.no_products_desc")} /></TableCell></TableRow>
               ) : (
                 products?.map((product) => {
                   const isService = (product as any).isService;
                   const isLowStock = !isService && product.stock <= (product.lowStockThreshold || 5);
                   return (
                     <TableRow key={product.id} className={isLowStock ? "bg-destructive/5" : ""}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(String(product.id))}
+                          onCheckedChange={() => toggleSelectOne(String(product.id))}
+                          aria-label={t("inventory.bulk_select_row")}
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-xs">{product.sku}</TableCell>
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell>{product.categoryName || t("inventory.uncategorized")}</TableCell>
@@ -269,6 +357,33 @@ export default function InventoryPage() {
           </DialogContent>
         </Dialog>
       )}
+      <Dialog open={bulkCategoryDialogOpen} onOpenChange={setBulkCategoryDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("inventory.bulk_change_category")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label>{t("common.category")}</Label>
+            <Select value={bulkCategoryId} onValueChange={setBulkCategoryId}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">{t("inventory.uncategorized")}</SelectItem>
+                {categories?.map((c: any) => (
+                  <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkCategoryDialogOpen(false)} disabled={isBulkWorking}>{t("common.cancel")}</Button>
+            <Button onClick={handleBulkCategoryChange} disabled={isBulkWorking}>
+              {isBulkWorking ? t("common.saving") : t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
