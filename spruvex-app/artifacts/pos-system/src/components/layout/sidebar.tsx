@@ -21,9 +21,6 @@ import {
   Tag,
   PlusCircle,
   Undo2,
-  HandCoins,
-  Settings2,
-  Timer,
 } from "lucide-react";
 
 type NavIcon = React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
@@ -41,10 +38,12 @@ interface NavGroup {
   items: NavItem[];
 }
 
-// Sales and POS get their own grouped sections per the navigation restructure:
-// every entry points at a real page — /pos creates invoices, /vouchers records
-// customer payments (receipt vouchers), /accounting hosts cash sessions, and
-// /settings holds the invoice + POS screen configuration.
+// Sales — every entry points at a distinct real page. A separate "POS" group
+// and a per-group "Settings"/"Vouchers" entry used to duplicate /pos,
+// /accounting, /reports, /vouchers, and /settings under different labels
+// (up to 3x for /settings alone) with no actual difference in destination or
+// behavior — removed as pure navigation noise; each destination now appears
+// exactly once, in whichever single group it fits best.
 const SALES_GROUP: NavGroup = {
   key: "nav.sales_group",
   basePath: "/sales",
@@ -55,20 +54,6 @@ const SALES_GROUP: NavGroup = {
     { key: "nav.online_orders", href: "/ecommerce/orders", icon: ShoppingCart },
     { key: "nav.sales_returns", href: "/sales/returns", icon: Undo2 },
     { key: "nav.credit_notes", href: "/sales/credit-notes", icon: ReceiptText },
-    { key: "nav.customer_payments", href: "/vouchers", icon: HandCoins },
-    { key: "nav.sales_settings", href: "/settings", icon: Settings2 },
-  ],
-};
-
-const POS_GROUP: NavGroup = {
-  key: "nav.pos_group",
-  basePath: "/pos",
-  icon: ShoppingCart,
-  items: [
-    { key: "nav.start_sale", href: "/pos", icon: ShoppingCart },
-    { key: "nav.pos_sessions", href: "/accounting", icon: Timer },
-    { key: "nav.pos_reports", href: "/reports", icon: BarChart3 },
-    { key: "nav.pos_settings", href: "/settings", icon: Settings2 },
   ],
 };
 
@@ -96,7 +81,7 @@ const FINANCE_GROUP: NavGroup = {
   ],
 };
 
-const NAV_GROUPS: NavGroup[] = [SALES_GROUP, POS_GROUP, PRODUCTS_GROUP, FINANCE_GROUP];
+const NAV_GROUPS: NavGroup[] = [SALES_GROUP, PRODUCTS_GROUP, FINANCE_GROUP];
 
 const TOP_ITEMS: NavItem[] = [
   { key: "nav.dashboard", href: "/", icon: LayoutDashboard },
