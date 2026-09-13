@@ -42,6 +42,7 @@ const CustomersPage = lazy(() => import("@/pages/customers"));
 const CustomerDetailPage = lazy(() => import("@/pages/customers/detail"));
 const AccountingPage = lazy(() => import("@/pages/accounting"));
 const ReportsPage = lazy(() => import("@/pages/reports"));
+const AdvancedReportsPage = lazy(() => import("@/pages/reports/advanced"));
 const SettingsPage = lazy(() => import("@/pages/settings"));
 const UsersSettingsPage = lazy(() => import("@/pages/settings/users"));
 const PaymentMethodsSettingsPage = lazy(() => import("@/pages/settings/payment-methods"));
@@ -221,6 +222,7 @@ function AuthenticatedApp() {
         <Route path="/purchases"><GuardedPage component={PurchasesPage} basePath="/purchases" /></Route>
         <Route path="/vouchers"><GuardedPage component={VouchersPage} basePath="/vouchers" /></Route>
         <Route path="/accounting"><GuardedPage component={AccountingPage} basePath="/accounting" /></Route>
+        <Route path="/reports/advanced"><GuardedPage component={AdvancedReportsPage} basePath="/reports" /></Route>
         <Route path="/reports"><GuardedPage component={ReportsPage} basePath="/reports" /></Route>
         <Route path="/settings/users"><GuardedPage component={UsersSettingsPage} basePath="/settings" adminOnly /></Route>
         <Route path="/settings/payment-methods"><GuardedPage component={PaymentMethodsSettingsPage} basePath="/settings" /></Route>

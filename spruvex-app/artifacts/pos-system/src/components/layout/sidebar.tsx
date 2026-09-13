@@ -21,6 +21,7 @@ import {
   Tag,
   PlusCircle,
   Undo2,
+  LineChart,
 } from "lucide-react";
 
 type NavIcon = React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
@@ -93,6 +94,7 @@ const BOTTOM_ITEMS: NavItem[] = [
   { key: "nav.suppliers", href: "/suppliers", icon: Truck },
   { key: "nav.purchases", href: "/purchases", icon: PackageSearch },
   { key: "nav.reports", href: "/reports", icon: BarChart3 },
+  { key: "nav.advanced_reports", href: "/reports/advanced", icon: LineChart },
   { key: "nav.settings", href: "/settings", icon: Settings },
 ];
 
@@ -136,6 +138,9 @@ export function Sidebar() {
   const bottomItems = BOTTOM_ITEMS.filter(item => {
     if (user && !canAccess(user.role, item.href)) return false;
     if (item.href === "/repairs" && settings?.repairsModuleEnabled === false) return false;
+    // /reports/advanced (paid add-on) stays visible even when not purchased —
+    // the page itself shows an upgrade prompt (see advanced.tsx) instead of
+    // an upsell opportunity disappearing from navigation entirely.
     return true;
   });
 
