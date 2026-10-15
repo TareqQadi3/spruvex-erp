@@ -45,6 +45,7 @@ const ReportsPage = lazy(() => import("@/pages/reports"));
 const AdvancedReportsPage = lazy(() => import("@/pages/reports/advanced"));
 const SupportPage = lazy(() => import("@/pages/support"));
 const SupportTicketDetailPage = lazy(() => import("@/pages/support/detail"));
+const AiAssistantPage = lazy(() => import("@/pages/ai"));
 const SettingsPage = lazy(() => import("@/pages/settings"));
 const UsersSettingsPage = lazy(() => import("@/pages/settings/users"));
 const PaymentMethodsSettingsPage = lazy(() => import("@/pages/settings/payment-methods"));
@@ -239,6 +240,7 @@ function AuthenticatedApp() {
         <Route path="/settings"><GuardedPage component={SettingsPage} basePath="/settings" /></Route>
         <Route path="/support/:id"><GuardedPage component={SupportTicketDetailPage} basePath="/support" /></Route>
         <Route path="/support"><GuardedPage component={SupportPage} basePath="/support" /></Route>
+        <Route path="/ai"><GuardedPage component={AiAssistantPage} basePath="/ai" /></Route>
         <Route component={NotFound} />
       </Switch>
       </Suspense>

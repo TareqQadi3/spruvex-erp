@@ -23,6 +23,7 @@ import {
   Undo2,
   LineChart,
   LifeBuoy,
+  Sparkles,
 } from "lucide-react";
 
 type NavIcon = React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
@@ -96,6 +97,7 @@ const BOTTOM_ITEMS: NavItem[] = [
   { key: "nav.purchases", href: "/purchases", icon: PackageSearch },
   { key: "nav.reports", href: "/reports", icon: BarChart3 },
   { key: "nav.advanced_reports", href: "/reports/advanced", icon: LineChart },
+  { key: "nav.ai_assistant", href: "/ai", icon: Sparkles },
   { key: "nav.support", href: "/support", icon: LifeBuoy },
   { key: "nav.settings", href: "/settings", icon: Settings },
 ];

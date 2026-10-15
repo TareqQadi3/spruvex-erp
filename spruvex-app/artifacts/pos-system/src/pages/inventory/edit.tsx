@@ -21,6 +21,7 @@ import { useTranslation } from "@/i18n";
 import { QueryErrorState } from "@/components/QueryErrorState";
 import { MediaUploadField } from "@/components/MediaUploadField";
 import { TranslateButton } from "@/components/TranslateButton";
+import { ProductAiAssistant } from "./ProductAiAssistant";
 
 export default function EditProductPage() {
   const { id } = useParams<{ id: string }>();
@@ -244,7 +245,17 @@ export default function EditProductPage() {
                 <MediaUploadField value={imagePreview} onChange={setImagePreview} />
               </div>
               <div className="col-span-2 space-y-1.5">
-                <Label>{t("inventory.description")}</Label>
+                <div className="flex items-center justify-between">
+                  <Label>{t("inventory.description")}</Label>
+                  <ProductAiAssistant
+                    name={watch("name") ?? ""}
+                    category={categories?.find(c => String(c.id) === watch("categoryId"))?.name}
+                    brand={watch("brandName")}
+                    description={watch("description")}
+                    onApplyName={(v) => setValue("name", v)}
+                    onApplyDescription={(v) => setValue("description", v)}
+                  />
+                </div>
                 <Textarea {...register("description")} placeholder={t("inventory.description_placeholder")} rows={2} />
               </div>
             </CardContent>

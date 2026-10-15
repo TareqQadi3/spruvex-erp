@@ -16,6 +16,7 @@ import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "@/i18n";
 import { MediaUploadField } from "@/components/MediaUploadField";
 import { TranslateButton } from "@/components/TranslateButton";
+import { ProductAiAssistant } from "./ProductAiAssistant";
 
 export default function NewProductPage() {
   const [, navigate] = useLocation();
@@ -202,7 +203,17 @@ export default function NewProductPage() {
                 )}
               </div>
               <div className="col-span-2 space-y-1.5">
-                <Label>{t("inventory.description")}</Label>
+                <div className="flex items-center justify-between">
+                  <Label>{t("inventory.description")}</Label>
+                  <ProductAiAssistant
+                    name={watch("name") ?? ""}
+                    category={categories?.find(c => String(c.id) === watch("categoryId"))?.name}
+                    brand={watch("brandName")}
+                    description={watch("description")}
+                    onApplyName={(v) => setValue("name", v)}
+                    onApplyDescription={(v) => setValue("description", v)}
+                  />
+                </div>
                 <Textarea {...register("description")} placeholder={t("inventory.description_placeholder")} rows={2} />
               </div>
             </CardContent>
