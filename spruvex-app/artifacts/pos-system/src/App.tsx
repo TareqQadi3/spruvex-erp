@@ -37,6 +37,7 @@ const ManageProductPage = lazy(() => import("@/pages/inventory/manage"));
 const ImportExportPage = lazy(() => import("@/pages/settings/import-export"));
 const AuditLogPage = lazy(() => import("@/pages/settings/audit-log"));
 const RolesPage = lazy(() => import("@/pages/settings/roles"));
+const PlanSettingsPage = lazy(() => import("@/pages/settings/plan"));
 const StockMovementsPage = lazy(() => import("@/pages/inventory/movements"));
 const CustomersPage = lazy(() => import("@/pages/customers"));
 const CustomerDetailPage = lazy(() => import("@/pages/customers/detail"));
@@ -237,6 +238,7 @@ function AuthenticatedApp() {
         <Route path="/settings/import-export"><GuardedPage component={ImportExportPage} basePath="/settings" /></Route>
         <Route path="/settings/audit-log"><GuardedPage component={AuditLogPage} basePath="/settings" adminOnly /></Route>
         <Route path="/settings/roles"><GuardedPage component={RolesPage} basePath="/settings" adminOnly /></Route>
+        <Route path="/settings/plan"><GuardedPage component={PlanSettingsPage} basePath="/settings" /></Route>
         <Route path="/settings"><GuardedPage component={SettingsPage} basePath="/settings" /></Route>
         <Route path="/support/:id"><GuardedPage component={SupportTicketDetailPage} basePath="/support" /></Route>
         <Route path="/support"><GuardedPage component={SupportPage} basePath="/support" /></Route>

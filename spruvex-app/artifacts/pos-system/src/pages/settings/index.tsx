@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Save, Store, Receipt, Bell, Globe, Image, Printer, Shield, FileSpreadsheet, Plug } from "lucide-react";
+import { Save, Store, Receipt, Bell, Globe, Image, Printer, Shield, FileSpreadsheet, Plug, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "@/i18n";
@@ -505,6 +505,24 @@ export default function SettingsPage() {
               <Button type="button" variant="outline" size="sm">{t("settings.open_integrations")}</Button>
             </Link>
           </CardContent>
+        </Card>
+
+        {/* Plan & Billing */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <CardTitle className="text-base">{t("settings.plan_title")}</CardTitle>
+                  <CardDescription className="text-xs mt-0.5">{t("settings.plan_desc")}</CardDescription>
+                </div>
+              </div>
+              <Link href="/settings/plan">
+                <Button type="button" variant="outline" size="sm">{t("settings.view_plan")}</Button>
+              </Link>
+            </div>
+          </CardHeader>
         </Card>
 
         {/* Modules */}
