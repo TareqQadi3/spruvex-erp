@@ -24,6 +24,7 @@
     "accounting": "Accounting",
     "reports": "Reports",
     "advanced_reports": "Advanced Reports",
+    "support": "Help & Support",
     "settings": "Settings"
   },
   "common": {
@@ -64,11 +65,15 @@
     "not_found": "Page not found",
     "not_found_desc": "The page you are looking for does not exist or has been moved.",
     "error_load_data": "Failed to load data",
+    "optional": "Optional",
     "error_load_data_desc": "Check your connection to the server and try again."
   },
   "topbar": {
     "search_placeholder": "Global search (coming soon)...",
     "notifications": "Notifications",
+    "low_stock_alert": "{{count}} products low on stock",
+    "low_stock_alert_desc": "Tap to review your inventory.",
+    "no_notifications": "No notifications yet.",
     "user_menu": "User menu",
     "lang_switch": "AR"
   },
@@ -607,6 +612,37 @@
     "cashflow_income": "Cash In",
     "cashflow_expenses": "Cash Out",
     "cashflow_net": "Net Cash Flow"
+  },
+  "support": {
+    "title": "Help & Support",
+    "subtitle": "Open a ticket and the SpruVex team will reply here.",
+    "new_ticket": "New Ticket",
+    "list_title": "Your tickets",
+    "list_desc": "Track every support request you've opened.",
+    "empty_title": "No support tickets yet",
+    "empty_desc": "Open a ticket if you run into a problem or have a question.",
+    "subject": "Subject",
+    "priority": "Priority",
+    "priority_low": "Low",
+    "priority_medium": "Medium",
+    "priority_high": "High",
+    "priority_critical": "Critical",
+    "status_open": "Open",
+    "status_pending": "Pending",
+    "status_in_progress": "In Progress",
+    "status_resolved": "Resolved",
+    "status_closed": "Closed",
+    "submit_ticket": "Submit Ticket",
+    "ticket_created": "Ticket submitted",
+    "conversation": "Conversation",
+    "no_messages": "No replies yet.",
+    "support_team": "SpruVex Support",
+    "you": "You",
+    "reply_placeholder": "Type your reply...",
+    "send_reply": "Send",
+    "close_ticket": "Close Ticket",
+    "ticket_closed": "Ticket closed",
+    "ticket_is_closed": "This ticket is closed."
   },
   "auth": {
     "sign_in": "Sign In",

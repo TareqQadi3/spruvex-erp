@@ -150,6 +150,9 @@ export const ROLE_PAGES: Record<string, string[]> = {
 };
 
 export function canAccess(role: string, path: string): boolean {
+  // Every authenticated user can reach support regardless of role — a
+  // cashier locked out of something still needs a way to ask why.
+  if (path === "/support" || path.startsWith("/support/")) return true;
   const allowed = ROLE_PAGES[role] ?? ["/"];
   if (allowed.includes("*")) return true;
   if (allowed.includes(path)) return true;

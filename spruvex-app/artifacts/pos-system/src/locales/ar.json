@@ -24,6 +24,7 @@
     "accounting": "المحاسبة",
     "reports": "التقارير",
     "advanced_reports": "تقارير متقدمة",
+    "support": "المساعدة والدعم",
     "settings": "الإعدادات"
   },
   "common": {
@@ -64,11 +65,15 @@
     "not_found": "الصفحة غير موجودة",
     "not_found_desc": "الصفحة التي تبحث عنها غير موجودة أو تم نقلها.",
     "error_load_data": "تعذّر تحميل البيانات",
+    "optional": "اختياري",
     "error_load_data_desc": "تحقق من الاتصال بالخادم ثم أعد المحاولة."
   },
   "topbar": {
     "search_placeholder": "البحث العام (قريباً)...",
     "notifications": "الإشعارات",
+    "low_stock_alert": "{{count}} منتج منخفض المخزون",
+    "low_stock_alert_desc": "اضغط لمراجعة المخزون.",
+    "no_notifications": "لا توجد إشعارات بعد.",
     "user_menu": "قائمة المستخدم",
     "lang_switch": "EN"
   },
@@ -607,6 +612,37 @@
     "cashflow_income": "النقد الداخل",
     "cashflow_expenses": "النقد الخارج",
     "cashflow_net": "صافي التدفق النقدي"
+  },
+  "support": {
+    "title": "المساعدة والدعم",
+    "subtitle": "افتح تذكرة وسيرد عليك فريق SpruVex هنا.",
+    "new_ticket": "تذكرة جديدة",
+    "list_title": "تذاكرك",
+    "list_desc": "تابع كل طلبات الدعم التي فتحتها.",
+    "empty_title": "لا توجد تذاكر دعم بعد",
+    "empty_desc": "افتح تذكرة إذا واجهت مشكلة أو لديك سؤال.",
+    "subject": "الموضوع",
+    "priority": "الأولوية",
+    "priority_low": "منخفضة",
+    "priority_medium": "متوسطة",
+    "priority_high": "عالية",
+    "priority_critical": "حرجة",
+    "status_open": "مفتوحة",
+    "status_pending": "بانتظار الرد",
+    "status_in_progress": "قيد المعالجة",
+    "status_resolved": "محلولة",
+    "status_closed": "مغلقة",
+    "submit_ticket": "إرسال التذكرة",
+    "ticket_created": "تم إرسال التذكرة",
+    "conversation": "المحادثة",
+    "no_messages": "لا توجد ردود بعد.",
+    "support_team": "دعم SpruVex",
+    "you": "أنت",
+    "reply_placeholder": "اكتب ردك...",
+    "send_reply": "إرسال",
+    "close_ticket": "إغلاق التذكرة",
+    "ticket_closed": "تم إغلاق التذكرة",
+    "ticket_is_closed": "هذه التذكرة مغلقة."
   },
   "auth": {
     "sign_in": "تسجيل الدخول",
