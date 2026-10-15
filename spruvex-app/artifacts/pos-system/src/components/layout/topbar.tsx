@@ -1,4 +1,4 @@
-import { Bell, Search, LogOut, ChevronDown, PackageX, LifeBuoy } from "lucide-react";
+import { Bell, Search, LogOut, ChevronDown, PackageX, LifeBuoy, ShieldCheck } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -175,6 +175,14 @@ export function Topbar() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {user.isPlatformAdmin && (
+                  <Link href="/platform">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <ShieldCheck className="me-2 h-4 w-4" />
+                      {t("topbar.platform_admin")}
+                    </DropdownMenuItem>
+                  </Link>
+                )}
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive cursor-pointer"
                   onClick={handleLogout}

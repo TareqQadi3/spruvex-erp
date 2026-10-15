@@ -124,9 +124,14 @@ router.post("/login", rateLimitAuth, async (req, res) => {
 
   await logAudit({ companyId: user.companyId, userId: user.id, action: "login", entityType: "user", entityId: user.id });
 
+  // isPlatformAdmin is surfaced in the response body ONLY — never added to
+  // the JWT payload above. requirePlatformAdmin (modules/platform) always
+  // re-checks this flag fresh from the DB on every request specifically so
+  // a stale or forged claim can't grant cross-tenant access; this is purely
+  // so the frontend knows whether to show a "Platform Admin" nav link.
   res.json({
     token,
-    user: payload,
+    user: { ...payload, isPlatformAdmin: user.isPlatformAdmin },
     branches,
   });
 });
@@ -163,6 +168,7 @@ router.get("/me", requireAuth, async (req: AuthedRequest, res) => {
       email: usersTable.email,
       role: usersTable.role,
       companyId: usersTable.companyId,
+      isPlatformAdmin: usersTable.isPlatformAdmin,
     })
     .from(usersTable)
     .where(and(eq(usersTable.id, req.user!.id), eq(usersTable.companyId, req.user!.companyId)))

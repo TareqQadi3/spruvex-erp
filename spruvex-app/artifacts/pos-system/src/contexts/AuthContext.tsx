@@ -6,6 +6,7 @@ export interface AuthUser {
   username: string;
   role: string;
   branchId?: string;
+  isPlatformAdmin?: boolean;
 }
 
 export interface BranchOption {

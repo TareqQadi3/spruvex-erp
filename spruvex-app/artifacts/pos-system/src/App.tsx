@@ -11,6 +11,7 @@ import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout/app-layout";
 import { SetupWizardOverlay } from "@/components/SetupWizardOverlay";
 import { BranchSelectOverlay } from "@/components/BranchSelectOverlay";
+import { PlatformLayout } from "@/pages/platform/PlatformLayout";
 
 // Route-level code splitting: each page becomes its own chunk instead of one
 // ~1.15MB bundle loaded up front for every user regardless of which pages
@@ -47,6 +48,12 @@ const AdvancedReportsPage = lazy(() => import("@/pages/reports/advanced"));
 const SupportPage = lazy(() => import("@/pages/support"));
 const SupportTicketDetailPage = lazy(() => import("@/pages/support/detail"));
 const AiAssistantPage = lazy(() => import("@/pages/ai"));
+const PlatformDashboardPage = lazy(() => import("@/pages/platform"));
+const PlatformCompaniesPage = lazy(() => import("@/pages/platform/companies"));
+const PlatformCompanyDetailPage = lazy(() => import("@/pages/platform/companies/detail"));
+const PlatformSupportPage = lazy(() => import("@/pages/platform/support"));
+const PlatformSupportTicketDetailPage = lazy(() => import("@/pages/platform/support/detail"));
+const PlatformAffiliatesPage = lazy(() => import("@/pages/platform/affiliates"));
 const SettingsPage = lazy(() => import("@/pages/settings"));
 const UsersSettingsPage = lazy(() => import("@/pages/settings/users"));
 const PaymentMethodsSettingsPage = lazy(() => import("@/pages/settings/payment-methods"));
@@ -98,9 +105,16 @@ function AccessDenied() {
   );
 }
 
-function GuardedPage({ component: Component, basePath, adminOnly }: { component: React.ComponentType; basePath: string; adminOnly?: boolean }) {
+function GuardedPage({ component: Component, basePath, adminOnly, platformAdminOnly }: { component: React.ComponentType; basePath: string; adminOnly?: boolean; platformAdminOnly?: boolean }) {
   const { user } = useAuth();
   if (!user) return <Redirect to="/login" />;
+  // Platform-admin routes are gated purely on isPlatformAdmin — this is a
+  // cross-tenant flag orthogonal to the tenant RBAC role system, so the
+  // normal canAccess(role, basePath) check (which knows nothing about it)
+  // is skipped entirely rather than trying to special-case it in ROLE_PAGES.
+  if (platformAdminOnly) {
+    return user.isPlatformAdmin ? <Component /> : <AccessDenied />;
+  }
   if (!canAccess(user.role, basePath)) return <AccessDenied />;
   if (adminOnly && user.role !== "admin" && user.role !== "owner") return <AccessDenied />;
   return <Component />;
@@ -157,7 +171,36 @@ function AppRouter() {
 
   if (!user) return <Redirect to="/login" />;
 
+  // Platform admin is a separate cross-tenant section sharing this bundle —
+  // routed before AuthenticatedApp so it never passes through a tenant's own
+  // setup-wizard/branch-select overlays (those are tenant-scoped state that
+  // means nothing to a cross-tenant platform admin session).
+  if (location.startsWith("/platform")) {
+    return <PlatformAdminApp />;
+  }
+
   return <AuthenticatedApp />;
+}
+
+function PlatformAdminApp() {
+  const { user } = useAuth();
+  if (!user?.isPlatformAdmin) return <AccessDenied />;
+
+  return (
+    <PlatformLayout>
+      <Suspense fallback={<PageLoadingSpinner />}>
+        <Switch>
+          <Route path="/platform/companies/:id"><PlatformCompanyDetailPage /></Route>
+          <Route path="/platform/companies"><PlatformCompaniesPage /></Route>
+          <Route path="/platform/support/:id"><PlatformSupportTicketDetailPage /></Route>
+          <Route path="/platform/support"><PlatformSupportPage /></Route>
+          <Route path="/platform/affiliates"><PlatformAffiliatesPage /></Route>
+          <Route path="/platform"><PlatformDashboardPage /></Route>
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
+    </PlatformLayout>
+  );
 }
 
 // Isolated from AppRouter on purpose: AppRouter re-renders on every route
